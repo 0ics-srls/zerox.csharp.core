@@ -276,7 +276,11 @@ public abstract class PropertyContainer : NotifyingObject, IDisposable
         return true;
     }
 
+    // AVA2001 is for AvaloniaObject.OnPropertyChanged; this is NotifyingObject's seam, and not calling
+    // the base at once is the point: the event is posted or throttled, and Raise calls the base later.
+#pragma warning disable AVA2001
     protected override void OnPropertyChanged(string? propertyName)
+#pragma warning restore AVA2001
     {
         if (!_eventsOn || _disposed)
             return;
