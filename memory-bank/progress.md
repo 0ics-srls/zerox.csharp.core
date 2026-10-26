@@ -2,16 +2,5 @@
 
 # Active task progress only
 
-[03-port-statistics]
-✓notes.md + plan (8 blocks,85 red lines) committed 877e004;review:parsePlan valid,red count 85=85,stage A symbols exist,no capability rewritten
-✓01 interval-and-circular-buffer:Collections/Interval<T> (record struct,half-open [From,To) + last N;factories Range/Since/LastN/Last(span,now)) + CircularBuffer<T> (one Lock,push/pop both ends,View = copy via SortedSearch.LowerBound on the 2 ring segments) + KeyComparer.For<TKey,TValue>;16 tests (7 ported,CB_MultiThreadTest Integration without Sleep);KeyComparer test in IntervalTests
-✓02 series-keys:Statistics/SeriesKeys (ISeriesKeys<TKey> NextKey()+Distance(earlier,later);TimeKeys monotonic UTC on TimeProvider,seconds;IndexKeys Interlocked counter);4 tests
-!gotcha::CA1716 (VB keywords) rejects interface members/params named Next,To,From... → NextKey(),Distance(earlier,later);plan updated in place
-✓03 data-series:Statistics/ISeries (ISeries,IValueSeries<in T>,SeriesUpdate(Name,Count,Array Points),internal SeriesWindow.NewPoints) + DataSeries<TKey,TValue> (generic math,one Lock,Count long,Min/Max/Last/Sum/Mean/Rate in double,keys never back → ArgumentOutOfRange,rate 0 first + kept at distance 0,View copy,ViewSum double half-open,Get O(1),Snapshot/Load (ascending or ArgumentException,unchanged),UpdateSince);16 tests (5 ported:persistor tests on snapshots,Mongo dropped)
-✓04 array-series:Statistics/ArraySeries<TKey,TValue> (rows stored as ImmutableArray copies,width enforced,per-channel Min/Max/Last/Sum/Mean/Rate as ImmutableArray,rate 0 for an unchanged channel,AddParts,ViewChannel,ViewSum double[],UpdateSince) + CounterWidening (Widen ushort/uint vs last,AddCounters extensions on ArraySeries<TKey,long>);11 tests (2 ported)
-✓05 cyclic-series:Statistics/CyclicSeries<TValue> on CircularBuffer (window sum/mean,MinMean/MaxMean = old Min/Max of the moving mean,Min/Max of the window values,Count long,UpdateSince TValue[],fixed size);7 tests (1 ported)
-✓06 aggregator:Statistics/SeriesAggregator (sealed registry,ConcurrentDictionary TryAdd atomic,Register/TryRegister series+groups,Remove,Add<TValue> via IValueSeries,Get<T>,GetByHierId,GetSeriesOrGroup,AvailableNames ordinal;no id index) + SeriesGroup (Of ids | WithPrefix);10 tests (3 ported)
-✓07 aggregable-sources:Statistics/AggregableAttribute (Name,Group,Color hex) + IAggregableSource (INotifyPropertyChanged + Name) + AggregableSources (Register → DataSeries<DateTime,double> per [Aggregable] numeric property,name <source>.<name>,id Group/source/name + prefix group,TimeKeys;rollback when a name is taken;PropertyChanged samples (null name = all);Sample() with [ThreadStatic] guard so a self-raising getter samples once;Unregister removes series;getter exceptions reach the caller);11 tests
-!gotcha::CA1822 in tests flags a throwing property getter without instance data → make it read an instance member
-✓08 remote-data-provider:Statistics/RemoteDataProvider (basic,user decision:Start(names) validates series|groups,PeriodicTimer on TimeProvider created in Start,loop via OwnerQueue.StartDetached,UpdateSince per series name once per tick → Updates ChannelReader<SeriesUpdate>,StopAsync disposes the timer (no exception to stop),restartable,DisposeAsync completes Updates,DefaultPeriod 250 ms);10 tests,5 runs stable,no sleep
-✓FINAL REVIEW stage B:tools/verify.sh 4/4 ok,370 tests (+86 vs stage A),0 warnings,no absolute path,no catch in Statistics/Collections
+[04-port-messaging-editing]
+✓notes.md + plan (5 blocks,39 red lines);review:parsePlan valid,red 39=39,packages probed on net10
