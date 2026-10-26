@@ -4,8 +4,8 @@
 <mission>
 ## Project
 
-`zerox.csharp.core` is a new C# library repository at `/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core`
-(branch `main`; it is a git submodule of assetforge, checked out at `externals/zerox.csharp.core`; its `origin` is the local repository `/Users/mail0ics.it/dev/zerox.csharp.core`: never push). Every path and command in this plan is relative to the zerox repository root, never to assetforge; run commands from `/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core` and commit inside that repository, not in assetforge. It will hold the reusable core of the old Zerox code,
+`zerox.csharp.core` is a new C# library repository (the repository root, written `.` below)
+(branch `main`; it is a git submodule of assetforge, checked out at `externals/zerox.csharp.core`; its `origin` is the local repository `~/dev/zerox.csharp.core`: never push). Every path and command in this plan is relative to the zerox repository root, never to assetforge; run commands from the repository root and commit inside that repository, not in assetforge. It will hold the reusable core of the old Zerox code,
 rebuilt clean; this plan builds ONLY the skeleton. No capability of the old code is ported here.
 
 Three production projects and one test project each:
@@ -77,7 +77,7 @@ Three production projects and one test project each:
 ## TDDAB-1: Create the Solution Skeleton with Its Build Foundations
 
 <intro>
-Creates the whole build skeleton of `/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core`: `global.json`,
+Creates the whole build skeleton of the repository root: `global.json`,
 `version.build`, the completed `Directory.Build.props`, `Directory.Build.targets`,
 `Directory.Packages.props`, `.editorconfig` additions, `.gitignore` additions,
 `zerox.csharp.core.slnx`, the three production projects (empty), the three test projects and the
@@ -106,7 +106,7 @@ test).
 
 ### Implementation
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/global.json`
+`global.json`
 ```json
 {
   "sdk": { "version": "10.0.400", "rollForward": "latestFeature" },
@@ -114,12 +114,12 @@ test).
 }
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/version.build`
+`version.build`
 ```
 1
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/Directory.Build.props` (keep the four existing lint properties, add the rest)
+`Directory.Build.props` (keep the four existing lint properties, add the rest)
 ```xml
 <Project>
   <PropertyGroup>
@@ -150,7 +150,7 @@ test).
 </Project>
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/Directory.Build.targets`
+`Directory.Build.targets`
 ```xml
 <Project>
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
@@ -171,7 +171,7 @@ test).
 </Project>
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/Directory.Packages.props`
+`Directory.Packages.props`
 ```xml
 <Project>
   <PropertyGroup>
@@ -187,7 +187,7 @@ test).
 </Project>
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/.editorconfig` — keep the template lines, append:
+`.editorconfig` — keep the template lines, append:
 ```ini
 [*]
 charset = utf-8
@@ -218,7 +218,7 @@ indent_size = 2
 ```
 (`root = true` stays the first line of the file; the `[*]` section goes right after it.)
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/.gitignore` — append:
+`.gitignore` — append:
 ```
 artifacts/
 TestResults/
@@ -228,7 +228,7 @@ TestResults/
 .DS_Store
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/zerox.csharp.core.slnx`
+`zerox.csharp.core.slnx`
 ```xml
 <Solution>
   <Folder Name="/Solution Items/">
@@ -296,7 +296,7 @@ Test projects (runner, assertions and the shared source come from `Directory.Bui
 </Project>
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Shared/RepositoryRoot.cs` (same shape as assetforge `tests/Assetforge.Test.Common/RepositoryRoot.cs`, which this repository cannot reference)
+`tests/Shared/RepositoryRoot.cs` (same shape as assetforge `tests/Assetforge.Test.Common/RepositoryRoot.cs`, which this repository cannot reference)
 ```csharp
 namespace Zerox.Tests.Shared;
 
@@ -323,7 +323,7 @@ A missing solution file is a broken checkout, not an expected case: the exceptio
 
 The headless session's `Dispatch` returns the task of the dispatched body; whether it hands back the body's exception unchanged is pinned by the RED test of block 02, not assumed.
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Zerox.Core.Tests/AssemblyTests.cs` (the Dnf and Avalonia test projects get the same shape for their own assembly; `RepositoryRootTests` lives in `Zerox.Core.Tests`)
+`tests/Zerox.Core.Tests/AssemblyTests.cs` (the Dnf and Avalonia test projects get the same shape for their own assembly; `RepositoryRootTests` lives in `Zerox.Core.Tests`)
 ```csharp
 using System.Reflection;
 using Zerox.Tests.Shared;
@@ -398,15 +398,15 @@ Files: `tests/Zerox.Core.Avalonia.Tests/TestApp.cs`, `tests/Zerox.Core.Avalonia.
 </intro>
 
 <red>
-- test: Should_RunOnTheUiThread_WhenTheBodyIsDispatchedThroughTheSession — inside `HeadlessUi.RunAsync`, `Dispatcher.UIThread.CheckAccess()` is true
-- test: Should_NotRunOnTheUiThread_WhenTheTestBodyRunsDirectly — outside `HeadlessUi.RunAsync`, after the session has started, `Dispatcher.UIThread.CheckAccess()` is false
+- test: Should_RunOnTheUiThread_WhenTheBodyIsDispatchedThroughTheSession — inside `HeadlessUi.RunAsync`, `SynchronizationContext.Current` is an `AvaloniaSynchronizationContext` (on the headless platform `Dispatcher.UIThread.CheckAccess()` is true on any thread: it proves nothing)
+- test: Should_NotRunOnTheUiThread_WhenTheTestBodyRunsDirectly — outside `HeadlessUi.RunAsync`, after the session has started, `SynchronizationContext.Current` is not an `AvaloniaSynchronizationContext`
 - test: Should_ReachTheTestWithTheSameException_WhenTheUiBodyThrows — `HeadlessUi.RunAsync(() => throw new InvalidOperationException("ui failed"))` throws `InvalidOperationException` with message `ui failed`
-- test: Should_ContinueOnTheUiThread_WhenTheBodyAwaits — after `await Task.Yield()` inside the body, `Dispatcher.UIThread.CheckAccess()` is still true
+- test: Should_ContinueOnTheUiThread_WhenTheBodyAwaits — after `await Task.Yield()` inside the body, `SynchronizationContext.Current` is still an `AvaloniaSynchronizationContext`
 </red>
 
 ### Implementation
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Zerox.Core.Avalonia.Tests/TestApp.cs`
+`tests/Zerox.Core.Avalonia.Tests/TestApp.cs`
 ```csharp
 using Avalonia;
 using Avalonia.Headless;
@@ -423,7 +423,7 @@ public static class TestApp
 }
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Zerox.Core.Avalonia.Tests/HeadlessUi.cs`
+`tests/Zerox.Core.Avalonia.Tests/HeadlessUi.cs`
 ```csharp
 using Avalonia.Headless;
 
@@ -444,7 +444,7 @@ internal static class HeadlessUi
 }
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Zerox.Core.Avalonia.Tests/HeadlessUiTests.cs`
+`tests/Zerox.Core.Avalonia.Tests/HeadlessUiTests.cs`
 ```csharp
 using Avalonia.Threading;
 
@@ -456,7 +456,7 @@ public sealed class HeadlessUiTests
     public Task Should_RunOnTheUiThread_WhenTheBodyIsDispatchedThroughTheSession()
         => HeadlessUi.RunAsync(() =>
         {
-            Dispatcher.UIThread.CheckAccess().Should().BeTrue();
+            SynchronizationContext.Current.Should().BeOfType<AvaloniaSynchronizationContext>();
             return Task.CompletedTask;
         });
 
@@ -465,7 +465,7 @@ public sealed class HeadlessUiTests
     {
         await HeadlessUi.RunAsync(() => Task.CompletedTask);   // the session is started
 
-        Dispatcher.UIThread.CheckAccess().Should().BeFalse();
+        (SynchronizationContext.Current is AvaloniaSynchronizationContext).Should().BeFalse();   // null outside the session
     }
 
     [Fact]
@@ -481,7 +481,7 @@ public sealed class HeadlessUiTests
         => HeadlessUi.RunAsync(async () =>
         {
             await Task.Yield();
-            Dispatcher.UIThread.CheckAccess().Should().BeTrue();
+            SynchronizationContext.Current.Should().BeOfType<AvaloniaSynchronizationContext>();
         });
 }
 ```
@@ -517,12 +517,12 @@ bank list at the end). Keep all of it; insert the project part (sections below) 
 <red>
 - test: tools/verify.sh on the clean repository prints `[1/4] build`, `[1/4] ok` … `[4/4] ok` in order and exits 0
 - test: tools/verify.sh with a probe file `src/Zerox.Core/VerifyProbe.cs` holding `internal sealed class VerifyProbe { private int _unused; }` prints `[1/4] FAILED`, never prints `[2/4]`, and exits 1 (the probe file is deleted right after the check)
-- test: tools/verify.sh run from another folder (`cd /tmp && /Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tools/verify.sh`) behaves as from the root and exits 0
+- test: tools/verify.sh run from another folder (`(cd /tmp && "$OLDPWD/tools/verify.sh")`, started from the root) behaves as from the root and exits 0
 </red>
 
 ### Implementation
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tools/verify.sh` (executable, `chmod +x`)
+`tools/verify.sh` (executable, `chmod +x`)
 ```bash
 #!/usr/bin/env bash
 # Every check of the repository, in order, with progress [k/4]; stops at the first that fails.
@@ -558,7 +558,7 @@ step 3 tests tests
 step 4 ast-grep astgrep
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/CLAUDE.md` — project part to insert:
+`CLAUDE.md` — project part to insert:
 ```markdown
 ## Project
 
@@ -590,7 +590,7 @@ libraries: `Zerox.Core` (no UI), `Zerox.Core.Avalonia` (UI helpers on Avalonia),
 - Everything: `tools/verify.sh` ([1/4] build, [2/4] format, [3/4] tests, [4/4] ast-grep)
 ```
 
-`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/README.md`
+`README.md`
 ```markdown
 # zerox.csharp.core
 
