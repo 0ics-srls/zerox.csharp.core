@@ -3,7 +3,7 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [TASK]
-@state::PLAN
+@state::DEVELOP (CVM run-20261026-zerox-01 from the assetforge session)
 @feature::01-scaffold
 @branch::main (new repository,first task)
 @goal::solution skeleton,build + test foundations,headless UI test session,verify script,CLAUDE.md + README;no ported code yet

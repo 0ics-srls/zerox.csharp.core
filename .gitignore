@@ -1,3 +1,11 @@
 .cvm
 .lsai/
 cortex_db/
+artifacts/
+TestResults/
+.vs/
+.idea/
+*.user
+.DS_Store
+bin/
+obj/

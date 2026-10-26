@@ -1,5 +1,11 @@
 root = true
 
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
 [*.cs]
 # Zero-tolerance: analyzer + async + nullable diagnostics as errors (dotnet format reads this).
 dotnet_diagnostic.CA2007.severity = error   # ConfigureAwait / sync-over-async family
@@ -8,3 +14,24 @@ dotnet_diagnostic.CA1849.severity = error   # call async methods when in an asyn
 dotnet_diagnostic.IDE0005.severity = error   # unnecessary usings
 # Test method naming from csharp-senior_10.md: Should_<Outcome>_When<Condition>
 dotnet_naming_style.should_when.capitalization = pascal_case
+
+[*.cs]
+indent_style = space
+indent_size = 4
+csharp_style_namespace_declarations = file_scoped:error
+dotnet_style_qualification_for_field = false
+dotnet_style_qualification_for_property = false
+dotnet_style_qualification_for_method = false
+dotnet_style_qualification_for_event = false
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+[tests/**.cs]
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1515.severity = none
+
+[*.{json,xml,csproj,props,targets,slnx}]
+indent_style = space
+indent_size = 2

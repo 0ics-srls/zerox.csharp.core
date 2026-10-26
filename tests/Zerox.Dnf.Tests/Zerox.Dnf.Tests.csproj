@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/Zerox.Dnf/Zerox.Dnf.csproj" />
+  </ItemGroup>
+</Project>

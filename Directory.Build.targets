@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <PackageReference Include="xunit.v3.mtp-v2" />
+    <PackageReference Include="AwesomeAssertions" />
+    <Using Include="Xunit" />
+    <Using Include="AwesomeAssertions" />
+    <Compile Include="$(MSBuildThisFileDirectory)tests/Shared/*.cs" Link="Shared/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup Condition="!$(MSBuildProjectName.EndsWith('.Tests'))">
+    <InternalsVisibleTo Include="$(MSBuildProjectName).Tests" />
+  </ItemGroup>
+</Project>
