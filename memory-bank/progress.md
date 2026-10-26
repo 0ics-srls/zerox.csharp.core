@@ -11,4 +11,5 @@
 ✓02 headless-ui-session:TestApp (plain Application on headless),HeadlessUi.RunAsync (assetforge shape,session per assembly),4 tests + version = 5 green
 !gotcha::headless Dispatcher.UIThread.CheckAccess() is true on ANY thread (UIThread bound to first toucher,reset by the session) → recognise the UI thread by SynchronizationContext.Current is AvaloniaSynchronizationContext (null outside);plan RED reworded in place
 !fact::HeadlessUnitTestSession runs on a thread-pool thread,completes a plain TaskCompletionSource,rethrows the body's exception unchanged (no AggregateException)
-⚡03 verify-and-docs next
+✓03 verify-and-docs:tools/verify.sh ([1/4] build,[2/4] format,[3/4] tests,[4/4] ast-grep;stops at first failure;works from any folder),CLAUDE.md project part (Project,Stack locks,Rules incl. relative paths only,Build & Test),README.md;3 shell checks run from the session scratchpad (not in the repo)
+⚡FINAL REVIEW

@@ -7,6 +7,7 @@
 @feature::01-scaffold
 @branch::main (new repository,first task)
 @goal::solution skeleton,build + test foundations,headless UI test session,verify script,CLAUDE.md + README;no ported code yet
+@done::3/3 blocks (01 skeleton,02 headless session,03 verify + docs);final review pending
 @plan::tasks/01-scaffold/plan.md (TDDAB,3 blocks)
 
 [NEXT]

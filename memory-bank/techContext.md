@@ -14,4 +14,4 @@
 @build::dotnet build zerox.csharp.core.slnx -warnaserror
 @fast-tests::dotnet test --solution zerox.csharp.core.slnx -- --filter-not-trait "Category=Integration"
 @all-tests::dotnet test --solution zerox.csharp.core.slnx
-@verify::tools/verify.sh (after task 01)
+@verify::tools/verify.sh ([k/4] build,format,tests,ast-grep)

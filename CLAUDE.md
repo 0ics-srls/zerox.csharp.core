@@ -6,6 +6,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 If you want to ask questions for more spec or other info always use AskUserQuestion tool.
 
+## Project
+
+zerox.csharp.core: the reusable C# core of 0ics, rebuilt clean from the old Zerox code. Three
+libraries: `Zerox.Core` (no UI), `Zerox.Core.Avalonia` (UI helpers on Avalonia), `Zerox.Dnf`
+(boolean rule compiler). Consumed by assetforge as a submodule.
+
+## Stack locks
+
+- .NET 10 (SDK 10.0.400, C# 14), solution `zerox.csharp.core.slnx`, central package management in `Directory.Packages.props` (no version in a `.csproj`)
+- Projects: `src/Zerox.Core` (only `Microsoft.Extensions.*.Abstractions` and `System.Text.Json` may be added), `src/Zerox.Core.Avalonia` (Avalonia 12.1.4, references `Zerox.Core`), `src/Zerox.Dnf` (no dependency); tests in `tests/<Project>.Tests`
+- Tests: xunit.v3.mtp-v2 4.0.2 + AwesomeAssertions 9.6.0 on the Microsoft Testing Platform; names `Should_<Outcome>_When<Condition>`; Avalonia tests through `HeadlessUi.RunAsync` (Avalonia.Headless 12.1.4 `HeadlessUnitTestSession` + plain `[Fact]`; never Avalonia.Headless.XUnit); in a test the UI thread is recognised by `SynchronizationContext.Current is AvaloniaSynchronizationContext` (headless `Dispatcher.UIThread.CheckAccess()` is true on any thread)
+- Version: `version.build` → every assembly `1.0.<n>`
+
+## Rules
+
+- Everything in the repository is English (identifiers, comments, strings, files, commits)
+- KISS, DRY, SOLID as heuristics, applied where a change is real or very likely: no interface without a consumer that substitutes it (the consumer owns it), no registration method without something to wire, one implementation per capability, one actor per class, composition instead of deep inheritance
+- No exception is hidden: an expected failure is a Try-pattern or a result; misuse is an `ArgumentException`; an exception nobody expected is never caught to go on
+- Constructor injection only, no DI container inside the components; `internal sealed` by default, `public` is a decision
+- Library code awaits with `ConfigureAwait(false)` (CA2007); UI code in `Zerox.Core.Avalonia` returns to the UI thread through the `Dispatcher`, explicitly
+- Enums instead of strings (in JSON the member name); System.Text.Json only (never Newtonsoft); everything async
+- Paths in the repository are relative to its root; never write a machine's absolute path
+
+## Build & Test
+
+- Build: `dotnet build zerox.csharp.core.slnx -warnaserror` (0 warnings)
+- Fast tests: `dotnet test --solution zerox.csharp.core.slnx -- --filter-not-trait "Category=Integration"`
+- All tests: `dotnet test --solution zerox.csharp.core.slnx`
+- Everything: `tools/verify.sh` ([1/4] build, [2/4] format, [3/4] tests, [4/4] ast-grep)
+
 ## Memory Bank - Critical System
 
 The Memory Bank is Claude's ONLY connection to the project between sessions. Without it, Claude starts completely fresh with zero knowledge of the project.
