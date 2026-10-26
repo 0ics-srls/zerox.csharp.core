@@ -11,5 +11,8 @@
 @design::ComponentModel/NotifyingObject;Validation/{ValidationRule,ValidationRules,ValidationParameters,IValidatable,Validator<T> (composition,INotifyDataErrorInfo),ValidationException};Editing/{PocoExtensions,MemberDifference,PocoProxy<T>};Messaging/{Message<TKind>,IMessageSource,IMessageDestination,MessageChannel<TKind>};JsonDefaults IncludeFields
 
 [NEXT]
+?stage E 06-port-scheduler (©User 2026-10-26:wanted in the unified system):old Commands/Scheduler/Job.cs + WorkingProcess ported with the same model (composite rings on CircularLinkedList,main ring holds main jobs + slow queue → one slow job per main lap,priority ring one job per tick,one-time + delayed jobs,groups suspend/resume,sync jobs);WorkingProcess = the loop container on TimeProvider with stats;errors = supervisor:job exception → errors channel (job,exception,time) the owner reads,engine failure → process dies (explicit P9 exception);fix CreateCustomJob adding PriorityGroup,priority skipped when main throws;tests deterministic (ticks by hand,fake clock)
+?charts (ChartSeriesSource,palettes,histogram curves) = own stage on ScottPlot.Avalonia 5 when a view needs them
+✗dropped::ActionsContext (product actors LocalOperator/RemoteOPC)
 ?stage D 05-port-avalonia (PropertyContainer pump on NotifyingObject,async commands,observable task,dialogs/message boxes,charts of the statistics)
 ?remote::github repo created by the user;then assetforge commits externals/zerox.csharp.core
