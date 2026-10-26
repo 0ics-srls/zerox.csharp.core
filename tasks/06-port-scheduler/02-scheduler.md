@@ -414,7 +414,7 @@ public sealed class WorkingProcess : IAsyncDisposable
             _timer = timer;
             _stop = stop;
             _stopped = stopped.Task;
-            OwnerQueue.StartDetached(() => LoopAsync(timer, stop.Token, stopped));
+            OwnerQueue.StartDetached(() => LoopAsync(timer, stopped, stop.Token));
         }
     }
 
@@ -441,7 +441,7 @@ public sealed class WorkingProcess : IAsyncDisposable
 
     public async ValueTask DisposeAsync() => await StopAsync().ConfigureAwait(false);
 
-    private async Task LoopAsync(PeriodicTimer timer, CancellationToken stop, TaskCompletionSource stopped)
+    private async Task LoopAsync(PeriodicTimer timer, TaskCompletionSource stopped, CancellationToken stop)
     {
         try
         {
@@ -456,7 +456,7 @@ public sealed class WorkingProcess : IAsyncDisposable
                 Interlocked.Add(ref _totalTicks, elapsed.Ticks);
                 Interlocked.Increment(ref _cycles);
             }
-            while (await timer.WaitForNextTickAsync().ConfigureAwait(false));
+            while (await timer.WaitForNextTickAsync(CancellationToken.None).ConfigureAwait(false));   // the stop disposes the timer: the wait returns false
         }
         finally
         {
