@@ -405,7 +405,7 @@ Delivers the two pieces the declarative discovery of later stages stands on:
   `GetAttributeOfPropertyType<TAttribute>(this Type type, string propertyName)`.
 - `FastProperty<TInstance, TValue>`: getter and setter of a property compiled once with
   `System.Linq.Expressions`, then called as delegates (no reflection per call — the aggregator
-  samples properties at high rate). Instances are cached per `(PropertyInfo, publicOnly)`.
+  samples properties at high rate). Instances come from `FastProperty.For<TInstance, TValue>(info)` (CA1000), cached per `(PropertyInfo, publicOnly)`.
 
 Capability: old `../../tmp/zerox/Zerox.Wpf.Core/Core/Support/ReflectionExtensions.cs` and
 `../../tmp/zerox/Zerox.Wpf.Core/Core/Reflection/*` (no tests). Kept only what the framework lacks:
@@ -426,8 +426,8 @@ tests `tests/Zerox.Core.Tests/Reflection/AttributeExtensionsTests.cs`,
 - test: Should_IncludeInheritedAttributes_WhenTheBaseTypeMarksAProperty — an overriding property inherits the base marking
 - test: Should_FindTheAttributeOfANamedProperty_WhenItExists — `GetPropertyAttribute<T>("Name")` returns it; an unknown name returns null
 - test: Should_FindTheAttributeOfThePropertyType_WhenTheTypeIsMarked — `GetAttributeOfPropertyType<T>("Child")` returns the attribute of the property's type
-- test: Should_ReadAndWrite_WhenThePropertyIsPublic — `FastProperty<Sample, int>.For(info)` gets and sets `Sample.Count`
-- test: Should_ConvertTheValue_WhenTheTypesAreObject — `FastProperty<object, object>.For(info)` gets a boxed `int` and sets it back from a boxed `int`
+- test: Should_ReadAndWrite_WhenThePropertyIsPublic — `FastProperty.For<Sample, int>(info)` gets and sets `Sample.Count`
+- test: Should_ConvertTheValue_WhenTheTypesAreObject — `FastProperty.For<object, object>(info)` gets a boxed `int` and sets it back from a boxed `int`
 - test: Should_WriteAPrivateSetter_WhenPublicOnlyIsFalse — a property with a private setter is written with `publicOnly: false`; with `publicOnly: true` `Set` throws `InvalidOperationException`
 - test: Should_ReturnTheSameAccessor_WhenAskedTwice — `For(info)` twice returns the same instance, also from 8 threads at once
 - test: Should_Throw_WhenThePropertyHasNoGetter — `Get` of a set-only property throws `InvalidOperationException`
