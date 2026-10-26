@@ -9,7 +9,6 @@
     <PackageReference Include="AwesomeAssertions" />
     <Using Include="Xunit" />
     <Using Include="AwesomeAssertions" />
-    <Compile Include="$(MSBuildThisFileDirectory)tests/Shared/*.cs" Link="Shared/%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup Condition="!$(MSBuildProjectName.EndsWith('.Tests'))">
     <InternalsVisibleTo Include="$(MSBuildProjectName).Tests" />
