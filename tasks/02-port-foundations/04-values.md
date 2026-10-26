@@ -18,7 +18,9 @@ exception that `GetPart` never throws). Kept as they were: `GetPart(i)` with `i`
 part returns the last part, an empty id returns `""`; `==` with a `string` compares the text;
 `ToString(levels)` with `levels ≤ 0` prints all parts.
 
-Equality: same separator and same parts (ordinal). `Size()` becomes the property `Count`.
+Equality: same separator and same parts (ordinal). `Size()` becomes the property `Count`. With
+two `==` operators (id and string) a comparison with the `null` literal is ambiguous: code and
+tests compare with null through `is null`.
 
 Files: `src/Zerox.Core/Identity/HierId.cs`; tests `tests/Zerox.Core.Tests/Identity/HierIdTests.cs`
 (the 11 old tests with their names, NUnit → xunit, plus the new ones).
