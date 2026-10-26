@@ -6,7 +6,7 @@
 <intro>
 Delivers where the key of a new sample comes from and how far two keys are, in
 `src/Zerox.Core/Statistics/SeriesKeys.cs`:
-- `ISeriesKeys<TKey>`: `TKey Next()`, `double Distance(TKey from, TKey to)` (the unit of the
+- `ISeriesKeys<TKey>`: `TKey NextKey()`, `double Distance(TKey earlier, TKey later)` (the unit of the
   rate: a series' rate is value change per distance unit);
 - `TimeKeys(TimeProvider)`: `DateTime` keys in UTC, MONOTONIC (start time read once, then the
   provider's timestamp: a wall clock set back never makes keys go back); `Now`; distance in
@@ -23,9 +23,9 @@ Files: `src/Zerox.Core/Statistics/SeriesKeys.cs`; tests
 </intro>
 
 <red>
-- test: Should_FollowTheClock_WhenTheTimeAdvances — `FakeTimeProvider` at 2026-01-01T00:00:00Z: `Next()` is that instant (Kind `Utc`); after `Advance(1.5 s)` `Next()` is 1.5 s later and equals `Now`
+- test: Should_FollowTheClock_WhenTheTimeAdvances — `FakeTimeProvider` at 2026-01-01T00:00:00Z: `NextKey()` is that instant (Kind `Utc`); after `Advance(1.5 s)` `NextKey()` is 1.5 s later and equals `Now`
 - test: Should_MeasureSeconds_WhenTimeKeysCompareTwoKeys — `Distance(t, t + 250 ms)` is 0.25; `Distance(t + 1 s, t)` is −1
-- test: Should_CountFromTheStart_WhenIndexKeysAreAsked — `new IndexKeys(5)`: `Next()` gives 5, 6, 7; `Distance(3, 10)` is 7
+- test: Should_CountFromTheStart_WhenIndexKeysAreAsked — `new IndexKeys(5)`: `NextKey()` gives 5, 6, 7; `Distance(3, 10)` is 7
 - test: Should_GiveUniqueKeys_WhenManyThreadsAsk — 8 parallel loops take 1000 keys each from one `IndexKeys`: 8000 distinct keys, `0..7999`
 </red>
 
@@ -38,9 +38,9 @@ namespace Zerox.Core.Statistics;
 public interface ISeriesKeys<TKey>
     where TKey : struct, IComparable<TKey>
 {
-    TKey Next();
+    TKey NextKey();
 
-    double Distance(TKey from, TKey to);
+    double Distance(TKey earlier, TKey later);
 }
 
 // UTC time keys that never go back: the start time is read once, then the provider's timestamp moves them.
@@ -60,10 +60,10 @@ public sealed class TimeKeys : ISeriesKeys<DateTime>
 
     public DateTime Now => _start + _time.GetElapsedTime(_startTimestamp);
 
-    public DateTime Next() => Now;
+    public DateTime NextKey() => Now;
 
     // Seconds: a rate over time keys is per second.
-    public double Distance(DateTime from, DateTime to) => (to - from).TotalSeconds;
+    public double Distance(DateTime earlier, DateTime later) => (later - earlier).TotalSeconds;
 }
 
 // Counter keys start, start + 1, ...; distance in steps.
@@ -71,9 +71,9 @@ public sealed class IndexKeys(long start = 0) : ISeriesKeys<long>
 {
     private long _next = start;
 
-    public long Next() => Interlocked.Increment(ref _next) - 1;
+    public long NextKey() => Interlocked.Increment(ref _next) - 1;
 
-    public double Distance(long from, long to) => to - from;
+    public double Distance(long earlier, long later) => later - earlier;
 }
 ```
 
@@ -261,7 +261,7 @@ public sealed class DataSeries<TKey, TValue> : IValueSeries<TValue>
     public void Add(TValue value)
     {
         lock (_lock)
-            Append(value, _keys.Next());
+            Append(value, _keys.NextKey());
     }
 
     public void Add(TValue value, TKey key)
@@ -373,9 +373,9 @@ public sealed class DataSeriesTests
     {
         private DateTime _now = start;
 
-        public DateTime Next() => _now += step;
+        public DateTime NextKey() => _now += step;
 
-        public double Distance(DateTime from, DateTime to) => (to - from).TotalSeconds;
+        public double Distance(DateTime earlier, DateTime later) => (later - earlier).TotalSeconds;
     }
 
     [Fact]
@@ -542,7 +542,7 @@ public sealed class ArraySeries<TKey, TValue> : ISeries
     public void Add(ReadOnlySpan<TValue> row)
     {
         lock (_lock)
-            Append(row, _keys.Next());
+            Append(row, _keys.NextKey());
     }
 
     public void Add(ReadOnlySpan<TValue> row, TKey key)
