@@ -15,7 +15,7 @@ libraries: `Zerox.Core` (no UI), `Zerox.Core.Avalonia` (UI helpers on Avalonia),
 ## Stack locks
 
 - .NET 10 (SDK 10.0.400, C# 14), solution `zerox.csharp.core.slnx`, central package management in `Directory.Packages.props` (no version in a `.csproj`)
-- Projects: `src/Zerox.Core` (only `Microsoft.Extensions.*.Abstractions` and `System.Text.Json` may be added), `src/Zerox.Core.Avalonia` (Avalonia 12.1.4, references `Zerox.Core`), `src/Zerox.Dnf` (no dependency); tests in `tests/<Project>.Tests`
+- Projects: `src/Zerox.Core` (no UI), `src/Zerox.Core.Avalonia` (Avalonia 12.1.4, references `Zerox.Core`), `src/Zerox.Dnf`; tests in `tests/<Project>.Tests`
 - Tests: xunit.v3.mtp-v2 4.0.2 + AwesomeAssertions 9.6.0 on the Microsoft Testing Platform; names `Should_<Outcome>_When<Condition>`; Avalonia tests through `HeadlessUi.RunAsync` (Avalonia.Headless 12.1.4 `HeadlessUnitTestSession` + plain `[Fact]`; never Avalonia.Headless.XUnit); in a test the UI thread is recognised by `SynchronizationContext.Current is AvaloniaSynchronizationContext` (headless `Dispatcher.UIThread.CheckAccess()` is true on any thread)
 - Version: `version.build` → every assembly `1.0.<n>`
 

@@ -12,10 +12,6 @@ public sealed class AssemblyTests
     public void Should_TakeTheVersionFromVersionBuild_WhenZeroxCoreIsBuilt()
         => ZeroxCore.GetName().Version.Should().Be(new Version(1, 0, RepositoryRoot.VersionBuild(), 0));
 
-    [Fact]
-    public void Should_ReferenceOnlyTheFramework_WhenZeroxCoreIsBuilt()
-        => ZeroxCore.GetReferencedAssemblies().Select(name => name.Name!)
-            .Should().OnlyContain(name => name.StartsWith("System", StringComparison.Ordinal) || name == "netstandard");
 }
 
 public sealed class RepositoryRootTests

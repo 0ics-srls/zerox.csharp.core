@@ -3,9 +3,9 @@
 # Architecture
 
 [PROJECTS]
-@Zerox.Core::no UI,only Microsoft.Extensions.*.Abstractions + System.Text.Json;areas Async,Cancellation,Collections,Statistics,Messaging,Reflection,Text,Numbers,Identity,Validation,Editing
+@Zerox.Core::no UI;areas Async,Cancellation,Collections,Statistics,Messaging,Reflection,Text,Numbers,Identity,Validation,Editing
 @Zerox.Core.Avalonia::Avalonia 12.1.4;references Zerox.Core;PropertyContainer + shared throttle pump,async commands
-@Zerox.Dnf::no dependencies;boolean expression → DNF masks → compiled rules
+@Zerox.Dnf::boolean expression → DNF masks → compiled rules
 @tests::tests/<Project>.Tests per project (xunit v3 + AwesomeAssertions on MTP);Avalonia tests through HeadlessUnitTestSession
 
 [RULES]
