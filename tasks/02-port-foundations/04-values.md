@@ -153,11 +153,11 @@ plus `long`, `ulong`, `float`, `double`, `decimal`).
 - test: Should_ClampToTheInterval_WhenTheTextIsOutsideIt — `NumberRange<int>(-10, 10)`: `"50"` → 10, `"-50"` → -10, `"5"` → 5
 - test: Should_GiveNoValue_WhenTheTextIsNotANumber — `"abc"` and `""` → `TryParse` false; `"1.5"` false for `int`, true (1.5) for `double`
 - test: Should_SaturateAtTheBounds_WhenStepping — `NumberRange<int>(0, 100)`: `Add(95, 10)` = 100, `Add(5, -10)` = 0, `Add(50, 10)` = 60; the same at the type limits for `long` and `ulong` without overflow
-- test: Should_SaturateAtTheBounds_WhenMultiplying — `NumberRange<byte>.Full.Multiply(100, 3)` = 255
+- test: Should_SaturateAtTheBounds_WhenMultiplying — `NumberRange.Full<byte>().Multiply(100, 3)` = 255
 - test: Should_TellWhetherAValueIsInside_WhenCheckingWithAndWithoutBounds — `Contains(10)` true and `ContainsExclusive(10)` false for `(0, 10)`; `Contains(11)` false
 - test: Should_KeepDecimals_WhenTheTypeHasThem — `NumberRange<decimal>(0m, 1m).Add(0.1m, 0.2m)` = 0.3m exactly; `NumberRange<double>` parses `"0.25"` with the invariant culture
-- test: Should_DescribeTheType_WhenAskedForIntegerAndSign — `NumberRange<byte>.IsInteger` true, `IsSigned` false; `NumberRange<double>.IsInteger` false, `IsSigned` true
-- test: Should_PrintInfinity_WhenABoundIsALongTypeLimit — `NumberRange<int>.Full.ToString()` = `( -∞, ∞ )`, `NumberRange<byte>.Full.ToString()` = `( 0, 255 )`
+- test: Should_DescribeTheType_WhenAskedForIntegerAndSign — `NumberRange.IsInteger<byte>()` true, `IsSigned` false; `NumberRange.IsInteger<double>()` false, `IsSigned` true
+- test: Should_PrintInfinity_WhenABoundIsALongTypeLimit — `NumberRange.Full<int>().ToString()` = `( -∞, ∞ )`, `NumberRange.Full<byte>().ToString()` = `( 0, 255 )`
 - test: Should_Throw_WhenMinIsGreaterThanMax — `new NumberRange<int>(5, 1)` throws `ArgumentException`
 </red>
 
