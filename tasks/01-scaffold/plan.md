@@ -62,7 +62,7 @@ Three production projects and one test project each:
 |---|---|---|
 | Every assembly's version from one file | `Directory.Build.props` (`_BuildNumber` read from `version.build`) — created by block 01 | 01, 02, 03 |
 | Test project configured by its name (runner, assertions, usings, shared test source, InternalsVisibleTo) | `Directory.Build.targets` — created by block 01 | 01, 02 |
-| Find the repository root and the build number from a running test | `tests/Shared/RepositoryFiles.cs` :: `RepositoryFiles.Root`, `RepositoryFiles.VersionBuild()` — created by block 01, linked into every test project | 01 |
+| Find the repository root and the build number from a running test | `tests/Shared/RepositoryRoot.cs` :: `RepositoryRoot.Folder`, `RepositoryRoot.File(...)`, `RepositoryRoot.VersionBuild()` — created by block 01 in the shape of assetforge's `RepositoryRoot` (another repository: not referenceable), linked into every test project | 01 |
 | Run a test body on the headless Avalonia UI thread | `tests/Zerox.Core.Avalonia.Tests/HeadlessUi.cs` :: `HeadlessUi.RunAsync` over `Avalonia.Headless.HeadlessUnitTestSession` (package, exists) — created by block 02 | 02 |
 | ast-grep lint layer | `.claude/support/lint/lint-run.sh` — EXISTS (ai-agent); call it, never copy it | 03 |
 
@@ -81,12 +81,13 @@ Creates the whole build skeleton of `/Users/mail0ics.it/dev/zerox.csharp.core`: 
 `version.build`, the completed `Directory.Build.props`, `Directory.Build.targets`,
 `Directory.Packages.props`, `.editorconfig` additions, `.gitignore` additions,
 `zerox.csharp.core.slnx`, the three production projects (empty), the three test projects and the
-shared test helper `tests/Shared/RepositoryFiles.cs`.
+shared test helper `tests/Shared/RepositoryRoot.cs`.
 
 Capabilities: the version from one file and the test-project convention are reused from
 assetforge (same MSBuild lines, written here, not referenced). Finding the repository root from a
-test has no implementation anywhere: this block writes `RepositoryFiles`, once, linked into every
-test project by `Directory.Build.targets` (never copied).
+test exists in assetforge (`tests/Assetforge.Test.Common/RepositoryRoot.cs`), which this repository
+cannot reference: this block writes `RepositoryRoot` in the same shape, once, linked into every test
+project by `Directory.Build.targets` (never copied).
 
 The production assemblies are empty. A test loads them by name with
 `Assembly.Load(new AssemblyName("Zerox.Core"))` (the project reference copies the dll next to the
@@ -94,13 +95,13 @@ test).
 </intro>
 
 <red>
-- test: Should_TakeTheVersionFromVersionBuild_WhenZeroxCoreIsBuilt — `Zerox.Core` assembly version equals `new Version(1, 0, RepositoryFiles.VersionBuild(), 0)`
+- test: Should_TakeTheVersionFromVersionBuild_WhenZeroxCoreIsBuilt — `Zerox.Core` assembly version equals `new Version(1, 0, RepositoryRoot.VersionBuild(), 0)`
 - test: Should_ReferenceOnlyTheFramework_WhenZeroxCoreIsBuilt — every referenced assembly name of `Zerox.Core` starts with `System` or is `netstandard`; none contains `Avalonia`, `Newtonsoft`, `Autofac`
 - test: Should_TakeTheVersionFromVersionBuild_WhenZeroxCoreAvaloniaIsBuilt — same for `Zerox.Core.Avalonia`
 - test: Should_TakeTheVersionFromVersionBuild_WhenZeroxDnfIsBuilt — same for `Zerox.Dnf`
 - test: Should_ReferenceOnlyTheFramework_WhenZeroxDnfIsBuilt — every referenced assembly name of `Zerox.Dnf` starts with `System` or is `netstandard`
-- test: Should_FindTheRepositoryRoot_WhenRunFromTheTestOutput — `RepositoryFiles.Root` contains `zerox.csharp.core.slnx` and `version.build`
-- test: Should_ReadTheBuildNumber_WhenVersionBuildHoldsANumber — `RepositoryFiles.VersionBuild()` equals `int.Parse(File.ReadAllText(Path.Combine(RepositoryFiles.Root, "version.build")).Trim())` and is ≥ 1
+- test: Should_FindTheRepositoryRoot_WhenRunFromTheTestOutput — `RepositoryRoot.Folder` contains `zerox.csharp.core.slnx` and `version.build`; `RepositoryRoot.File("version.build")` is that file's full path
+- test: Should_ReadTheBuildNumber_WhenVersionBuildHoldsANumber — `RepositoryRoot.VersionBuild()` equals `int.Parse(File.ReadAllText(Path.Combine(RepositoryRoot.Folder, "version.build")).Trim())` and is ≥ 1
 </red>
 
 ### Implementation
@@ -295,36 +296,34 @@ Test projects (runner, assertions and the shared source come from `Directory.Bui
 </Project>
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/tests/Shared/RepositoryFiles.cs`
+`/Users/mail0ics.it/dev/zerox.csharp.core/tests/Shared/RepositoryRoot.cs` (same shape as assetforge `tests/Assetforge.Test.Common/RepositoryRoot.cs`, which this repository cannot reference)
 ```csharp
 namespace Zerox.Tests.Shared;
 
-// Files of the repository seen from a running test: the root is the first folder, going up from the
-// test output, that holds the solution file.
-internal static class RepositoryFiles
+internal static class RepositoryRoot
 {
-    public static string Root { get; } = FindRoot();
+    // the folder that holds zerox.csharp.core.slnx, found walking up from AppContext.BaseDirectory
+    public static string Folder { get; } = Find();
+
+    public static string File(params string[] parts) => Path.Combine([Folder, .. parts]);
 
     public static int VersionBuild()
-        => int.Parse(File.ReadAllText(Path.Combine(Root, "version.build")).Trim(), CultureInfo.InvariantCulture);
+        => int.Parse(System.IO.File.ReadAllText(File("version.build")).Trim(), CultureInfo.InvariantCulture);
 
-    private static string FindRoot()
+    private static string Find()
     {
-        for (var folder = new DirectoryInfo(AppContext.BaseDirectory); folder is not null; folder = folder.Parent)
-        {
-            if (File.Exists(Path.Combine(folder.FullName, "zerox.csharp.core.slnx")))
-            {
-                return folder.FullName;
-            }
-        }
-
-        throw new InvalidOperationException($"No zerox.csharp.core.slnx above {AppContext.BaseDirectory}");
+        var folder = new DirectoryInfo(AppContext.BaseDirectory);
+        while (folder is not null && !System.IO.File.Exists(Path.Combine(folder.FullName, "zerox.csharp.core.slnx")))
+            folder = folder.Parent;
+        return folder?.FullName ?? throw new DirectoryNotFoundException("zerox.csharp.core.slnx not found walking up from the test output");
     }
 }
 ```
 A missing solution file is a broken checkout, not an expected case: the exception is thrown and never caught (P9).
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/tests/Zerox.Core.Tests/AssemblyTests.cs` (the Dnf and Avalonia test projects get the same shape for their own assembly; `RepositoryFilesTests` lives in `Zerox.Core.Tests`)
+The headless session's `Dispatch` returns the task of the dispatched body; whether it hands back the body's exception unchanged is pinned by the RED test of block 02, not assumed.
+
+`/Users/mail0ics.it/dev/zerox.csharp.core/tests/Zerox.Core.Tests/AssemblyTests.cs` (the Dnf and Avalonia test projects get the same shape for their own assembly; `RepositoryRootTests` lives in `Zerox.Core.Tests`)
 ```csharp
 using System.Reflection;
 using Zerox.Tests.Shared;
@@ -337,7 +336,7 @@ public sealed class AssemblyTests
 
     [Fact]
     public void Should_TakeTheVersionFromVersionBuild_WhenZeroxCoreIsBuilt()
-        => ZeroxCore.GetName().Version.Should().Be(new Version(1, 0, RepositoryFiles.VersionBuild(), 0));
+        => ZeroxCore.GetName().Version.Should().Be(new Version(1, 0, RepositoryRoot.VersionBuild(), 0));
 
     [Fact]
     public void Should_ReferenceOnlyTheFramework_WhenZeroxCoreIsBuilt()
@@ -345,21 +344,22 @@ public sealed class AssemblyTests
             .Should().OnlyContain(name => name.StartsWith("System", StringComparison.Ordinal) || name == "netstandard");
 }
 
-public sealed class RepositoryFilesTests
+public sealed class RepositoryRootTests
 {
     [Fact]
     public void Should_FindTheRepositoryRoot_WhenRunFromTheTestOutput()
     {
-        File.Exists(Path.Combine(RepositoryFiles.Root, "zerox.csharp.core.slnx")).Should().BeTrue();
-        File.Exists(Path.Combine(RepositoryFiles.Root, "version.build")).Should().BeTrue();
+        File.Exists(Path.Combine(RepositoryRoot.Folder, "zerox.csharp.core.slnx")).Should().BeTrue();
+        RepositoryRoot.File("version.build").Should().Be(Path.Combine(RepositoryRoot.Folder, "version.build"));
+        File.Exists(RepositoryRoot.File("version.build")).Should().BeTrue();
     }
 
     [Fact]
     public void Should_ReadTheBuildNumber_WhenVersionBuildHoldsANumber()
     {
-        var expected = int.Parse(File.ReadAllText(Path.Combine(RepositoryFiles.Root, "version.build")).Trim(), CultureInfo.InvariantCulture);
+        var expected = int.Parse(File.ReadAllText(Path.Combine(RepositoryRoot.Folder, "version.build")).Trim(), CultureInfo.InvariantCulture);
 
-        RepositoryFiles.VersionBuild().Should().Be(expected).And.BeGreaterThanOrEqualTo(1);
+        RepositoryRoot.VersionBuild().Should().Be(expected).And.BeGreaterThanOrEqualTo(1);
     }
 }
 ```

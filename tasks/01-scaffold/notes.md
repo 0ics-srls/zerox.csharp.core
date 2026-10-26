@@ -19,12 +19,12 @@ Decisions taken with the user:
 1. **What is shared.** The version number (`version.build`, read once by
    `Directory.Build.props`); the test conventions (`Directory.Build.targets`: every `*.Tests`
    project gets the runner, the assertions and the shared test source by its name); the helper
-   that finds the repository root from a test (`tests/Shared/RepositoryFiles.cs`, linked into
+   that finds the repository root from a test (`tests/Shared/RepositoryRoot.cs`, linked into
    every test project); the headless UI session (only the Avalonia tests use it).
-2. **Who owns it.** Build files at the repository root; `tests/Shared/RepositoryFiles.cs` owned
+2. **Who owns it.** Build files at the repository root; `tests/Shared/RepositoryRoot.cs` owned
    by the test convention; `tests/Zerox.Core.Avalonia.Tests/HeadlessUi.cs` owned by the Avalonia
    tests.
-3. **Contracts.** `RepositoryFiles.Root` / `RepositoryFiles.VersionBuild()` (static, test-only);
+3. **Contracts.** `RepositoryRoot.Folder` / `RepositoryRoot.File(...)` / `RepositoryRoot.VersionBuild()` (static, test-only);
    `HeadlessUi.RunAsync(Func<Task>)` (runs a test body on the headless UI thread). Nothing is
    injected: there is nothing to substitute.
 4. **What this task does not own.** The ported capabilities (task 02); the GitHub remote (the
@@ -41,4 +41,4 @@ Decisions taken with the user:
 | Run a test body on the Avalonia UI thread without a display | `Avalonia.Headless` 12.1.4 `HeadlessUnitTestSession`; assetforge `tests/Assetforge.Ui.Tests/HeadlessUi.cs` | reuse the session, same helper shape |
 | One script that runs every check with k/n progress and stops at the first failure | assetforge `tools/verify.sh` (`step` function) | reuse the shape, with this repository's four checks |
 | ast-grep lint layer | `.claude/support/lint/lint-run.sh` (ai-agent) | call it, do not copy it |
-| Find the repository root from a running test | nothing in the framework or in assetforge (searched `version.build` readers: only MSBuild) | write `RepositoryFiles` (one file, linked) |
+| Find the repository root from a running test | assetforge `tests/Assetforge.Test.Common/RepositoryRoot.cs` (`Folder`, `File(params string[])`); nothing in the framework | another repository, not referenceable: write `RepositoryRoot` in the same shape (+ `VersionBuild()`), one file linked into every test project |
