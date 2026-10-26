@@ -11,3 +11,4 @@
 ✓05 atomic-boolean:Concurrency/AtomicBoolean (int + Interlocked,callback only on real change,atomic setter);4 tests
 ✓06 critical-section:Concurrency/CriticalSection (SemaphoreSlim,Lock/Lock(timeout)/TryLock + LockAsync/TryLockAsync) + CriticalSectionLock struct (IsLocked);TimedLock dropped;8 tests (2 Integration with SpinWait,no Thread.Sleep:ast-grep rule)
 !gotcha::CA1849 flags synchronous Lock in async tests → take the held lock with LockAsync,keep sync calls in sync helpers/lambdas;xUnit1031 forbids Task.WaitAll in tests → await Task.WhenAll(...).WaitAsync
+✓07 cancellation-scope:Cancellation/Terminator + CancellationScope (linked CTS,CancellationTokenSource(timeout,TimeProvider),state Active|Canceled|TimedOut with parent rule first,children set with one Lock,DelayAsync on TimeProvider);FakeTimeProvider (TimeProvider.Testing 10.11.0,tests only);9 tests,no real wait;callback exceptions reach the caller (AggregateException)
