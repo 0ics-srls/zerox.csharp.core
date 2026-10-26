@@ -1,0 +1,4 @@
+[submodule ".ai-agent"]
+	path = .ai-agent
+	url = https://github.com/LadislavSopko/ai-agent.git
+	branch = feature/08-audit-coherence
