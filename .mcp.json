@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "lsai": {
+      "command": "/Users/mail0ics.it/.lsai/run",
+      "args": ["--stdio"]
+    },
+    "cvm": {
+      "command": "npx",
+      "args": ["-y", "cvm-server@latest"],
+      "env": {
+        "CVM_STORAGE_TYPE": "file",
+        "CVM_DATA_DIR": ".cvm",
+        "CVM_LOG_LEVEL": "info",
+        "CVM_SANDBOX_PATHS": "."
+      }
+    }
+  }
+}

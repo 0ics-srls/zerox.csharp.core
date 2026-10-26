@@ -1,0 +1,11 @@
+<Project>
+  <!-- Layer-1 native gate (Roslyn analyzers). `dotnet format --verify-no-changes` + build
+       enforce these. Version/dependency bans (FluentAssertions — any version, CPM Version=, Swashbuckle)
+       live in the consumer's Directory.Packages.props, not in ast-grep. -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+</Project>
