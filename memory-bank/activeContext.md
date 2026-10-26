@@ -3,7 +3,7 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [TASK]
-@state::DEVELOP (CVM run-20261026-zerox-06 from the assetforge session)
+@state::DONE ✓ (CVM run-20261026-zerox-06 4/4,verify 4/4,472 tests);waiting for the user's review
 @feature::06-port-scheduler (stage E:cyclic job scheduler + WorkingProcess;A–D ✓)
 @branch::feature/06-port-scheduler (from feature/05-port-avalonia)
 @plan::tasks/06-port-scheduler/index.md (TDDAB multi-file,4 blocks,33 red lines;notes.md = inventory + code organization)
