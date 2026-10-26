@@ -3,7 +3,7 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [TASK]
-@state::DEVELOP (CVM run-20261026-zerox-02 from the assetforge session;13/13 blocks done,final review next)
+@state::DONE stage A (CVM run-20261026-zerox-02,13/13 blocks,verify.sh 4/4,284 tests,0 warnings);next stage B 03-port-statistics
 @feature::02-port-foundations (stage A of 4:A foundations,B statistics,C messaging+editing,D Avalonia)
 @branch::feature/02-port
 @plan::tasks/02-port-foundations/index.md (TDDAB multi-file,13 blocks,117 red lines;notes.md = inventory + code organization)

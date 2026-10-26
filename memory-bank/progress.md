@@ -20,3 +20,4 @@
 ✓12 value-conversion:Text/ValueConversion.ConvertTo(object?,Type) + ConvertTo<T> (null/DBNull,instance passthrough,Nullable unwrap,enum by name|number,ChangeType invariant;framework exceptions reach the caller);9 tests (15 cases);test enum SomeOtherEnum → SomeKind (CA1711)
 !gotcha::CA2263 in tests prefers the generic overload → pass the Type through a variable when the Type overload is what is tested
 ✓13 reflection:Reflection/AttributeExtensions (GetPropertiesWith<TAttribute>,GetPropertyAttribute,GetAttributeOfPropertyType;inherited markings via GetCustomAttribute(inherit:true)) + FastProperty<TInstance,TValue> compiled with Expressions,factory FastProperty.For<,>(info,publicOnly) on a non-generic class (CA1000),ConcurrentDictionary cache per closed generic;9 tests
+✓FINAL REVIEW stage A:tools/verify.sh 4/4 ok,284 tests,0 warnings,no absolute path in src/tests
