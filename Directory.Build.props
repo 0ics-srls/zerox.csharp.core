@@ -21,7 +21,7 @@
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <_BuildNumber>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)version.build').Trim())</_BuildNumber>
     <Version>1.0.$(_BuildNumber)</Version>
-    <Company>0ics s.r.l.s.</Company>
+    <Company>0ics srl</Company>
     <Product>zerox.csharp.core</Product>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
