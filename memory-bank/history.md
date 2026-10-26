@@ -26,3 +26,6 @@
 ✓stage B on feature/03-port-statistics (CVM run-20261026-zerox-03,8/8 blocks,verify.sh 4/4,370 tests):Interval<T> + CircularBuffer<T> + KeyComparer,ISeriesKeys (TimeKeys monotonic,IndexKeys),ISeries/IValueSeries/SeriesUpdate,DataSeries<TKey,TValue>,ArraySeries + CounterWidening,CyclicSeries (MinMean/MaxMean),SeriesAggregator + SeriesGroup,[Aggregable] + IAggregableSource + AggregableSources,basic RemoteDataProvider (channel + PeriodicTimer)
 !fixed+pinned::pooled interval in lazy view,integer rate,first rate vs default key,keys going back,caller array stored,stale channel rate,check-then-add register,id index losing series
 !gotchas::CA1716 (VB keywords) → NextKey(),Distance(earlier,later);CA1822 on throwing test getters
+
+[2026-10-26 03/04/05 stages B,C,D ✓]
+✓B statistics (370 tests),C notification+validation+edit copy+messaging (402),D Avalonia UI base (439):see each task's notes.md;removed the dependency locks and structural guard tests nobody decided (user)
