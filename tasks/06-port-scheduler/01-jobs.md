@@ -258,11 +258,13 @@ Files: `src/Zerox.Core/Scheduling/JobQueue.cs`; tests `tests/Zerox.Core.Tests/Sc
 ### Implementation
 
 ```csharp
+using System.Diagnostics.CodeAnalysis;
 using Zerox.Core.Collections;
 
 namespace Zerox.Core.Scheduling;
 
 // A ring of jobs (a queue is a job too): each execution runs the current job and moves on.
+[SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "The name of the scheduler's queues in the old code; it is a ring of jobs, not a Queue<T>.")]
 public sealed class JobQueue : JobBase
 {
     private readonly Lock _lock = new();
