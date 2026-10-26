@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Zerox.Core.Text;
 
-// The JSON setup of the whole library: names as in C#, enums as member names.
+// The JSON setup of the whole library: names as in C#, enums as member names, public fields included.
 public static class JsonDefaults
 {
     public static JsonSerializerOptions Options { get; } = Create();
@@ -20,7 +20,7 @@ public static class JsonDefaults
 
     private static JsonSerializerOptions Create()
     {
-        var options = new JsonSerializerOptions { PropertyNamingPolicy = null };
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = null, IncludeFields = true };
         options.Converters.Add(new JsonStringEnumConverter());
         options.MakeReadOnly(populateMissingResolver: true);
         return options;

@@ -12,6 +12,12 @@ public sealed class JsonDefaultsTests
 
     public sealed record Sample(string Name, SampleKind Kind, int? Count);
 
+    internal sealed class FieldSample
+    {
+        public string Name = "";
+        public int Count;
+    }
+
     [Fact]
     public void Should_WriteNamesAsTheyAre_WhenSerializing()
         => new Sample("a", SampleKind.Second, null).ToJson().Should().Be("""{"Name":"a","Kind":"Second","Count":null}""");
@@ -30,5 +36,16 @@ public sealed class JsonDefaultsTests
         stream.Position = 0;
 
         (await stream.FromJsonAsync<Sample>(TestContext.Current.CancellationToken)).Should().Be(sample);
+    }
+
+    [Fact]
+    public void Should_WriteAndReadPublicFields_WhenUsingTheJsonDefaults()
+    {
+        var json = new FieldSample { Name = "a", Count = 3 }.ToJson();
+        var back = json.FromJson<FieldSample>();
+
+        json.Should().Be("""{"Name":"a","Count":3}""");
+        back!.Name.Should().Be("a");
+        back.Count.Should().Be(3);
     }
 }
