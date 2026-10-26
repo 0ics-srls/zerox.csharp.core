@@ -3,14 +3,13 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [TASK]
-@state::DONE 01-scaffold (CVM run-20261026-zerox-01,3/3 blocks,verify.sh green,11 tests);waiting for the user's review,then task 02-port
-@feature::01-scaffold
-@branch::main (new repository,first task)
-@goal::solution skeleton,build + test foundations,headless UI test session,verify script,CLAUDE.md + README;no ported code yet
-@done::3/3 blocks (01 skeleton,02 headless session,03 verify + docs);final review pending
-@plan::tasks/01-scaffold/plan.md (TDDAB,3 blocks)
+@state::DEVELOP (CVM run-20261026-zerox-02 from the assetforge session)
+@feature::02-port-foundations (stage A of 4:A foundations,B statistics,C messaging+editing,D Avalonia)
+@branch::feature/02-port
+@plan::tasks/02-port-foundations/index.md (TDDAB multi-file,13 blocks,117 red lines;notes.md = inventory + code organization)
+@source::old code read-only at ../../tmp/zerox (assetforge/tmp/zerox)
+@rules::ported tests keep their names (may keep xunit Assert);new tests Should_X_WhenY + AwesomeAssertions;bugs found while reading fixed + pinned by a test
 
 [NEXT]
-✓j-review-plan done (RepositoryRoot fix);!executed by the assetforge session through CVM,working in assetforge/externals/zerox.csharp.core
-?task 02-port::inventory piece by piece from assetforge/tmp/zerox (keep,fix,framework covers) → multi-file TDDAB plan (NUnit tests → xunit RED,then port + clean);order Collections+Async → Statistics → Reflection/declarative → Messaging → extensions → Avalonia → Dnf
-?remote::github repo created by the user;then assetforge adds externals/zerox.csharp.core as submodule
+?stage B 03-port-statistics,C 04-port-messaging-editing,D 05-port-avalonia (each its own notes + plan + review + CVM)
+?remote::github repo created by the user;then assetforge commits externals/zerox.csharp.core
