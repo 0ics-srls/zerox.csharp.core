@@ -644,7 +644,7 @@ public sealed class ArraySeries<TKey, TValue> : ISeries
 `src/Zerox.Core/Statistics/CounterWidening.cs`:
 
 ```csharp
-using System.Numerics;
+using System.Collections.Immutable;
 
 namespace Zerox.Core.Statistics;
 
@@ -680,7 +680,7 @@ public static class CounterWidening
         series.Add(row);
     }
 
-    private static System.Collections.Immutable.ImmutableArray<long> LastOf<TKey>(ArraySeries<TKey, long> series, int length)
+    private static ImmutableArray<long> LastOf<TKey>(ArraySeries<TKey, long> series, int length)
         where TKey : struct, IComparable<TKey>
     {
         if (length != series.Width)
