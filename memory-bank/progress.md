@@ -9,3 +9,5 @@
 ✓03 bit-mask:Collections/BitMask (ulong words,PopCount,GetSetBits via TrailingZeroCount,|/& + BitwiseOr/BitwiseAnd,value equality);fixed old == mutating operands + wrong mask,ArgumentOutOfRange,different sizes → ArgumentException;9 tests
 ✓04 circular-linked-list:Collections/CircularLinkedList<T> (round-robin set,O(1) index,private Node,Add = TryAdd or throw,Remove returns bool,int Count);7 tests (5 ported)
 ✓05 atomic-boolean:Concurrency/AtomicBoolean (int + Interlocked,callback only on real change,atomic setter);4 tests
+✓06 critical-section:Concurrency/CriticalSection (SemaphoreSlim,Lock/Lock(timeout)/TryLock + LockAsync/TryLockAsync) + CriticalSectionLock struct (IsLocked);TimedLock dropped;8 tests (2 Integration with SpinWait,no Thread.Sleep:ast-grep rule)
+!gotcha::CA1849 flags synchronous Lock in async tests → take the held lock with LockAsync,keep sync calls in sync helpers/lambdas;xUnit1031 forbids Task.WaitAll in tests → await Task.WhenAll(...).WaitAsync
