@@ -12,6 +12,7 @@ dotnet_diagnostic.CA2007.severity = error   # ConfigureAwait / sync-over-async f
 dotnet_diagnostic.CS8618.severity = error   # non-nullable member uninitialized (no null!)
 dotnet_diagnostic.CA1849.severity = error   # call async methods when in an async method
 dotnet_diagnostic.IDE0005.severity = error   # unnecessary usings
+dotnet_diagnostic.CA1716.severity = none    # VB keywords as member names (Next, Resume, To): no VB consumer
 # Test method naming from csharp-senior_10.md: Should_<Outcome>_When<Condition>
 dotnet_naming_style.should_when.capitalization = pascal_case
 
