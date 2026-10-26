@@ -4,8 +4,8 @@
 <mission>
 ## Project
 
-`zerox.csharp.core` is a new C# library repository at `/Users/mail0ics.it/dev/zerox.csharp.core`
-(branch `main`, no remote yet: never push). It will hold the reusable core of the old Zerox code,
+`zerox.csharp.core` is a new C# library repository at `/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core`
+(branch `main`; it is a git submodule of assetforge, checked out at `externals/zerox.csharp.core`; its `origin` is the local repository `/Users/mail0ics.it/dev/zerox.csharp.core`: never push). Every path and command in this plan is relative to the zerox repository root, never to assetforge; run commands from `/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core` and commit inside that repository, not in assetforge. It will hold the reusable core of the old Zerox code,
 rebuilt clean; this plan builds ONLY the skeleton. No capability of the old code is ported here.
 
 Three production projects and one test project each:
@@ -77,7 +77,7 @@ Three production projects and one test project each:
 ## TDDAB-1: Create the Solution Skeleton with Its Build Foundations
 
 <intro>
-Creates the whole build skeleton of `/Users/mail0ics.it/dev/zerox.csharp.core`: `global.json`,
+Creates the whole build skeleton of `/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core`: `global.json`,
 `version.build`, the completed `Directory.Build.props`, `Directory.Build.targets`,
 `Directory.Packages.props`, `.editorconfig` additions, `.gitignore` additions,
 `zerox.csharp.core.slnx`, the three production projects (empty), the three test projects and the
@@ -106,7 +106,7 @@ test).
 
 ### Implementation
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/global.json`
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/global.json`
 ```json
 {
   "sdk": { "version": "10.0.400", "rollForward": "latestFeature" },
@@ -114,12 +114,12 @@ test).
 }
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/version.build`
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/version.build`
 ```
 1
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/Directory.Build.props` (keep the four existing lint properties, add the rest)
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/Directory.Build.props` (keep the four existing lint properties, add the rest)
 ```xml
 <Project>
   <PropertyGroup>
@@ -150,7 +150,7 @@ test).
 </Project>
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/Directory.Build.targets`
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/Directory.Build.targets`
 ```xml
 <Project>
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
@@ -171,7 +171,7 @@ test).
 </Project>
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/Directory.Packages.props`
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/Directory.Packages.props`
 ```xml
 <Project>
   <PropertyGroup>
@@ -187,7 +187,7 @@ test).
 </Project>
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/.editorconfig` — keep the template lines, append:
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/.editorconfig` — keep the template lines, append:
 ```ini
 [*]
 charset = utf-8
@@ -218,7 +218,7 @@ indent_size = 2
 ```
 (`root = true` stays the first line of the file; the `[*]` section goes right after it.)
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/.gitignore` — append:
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/.gitignore` — append:
 ```
 artifacts/
 TestResults/
@@ -228,7 +228,7 @@ TestResults/
 .DS_Store
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/zerox.csharp.core.slnx`
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/zerox.csharp.core.slnx`
 ```xml
 <Solution>
   <Folder Name="/Solution Items/">
@@ -296,7 +296,7 @@ Test projects (runner, assertions and the shared source come from `Directory.Bui
 </Project>
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/tests/Shared/RepositoryRoot.cs` (same shape as assetforge `tests/Assetforge.Test.Common/RepositoryRoot.cs`, which this repository cannot reference)
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Shared/RepositoryRoot.cs` (same shape as assetforge `tests/Assetforge.Test.Common/RepositoryRoot.cs`, which this repository cannot reference)
 ```csharp
 namespace Zerox.Tests.Shared;
 
@@ -323,7 +323,7 @@ A missing solution file is a broken checkout, not an expected case: the exceptio
 
 The headless session's `Dispatch` returns the task of the dispatched body; whether it hands back the body's exception unchanged is pinned by the RED test of block 02, not assumed.
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/tests/Zerox.Core.Tests/AssemblyTests.cs` (the Dnf and Avalonia test projects get the same shape for their own assembly; `RepositoryRootTests` lives in `Zerox.Core.Tests`)
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Zerox.Core.Tests/AssemblyTests.cs` (the Dnf and Avalonia test projects get the same shape for their own assembly; `RepositoryRootTests` lives in `Zerox.Core.Tests`)
 ```csharp
 using System.Reflection;
 using Zerox.Tests.Shared;
@@ -406,7 +406,7 @@ Files: `tests/Zerox.Core.Avalonia.Tests/TestApp.cs`, `tests/Zerox.Core.Avalonia.
 
 ### Implementation
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/tests/Zerox.Core.Avalonia.Tests/TestApp.cs`
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Zerox.Core.Avalonia.Tests/TestApp.cs`
 ```csharp
 using Avalonia;
 using Avalonia.Headless;
@@ -423,7 +423,7 @@ public static class TestApp
 }
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/tests/Zerox.Core.Avalonia.Tests/HeadlessUi.cs`
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Zerox.Core.Avalonia.Tests/HeadlessUi.cs`
 ```csharp
 using Avalonia.Headless;
 
@@ -444,7 +444,7 @@ internal static class HeadlessUi
 }
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/tests/Zerox.Core.Avalonia.Tests/HeadlessUiTests.cs`
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tests/Zerox.Core.Avalonia.Tests/HeadlessUiTests.cs`
 ```csharp
 using Avalonia.Threading;
 
@@ -517,12 +517,12 @@ bank list at the end). Keep all of it; insert the project part (sections below) 
 <red>
 - test: tools/verify.sh on the clean repository prints `[1/4] build`, `[1/4] ok` … `[4/4] ok` in order and exits 0
 - test: tools/verify.sh with a probe file `src/Zerox.Core/VerifyProbe.cs` holding `internal sealed class VerifyProbe { private int _unused; }` prints `[1/4] FAILED`, never prints `[2/4]`, and exits 1 (the probe file is deleted right after the check)
-- test: tools/verify.sh run from another folder (`cd /tmp && /Users/mail0ics.it/dev/zerox.csharp.core/tools/verify.sh`) behaves as from the root and exits 0
+- test: tools/verify.sh run from another folder (`cd /tmp && /Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tools/verify.sh`) behaves as from the root and exits 0
 </red>
 
 ### Implementation
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/tools/verify.sh` (executable, `chmod +x`)
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/tools/verify.sh` (executable, `chmod +x`)
 ```bash
 #!/usr/bin/env bash
 # Every check of the repository, in order, with progress [k/4]; stops at the first that fails.
@@ -558,7 +558,7 @@ step 3 tests tests
 step 4 ast-grep astgrep
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/CLAUDE.md` — project part to insert:
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/CLAUDE.md` — project part to insert:
 ```markdown
 ## Project
 
@@ -590,7 +590,7 @@ libraries: `Zerox.Core` (no UI), `Zerox.Core.Avalonia` (UI helpers on Avalonia),
 - Everything: `tools/verify.sh` ([1/4] build, [2/4] format, [3/4] tests, [4/4] ast-grep)
 ```
 
-`/Users/mail0ics.it/dev/zerox.csharp.core/README.md`
+`/Users/mail0ics.it/dev/assetforge/externals/zerox.csharp.core/README.md`
 ```markdown
 # zerox.csharp.core
 
