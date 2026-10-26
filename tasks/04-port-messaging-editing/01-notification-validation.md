@@ -329,7 +329,7 @@ public sealed class Validator<T> : INotifyDataErrorInfo, IValidatable
 
     IEnumerable INotifyDataErrorInfo.GetErrors(string? propertyName) => GetErrors(propertyName);
 
-    private IReadOnlyList<object> ValidateChild(object? value)
+    private List<object> ValidateChild(object? value)
     {
         IEnumerable<IValidatable> children = value switch
         {
