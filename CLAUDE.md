@@ -29,6 +29,11 @@ libraries: `Zerox.Core` (no UI), `Zerox.Core.Avalonia` (UI helpers on Avalonia),
 - Enums instead of strings (in JSON the member name); System.Text.Json only (never Newtonsoft); everything async
 - Paths in the repository are relative to its root; never write a machine's absolute path
 
+## Catalog
+
+`docs/catalog.md` lists what the library offers, by need (type + file). Look there before writing a
+capability, then read the type with LSAI. A change to the public surface updates the catalog in the same commit.
+
 ## Build & Test
 
 - Build: `dotnet build zerox.csharp.core.slnx -warnaserror` (0 warnings)

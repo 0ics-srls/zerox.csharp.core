@@ -10,6 +10,16 @@
 @location::working copy = assetforge submodule externals/zerox.csharp.core (origin = local repo ~/dev/zerox.csharp.core,no GitHub remote yet,never push);.claude links recreated by hand after clone
 @ai-agent::.ai-agent submodule (branch feature/08-audit-coherence),setup.sh → .claude links;MCP lsai + cvm (.mcp.json)
 
+[CATALOG]
+@docs/catalog.md::what the library offers by need (type + file),entry point for LSAI lookups
+!rule::public surface changed → catalog updated in same commit
+
+[NOT PORTED]
+!old source copy deleted 2026-10-26 (©User:"se servirà vado a recuperare il codice") → ask the user for the old code when a stage needs it
+?charts (own stage,ScottPlot.Avalonia 5)::old Zerox.Wpf.Core/Core/Data/{ChartSeriesSource,IChartDataSourceTP (IChartDataSource*,IChartDataProvider),MixClassPalette,HistCurveSegments,DataSeriesBase (DataSeriesTag colors)} + ViewBars,View3D,ActivateForChart;Core/Wpf/Renderable/ScottPlotWrittableBitmapRenderable
+✗Zerox.Wpf.Danger::never ported (10 files:MbfWrapper photo blobs,SimulatedShootSynthesizer,MyColors,MetaTypeEnum,IElaboration,IImageWrapper,IByteBuffer/DataWithSize,NetWorkAround Windows hooks = product/Windows code;LittleEndianNumbers → BinaryPrimitives)
+✗dropped by decision::ActionsContext,Auth* commands,P80 machine code,Mongo persistor
+
 [COMMANDS]
 @build::dotnet build zerox.csharp.core.slnx -warnaserror
 @fast-tests::dotnet test --solution zerox.csharp.core.slnx -- --filter-not-trait "Category=Integration"

@@ -3,7 +3,7 @@
 # Why zerox.csharp.core exists
 
 [VISION]
-@zerox.csharp.core::reusable C# core of 0ics/Ladislav Sopko,rebuilt clean from the old Zerox.Wpf.Core + Zerox.Dnf (source copy at assetforge/tmp/zerox,never edited)
+@zerox.csharp.core::reusable C# core of 0ics/Ladislav Sopko,rebuilt clean from the old Zerox.Wpf.Core + Zerox.Dnf (source copy at assetforge/tmp/zerox deleted 2026-10-26;old code retrieved by the user on request,see techContext [NOT PORTED])
 @consumers::assetforge first (submodule externals/zerox.csharp.core,project references);any later C# project
 
 [PROBLEMS SOLVED]
