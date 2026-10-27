@@ -27,14 +27,28 @@ public sealed class Box : IEntity
     public List<Item> Items { get; set; } = [];
 }
 
+public sealed class Locked : IEntity, IHasOptimisticLock
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; } = "";
+
+    public int Version { get; set; }
+}
+
 public sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options), IDbContext
 {
     public DbSet<Item> Items => Set<Item>();
 
     public DbSet<Box> Boxes => Set<Box>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.Entity<Box>().HasIndex(b => b.Label).IsUnique();   // block 02 makes an apply fail on it
+    public DbSet<Locked> Locked => Set<Locked>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Box>().HasIndex(b => b.Label).IsUnique();   // makes an apply fail on purpose
+        modelBuilder.ApplyOptimisticLock();
+    }
 }
 
 // One Sqlite database in memory per test class: alive while the connection is open.

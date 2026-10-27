@@ -84,6 +84,7 @@ Paths are relative to `src/`.
 | Need | Type | File |
 |---|---|---|
 | An entity with its own int key | `IEntity` | `Zerox.Core/Data/IEntity.cs` |
+| An opt-in optimistic lock: `Version` as concurrency token, incremented on every save of a modified row | `IHasOptimisticLock` (+ `IRepository<T>.PinReadVersion`, `DetachAll`) | `Zerox.Core/Data/IHasOptimisticLock.cs` |
 | The port to a table: read (not tracked by default), unsaved rows, get, add, update, delete, save | `IRepository<T>` | `Zerox.Core/Data/IRepository.cs` |
 | The repository of a type decided at run time, on the same context | `IRepositoryFactory` (`For<T>`) | `Zerox.Core/Data/IRepositoryFactory.cs` |
 | One write for an operation over several repositories: saves inside are swallowed, `ApplyAsync` writes once (nested = slave) | `IUnitOfWork` (from `IRepository<T>.OpenUnitOfWork()`) | `Zerox.Core/Data/IUnitOfWork.cs` |
@@ -116,3 +117,4 @@ Paths are relative to `src/`.
 | The context the library works on (a project writes `MyContext : DbContext, IDbContext`, nothing else) | `IDbContext` | `Zerox.Db/IDbContext.cs` |
 | Register a context with the session rules, `IRepository<>` and `IRepositoryFactory` | `ServiceCollectionExtensions.AddZeroxDb<TContext>` | `Zerox.Db/ServiceCollectionExtensions.cs` |
 | Build context options by hand with the session rules (synchronous save refused) | `DbContextOptionsBuilderExtensions.UseZeroxSession` | `Zerox.Db/DbContextOptionsBuilderExtensions.cs` |
+| Mark `Version` as concurrency token on every `IHasOptimisticLock` entity (end of `OnModelCreating`) | `ModelBuilderExtensions.ApplyOptimisticLock` | `Zerox.Db/ModelBuilderExtensions.cs` |

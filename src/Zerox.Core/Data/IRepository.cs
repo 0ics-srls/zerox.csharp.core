@@ -37,4 +37,13 @@ public interface IRepository<T> where T : class, IEntity
     // Opens the exclusive mode to update or delete many rows without loading them. Refused with
     // pending changes, inside a unit of work, or while another one is open.
     Task<IMassiveOpHandler<T>> OpenMassiveAsync(CancellationToken ct = default);
+
+    // Sets the ORIGINAL Version to the one the client read, so the update compares against it and a
+    // stale client is caught. Assigning the property is not enough on a tracked entity: its original
+    // is the fresh value just read. For entities implementing IHasOptimisticLock.
+    void PinReadVersion(T entity, int version);
+
+    // Detaches EVERY tracked row of this type, so the next read goes to the database. Not only the
+    // current one: a stale tracked copy would make the re-read return the instance in memory.
+    void DetachAll();
 }
