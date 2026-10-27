@@ -126,3 +126,8 @@ Paths are relative to `src/`.
 | A request that cannot be executed, with the reason for whoever built it (the API answers 400) | `InvalidRequestException` | `Zerox.Domain/InvalidRequestException.cs` |
 | Check DevExtreme load options before running them: unknown field, operator, value type, interval → the reason and the right form | `LoadOptionsValidator.Validate<T>` | `Zerox.Domain/LoadOptionsValidator.cs` |
 | The options a client does not decide (no sync over async, grouping and projection in SQL, no negative paging) | `Search.MakeSafe` | `Zerox.Domain/Search.cs` |
+| Rows of a grid from DevExtreme load options: filter, sort, paging, total, summaries — server-side, errors as 400 | `Search.RowsAsync` → `DataSourceResult<T>` | `Zerox.Domain/Search.cs`, `DataSourceResult.cs` |
+| Keys, counts and sums per group (never rows), nested levels, date intervals | `Search.GroupsAsync` → `GroupsResult`, `GroupNode` | `Zerox.Domain/Search.cs`, `GroupsResult.cs` |
+| Only the asked columns, names through navigations, keys as the C# names | `Search.ProjectionAsync` | `Zerox.Domain/Search.cs` |
+| A `[JsonIgnore]` field never readable through load options | `Search` (reserved fields check) | `Zerox.Domain/Search.cs` |
+| The distinct values of a text column for a filter dropdown, in SQL | `DistinctTextValues` (`IsTextColumn<T>`, `ValuesAsync`) | `Zerox.Domain/DistinctTextValues.cs` |

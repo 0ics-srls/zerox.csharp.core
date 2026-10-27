@@ -87,6 +87,8 @@ public sealed class TestDb : IAsyncDisposable
     {
     }
 
+    public SqliteConnection Connection => _connection;
+
     public static async Task<TestDb> CreateAsync()
     {
         var db = new TestDb();
