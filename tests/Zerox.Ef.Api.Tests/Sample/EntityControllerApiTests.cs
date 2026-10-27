@@ -165,6 +165,15 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         body.GetProperty("Code").GetString().Should().Be("InvalidRequest");
     }
 
+    [Fact]
+    public async Task Should_Answer400_WhenValuesNamesAReservedField()
+    {
+        var (status, body) = await SendAsync(HttpMethod.Get, "api/Orders/values/InternalNote");
+
+        status.Should().Be(HttpStatusCode.BadRequest);
+        body.GetProperty("Message").GetString().Should().NotContain("internal\"");
+    }
+
     // --- CRUD ---
 
     [Fact]
@@ -204,6 +213,29 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         var saved = await check.Customers.SingleAsync(c => c.Id == id, Ct);
         saved.Name.Should().Be("Acme Ltd");
         saved.Version.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Should_KeepTheReservedFields_WhenPut()
+    {
+        var (status, _) = await SendAsync(HttpMethod.Put, "api/Orders/1",
+            """{"Id":1,"CustomerId":2,"Date":"2026-01-02","Amount":15,"Status":"Open"}""");
+
+        status.Should().Be(HttpStatusCode.OK);
+        await using var check = App.NewContext();
+        var saved = await check.Orders.SingleAsync(o => o.Id == 1, Ct);
+        saved.Amount.Should().Be(15);
+        saved.InternalNote.Should().Be("internal");
+    }
+
+    [Theory]
+    [InlineData("api/Orders/999", """{"Id":999,"CustomerId":1,"Date":"2026-01-02","Amount":1,"Status":"Open"}""")]
+    [InlineData("api/Customers/999", """{"Id":999,"Name":"x","City":"y","Version":0}""")]
+    public async Task Should_Answer404_WhenPutAMissingId(string url, string json)
+    {
+        var (status, _) = await SendAsync(HttpMethod.Put, url, json);
+
+        status.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

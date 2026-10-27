@@ -10,14 +10,15 @@ public static class DistinctTextValues
     // Whether the name is really a text column of the entity. The name usually comes from a URL: it is
     // checked against the real properties before anything is built on it. The EXACT name (the names
     // are the contract); a [NotMapped] property is not a column, and asking it would make the query
-    // fail instead of answering "does not exist".
+    // fail instead of answering "does not exist"; a reserved field is never listed.
     public static bool IsTextColumn<T>(string column)
     {
         ArgumentNullException.ThrowIfNull(column);
         var property = typeof(T).GetProperty(column, BindingFlags.Public | BindingFlags.Instance);
         return property is not null
             && property.PropertyType == typeof(string)
-            && property.GetCustomAttribute<NotMappedAttribute>() is null;
+            && property.GetCustomAttribute<NotMappedAttribute>() is null
+            && !EntityPaths.IsReserved(property);
     }
 
     // Ordered, without repetitions and without empty values (an empty choice would filter on "" and

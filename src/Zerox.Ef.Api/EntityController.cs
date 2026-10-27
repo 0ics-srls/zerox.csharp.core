@@ -35,7 +35,7 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
     public virtual async Task<ActionResult<IReadOnlyList<string>>> Values(string column, CancellationToken ct)
     {
         if (!DistinctTextValues.IsTextColumn<T>(column))
-            throw new InvalidRequestException($"'{column}' is not a text column of {typeof(T).Name}.");
+            throw new InvalidRequestException($"'{column}' is not a readable text column of {typeof(T).Name}.");
         return Ok(await DistinctTextValues.ValuesAsync(Repository.Query(), column, ct).ConfigureAwait(false));
     }
 
@@ -52,16 +52,23 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
     }
 
-    // A stale Version in the body makes the save fail: the error middleware answers 409.
+    // The stored row takes the editable fields of the body (never the reserved ones, which the client
+    // never sees, nor the navigations), so only what changed is written. A missing row is a 404. A stale
+    // Version in the body makes the save fail: the error middleware answers 409.
     [HttpPut("{id:int}")]
     public virtual async Task<ActionResult<T>> Update(int id, [FromBody] T entity, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(entity);
         if (id != entity.Id)
             return BadRequest(new ApiError(ApiErrorCode.InvalidRequest, "The id in the route and in the body differ."));
-        Repository.Update(entity);
+        var stored = await Repository.GetByIdAsync(id, ct).ConfigureAwait(false);
+        if (stored is null)
+            return NotFound();
+        EntityFields.CopyEditable(entity, stored);
+        if (entity is IHasOptimisticLock sent)
+            Repository.PinReadVersion(stored, sent.Version);
         await Repository.SaveChangesAsync(ct).ConfigureAwait(false);
-        return Ok(entity);
+        return Ok(stored);
     }
 
     [HttpDelete("{id:int}")]

@@ -47,6 +47,12 @@ public sealed class DistinctTextValuesTests : IAsyncLifetime
     }
 
     [Fact]
+    public void Should_RefuseAReservedColumn_WhenItIsText()
+    {
+        DistinctTextValues.IsTextColumn<Item>("Secret").Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Should_NotLoadTheRows_WhenDistinctValuesAreAsked()
     {
         var commands = new CommandCapture();
