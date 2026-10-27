@@ -137,6 +137,7 @@ Paths are relative to `src/`.
 
 | Need | Type | File |
 |---|---|---|
+| The controller of an entity: DevExtreme query/groups/projection, distinct values, CRUD — no `[Authorize]` (the project adds it); a project writes one line per entity | `EntityController<T>` | `Zerox.Api/EntityController.cs` |
 | Every error as one JSON body with a code: 400 invalid request (with the reason), 409 optimistic-lock conflict, 500 otherwise | `ApplicationBuilderExtensions.UseZeroxErrorHandling`, `ApiError`, `ApiErrorCode` | `Zerox.Api/ApplicationBuilderExtensions.cs`, `ApiError.cs`, `ErrorHandlingMiddleware.cs` |
 | JSON "as is" (no camelCase), enums as names, days as yyyy-MM-dd — controllers, minimal APIs, OpenAPI alike | `ZeroxJson.AddZeroxJson`, `ZeroxJson.AddConverters` | `Zerox.Api/ZeroxJson.cs` |
 | A day as yyyy-MM-dd, nullable too | `DateOnlyJsonConverter`, `NullableDateOnlyJsonConverter` | `Zerox.Api/DateOnlyJsonConverter.cs` |
