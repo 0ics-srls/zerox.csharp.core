@@ -79,17 +79,6 @@ Paths are relative to `src/`.
 | Properties marked by an attribute, an attribute of a property | `AttributeExtensions` | `Zerox.Core/Reflection/AttributeExtensions.cs` |
 | Fast get/set of a property through compiled delegates | `FastProperty<TInstance,TValue>`, `FastProperty.For` | `Zerox.Core/Reflection/FastProperty.cs` |
 
-### Data contracts (no EF type: what an application's own layers reference)
-
-| Need | Type | File |
-|---|---|---|
-| An entity with its own int key | `IEntity` | `Zerox.Core/Data/IEntity.cs` |
-| An opt-in optimistic lock: `Version` as concurrency token, incremented on every save of a modified row | `IHasOptimisticLock` (+ `IRepository<T>.PinReadVersion`, `DetachAll`) | `Zerox.Core/Data/IHasOptimisticLock.cs` |
-| The port to a table: read (not tracked by default), unsaved rows, get, add, update, delete, save | `IRepository<T>` | `Zerox.Core/Data/IRepository.cs` |
-| The repository of a type decided at run time, on the same context | `IRepositoryFactory` (`For<T>`) | `Zerox.Core/Data/IRepositoryFactory.cs` |
-| One write for an operation over several repositories: saves inside are swallowed, `ApplyAsync` writes once (nested = slave) | `IUnitOfWork` (from `IRepository<T>.OpenUnitOfWork()`) | `Zerox.Core/Data/IUnitOfWork.cs` |
-| Update or delete many rows without loading them, exclusive, in its own transaction (no commit = rollback) | `IMassiveOpHandler<T>` (from `IRepository<T>.OpenMassiveAsync()`), `IFieldsToSet<T>` | `Zerox.Core/Data/IMassiveOpHandler.cs`, `IFieldsToSet.cs` |
-
 ## Zerox.Core.Avalonia
 
 | Need | Type | File |
@@ -110,35 +99,48 @@ Paths are relative to `src/`.
 | Disjunctive normal form, minimized | `DnfConverter`, `DnfResult`, `DnfTerm` | `Zerox.Dnf/DnfConverter.cs` |
 | Rules to bytes and back | `RuleSerializer`, `IRuleSerializer` | `Zerox.Dnf/RuleCompiler.cs` |
 
-## Zerox.Db
+## Zerox.Ef.Core
+
+The contracts of the database foundation, no EF type in them: what an application's own layers reference.
 
 | Need | Type | File |
 |---|---|---|
-| The context the library works on (a project writes `MyContext : DbContext, IDbContext`, nothing else) | `IDbContext` | `Zerox.Db/IDbContext.cs` |
-| Register a context with the session rules, `IRepository<>` and `IRepositoryFactory` | `ServiceCollectionExtensions.AddZeroxDb<TContext>` | `Zerox.Db/ServiceCollectionExtensions.cs` |
-| Build context options by hand with the session rules (synchronous save refused) | `DbContextOptionsBuilderExtensions.UseZeroxSession` | `Zerox.Db/DbContextOptionsBuilderExtensions.cs` |
-| Mark `Version` as concurrency token on every `IHasOptimisticLock` entity (end of `OnModelCreating`) | `ModelBuilderExtensions.ApplyOptimisticLock` | `Zerox.Db/ModelBuilderExtensions.cs` |
+| An entity with its own int key | `IEntity` | `Zerox.Ef.Core/IEntity.cs` |
+| An opt-in optimistic lock: `Version` as concurrency token, incremented on every save of a modified row | `IHasOptimisticLock` (+ `IRepository<T>.PinReadVersion`, `DetachAll`) | `Zerox.Ef.Core/IHasOptimisticLock.cs` |
+| The port to a table: read (not tracked by default), unsaved rows, get, add, update, delete, save | `IRepository<T>` | `Zerox.Ef.Core/IRepository.cs` |
+| The repository of a type decided at run time, on the same context | `IRepositoryFactory` (`For<T>`) | `Zerox.Ef.Core/IRepositoryFactory.cs` |
+| One write for an operation over several repositories: saves inside are swallowed, `ApplyAsync` writes once (nested = slave) | `IUnitOfWork` (from `IRepository<T>.OpenUnitOfWork()`) | `Zerox.Ef.Core/IUnitOfWork.cs` |
+| Update or delete many rows without loading them, exclusive, in its own transaction (no commit = rollback) | `IMassiveOpHandler<T>` (from `IRepository<T>.OpenMassiveAsync()`), `IFieldsToSet<T>` | `Zerox.Ef.Core/IMassiveOpHandler.cs`, `Zerox.Ef.Core/IFieldsToSet.cs` |
 
-## Zerox.Domain
-
-| Need | Type | File |
-|---|---|---|
-| A request that cannot be executed, with the reason for whoever built it (the API answers 400) | `InvalidRequestException` | `Zerox.Domain/InvalidRequestException.cs` |
-| Check DevExtreme load options before running them: unknown field, operator, value type, interval → the reason and the right form | `LoadOptionsValidator.Validate<T>` | `Zerox.Domain/LoadOptionsValidator.cs` |
-| The options a client does not decide (no sync over async, grouping and projection in SQL, no negative paging) | `Search.MakeSafe` | `Zerox.Domain/Search.cs` |
-| Rows of a grid from DevExtreme load options: filter, sort, paging, total, summaries — server-side, errors as 400 | `Search.RowsAsync` → `DataSourceResult<T>` | `Zerox.Domain/Search.cs`, `DataSourceResult.cs` |
-| Keys, counts and sums per group (never rows), nested levels, date intervals | `Search.GroupsAsync` → `GroupsResult`, `GroupNode` | `Zerox.Domain/Search.cs`, `GroupsResult.cs` |
-| Only the asked columns, names through navigations, keys as the C# names | `Search.ProjectionAsync` | `Zerox.Domain/Search.cs` |
-| A `[JsonIgnore]` field never readable through load options | `Search` (reserved fields check) | `Zerox.Domain/Search.cs` |
-| The distinct values of a text column for a filter dropdown, in SQL | `DistinctTextValues` (`IsTextColumn<T>`, `ValuesAsync`) | `Zerox.Domain/DistinctTextValues.cs` |
-| A single-field action that wins even if somebody saved in between: re-read and re-apply on conflict, stale client caught | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Domain/LastWriterWins.cs` |
-
-## Zerox.Api
+## Zerox.Ef.Db
 
 | Need | Type | File |
 |---|---|---|
-| The controller of an entity: DevExtreme query/groups/projection, distinct values, CRUD — no `[Authorize]` (the project adds it); a project writes one line per entity | `EntityController<T>` | `Zerox.Api/EntityController.cs` |
-| Every error as one JSON body with a code: 400 invalid request (with the reason), 409 optimistic-lock conflict, 500 otherwise | `ApplicationBuilderExtensions.UseZeroxErrorHandling`, `ApiError`, `ApiErrorCode` | `Zerox.Api/ApplicationBuilderExtensions.cs`, `ApiError.cs`, `ErrorHandlingMiddleware.cs` |
-| JSON "as is" (no camelCase), enums as names, days as yyyy-MM-dd — controllers, minimal APIs, OpenAPI alike | `ZeroxJson.AddZeroxJson`, `ZeroxJson.AddConverters` | `Zerox.Api/ZeroxJson.cs` |
-| A day as yyyy-MM-dd, nullable too | `DateOnlyJsonConverter`, `NullableDateOnlyJsonConverter` | `Zerox.Api/DateOnlyJsonConverter.cs` |
-| The complete example of an application on the foundation (Core → Db → Domain → Api), tested from the repository to HTTP | `SampleApp`, `CustomerMerge`, `CustomersController`, `OrdersController` | `../tests/Zerox.Api.Tests/Sample/` |
+| The context the library works on (a project writes `MyContext : DbContext, IDbContext`, nothing else) | `IDbContext` | `Zerox.Ef.Db/IDbContext.cs` |
+| Register a context with the session rules, `IRepository<>` and `IRepositoryFactory` | `ServiceCollectionExtensions.AddZeroxDb<TContext>` | `Zerox.Ef.Db/ServiceCollectionExtensions.cs` |
+| Build context options by hand with the session rules (synchronous save refused) | `DbContextOptionsBuilderExtensions.UseZeroxSession` | `Zerox.Ef.Db/DbContextOptionsBuilderExtensions.cs` |
+| Mark `Version` as concurrency token on every `IHasOptimisticLock` entity (end of `OnModelCreating`) | `ModelBuilderExtensions.ApplyOptimisticLock` | `Zerox.Ef.Db/ModelBuilderExtensions.cs` |
+
+## Zerox.Ef.Domain
+
+| Need | Type | File |
+|---|---|---|
+| A request that cannot be executed, with the reason for whoever built it (the API answers 400) | `InvalidRequestException` | `Zerox.Ef.Domain/InvalidRequestException.cs` |
+| Check DevExtreme load options before running them: unknown field, operator, value type, interval → the reason and the right form | `LoadOptionsValidator.Validate<T>` | `Zerox.Ef.Domain/LoadOptionsValidator.cs` |
+| The options a client does not decide (no sync over async, grouping and projection in SQL, no negative paging) | `Search.MakeSafe` | `Zerox.Ef.Domain/Search.cs` |
+| Rows of a grid from DevExtreme load options: filter, sort, paging, total, summaries — server-side, errors as 400 | `Search.RowsAsync` → `DataSourceResult<T>` | `Zerox.Ef.Domain/Search.cs`, `DataSourceResult.cs` |
+| Keys, counts and sums per group (never rows), nested levels, date intervals | `Search.GroupsAsync` → `GroupsResult`, `GroupNode` | `Zerox.Ef.Domain/Search.cs`, `GroupsResult.cs` |
+| Only the asked columns, names through navigations, keys as the C# names | `Search.ProjectionAsync` | `Zerox.Ef.Domain/Search.cs` |
+| A `[JsonIgnore]` field never readable through load options | `Search` (reserved fields check) | `Zerox.Ef.Domain/Search.cs` |
+| The distinct values of a text column for a filter dropdown, in SQL | `DistinctTextValues` (`IsTextColumn<T>`, `ValuesAsync`) | `Zerox.Ef.Domain/DistinctTextValues.cs` |
+| A single-field action that wins even if somebody saved in between: re-read and re-apply on conflict, stale client caught | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Ef.Domain/LastWriterWins.cs` |
+
+## Zerox.Ef.Api
+
+| Need | Type | File |
+|---|---|---|
+| The controller of an entity: DevExtreme query/groups/projection, distinct values, CRUD — no `[Authorize]` (the project adds it); a project writes one line per entity | `EntityController<T>` | `Zerox.Ef.Api/EntityController.cs` |
+| Every error as one JSON body with a code: 400 invalid request (with the reason), 409 optimistic-lock conflict, 500 otherwise | `ApplicationBuilderExtensions.UseZeroxErrorHandling`, `ApiError`, `ApiErrorCode` | `Zerox.Ef.Api/ApplicationBuilderExtensions.cs`, `ApiError.cs`, `ErrorHandlingMiddleware.cs` |
+| JSON "as is" (no camelCase), enums as names, days as yyyy-MM-dd — controllers, minimal APIs, OpenAPI alike | `ZeroxJson.AddZeroxJson`, `ZeroxJson.AddConverters` | `Zerox.Ef.Api/ZeroxJson.cs` |
+| A day as yyyy-MM-dd, nullable too | `DateOnlyJsonConverter`, `NullableDateOnlyJsonConverter` | `Zerox.Ef.Api/DateOnlyJsonConverter.cs` |
+| The complete example of an application on the foundation (Core → Db → Domain → Api), tested from the repository to HTTP | `SampleApp`, `CustomerMerge`, `CustomersController`, `OrdersController` | `../tests/Zerox.Ef.Api.Tests/Sample/` |

@@ -1,5 +1,10 @@
 # 07 — port the DB → API foundation
 
+> After execution (©User 2026-10-27) the four libraries were renamed to the `Zerox.Ef` family:
+> `Zerox.Core.Data` → `Zerox.Ef.Core` (own project, no dependency), `Zerox.Db` → `Zerox.Ef.Db`,
+> `Zerox.Domain` → `Zerox.Ef.Domain`, `Zerox.Api` → `Zerox.Ef.Api`, tests `tests/Zerox.Ef.*.Tests`. The plan
+> below keeps the names it was executed with.
+
 ## Request
 
 ©User 2026-10-27: build into zerox.csharp.core the foundation every project with a database can build

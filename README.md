@@ -4,20 +4,22 @@ The reusable C# core of 0ics.
 
 | Project | What it holds | Depends on |
 |---|---|---|
-| `Zerox.Core` | concurrency, cancellation, collections, realtime statistics, messaging, reflection, extensions, data contracts (entity, repository) | the framework |
+| `Zerox.Core` | concurrency, cancellation, collections, realtime statistics, messaging, reflection, extensions | the framework |
 | `Zerox.Core.Avalonia` | throttled property notifications, async commands | `Zerox.Core`, Avalonia 12.1.4 |
 | `Zerox.Dnf` | boolean rule compiler (expression → disjunctive normal form → masks) | nothing |
-| `Zerox.Db` | the database foundation on EF Core: `IDbContext`, repositories, session rules on save | `Zerox.Core`, EF Core Relational 10 |
-| `Zerox.Domain` | the DevExtreme search over an `IQueryable`: rows, groups, projection, validator, distinct values, last writer wins | `Zerox.Db`, DevExtreme.AspNet.Data 5.1 |
-| `Zerox.Api` | ASP.NET Core: `EntityController<T>`, error middleware (400/409/500), JSON as is | `Zerox.Domain`, ASP.NET Core |
+| `Zerox.Ef.Core` | the contracts of the database foundation: entity, repository, unit of work, massive operation, optimistic lock | nothing |
+| `Zerox.Ef.Db` | the database foundation on EF Core: `IDbContext`, repositories, session rules on save | `Zerox.Ef.Core`, EF Core Relational 10 |
+| `Zerox.Ef.Domain` | the DevExtreme search over an `IQueryable`: rows, groups, projection, validator, distinct values, last writer wins | `Zerox.Ef.Db`, DevExtreme.AspNet.Data 5.1 |
+| `Zerox.Ef.Api` | ASP.NET Core: `EntityController<T>`, error middleware (400/409/500), JSON as is | `Zerox.Ef.Domain`, ASP.NET Core |
 
 What each project offers, by need: [docs/catalog.md](docs/catalog.md).
 
 ## Building on the database foundation
 
-`Zerox.Core` holds the contracts, `Zerox.Db` the EF Core side, `Zerox.Domain` the search and
-`Zerox.Api` the controller: an application takes from each its piece. The complete example, tested
-from the repository to HTTP, is [`tests/Zerox.Api.Tests/Sample`](tests/Zerox.Api.Tests/Sample)
+The `Zerox.Ef` family: `Zerox.Ef.Core` holds the contracts, `Zerox.Ef.Db` the EF Core side,
+`Zerox.Ef.Domain` the search and `Zerox.Ef.Api` the controller: an application takes from each its
+piece. The complete example, tested from the repository to HTTP, is
+[`tests/Zerox.Ef.Api.Tests/Sample`](tests/Zerox.Ef.Api.Tests/Sample)
 (`Core` the app's own contracts, `Db` entities and context, `Domain` services, `Api` controllers and host).
 
 1. Entities implement `IEntity` (and `IHasOptimisticLock` for the opt-in lock):

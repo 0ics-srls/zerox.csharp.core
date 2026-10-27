@@ -11,16 +11,17 @@
     <Project Path="src/Zerox.Core/Zerox.Core.csproj" />
     <Project Path="src/Zerox.Core.Avalonia/Zerox.Core.Avalonia.csproj" />
     <Project Path="src/Zerox.Dnf/Zerox.Dnf.csproj" />
-    <Project Path="src/Zerox.Db/Zerox.Db.csproj" />
-    <Project Path="src/Zerox.Domain/Zerox.Domain.csproj" />
-    <Project Path="src/Zerox.Api/Zerox.Api.csproj" />
+    <Project Path="src/Zerox.Ef.Core/Zerox.Ef.Core.csproj" />
+    <Project Path="src/Zerox.Ef.Db/Zerox.Ef.Db.csproj" />
+    <Project Path="src/Zerox.Ef.Domain/Zerox.Ef.Domain.csproj" />
+    <Project Path="src/Zerox.Ef.Api/Zerox.Ef.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Zerox.Core.Tests/Zerox.Core.Tests.csproj" />
     <Project Path="tests/Zerox.Core.Avalonia.Tests/Zerox.Core.Avalonia.Tests.csproj" />
     <Project Path="tests/Zerox.Dnf.Tests/Zerox.Dnf.Tests.csproj" />
-    <Project Path="tests/Zerox.Db.Tests/Zerox.Db.Tests.csproj" />
-    <Project Path="tests/Zerox.Domain.Tests/Zerox.Domain.Tests.csproj" />
-    <Project Path="tests/Zerox.Api.Tests/Zerox.Api.Tests.csproj" />
+    <Project Path="tests/Zerox.Ef.Db.Tests/Zerox.Ef.Db.Tests.csproj" />
+    <Project Path="tests/Zerox.Ef.Domain.Tests/Zerox.Ef.Domain.Tests.csproj" />
+    <Project Path="tests/Zerox.Ef.Api.Tests/Zerox.Ef.Api.Tests.csproj" />
   </Folder>
 </Solution>

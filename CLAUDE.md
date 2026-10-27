@@ -8,14 +8,15 @@ If you want to ask questions for more spec or other info always use AskUserQuest
 
 ## Project
 
-zerox.csharp.core: the reusable C# core of 0ics, rebuilt clean from the old Zerox code. Three
-libraries: `Zerox.Core` (no UI), `Zerox.Core.Avalonia` (UI helpers on Avalonia), `Zerox.Dnf`
-(boolean rule compiler). Consumed by assetforge as a submodule.
+zerox.csharp.core: the reusable C# core of 0ics, rebuilt clean from the old Zerox code. Libraries:
+`Zerox.Core` (no UI), `Zerox.Core.Avalonia` (UI helpers on Avalonia), `Zerox.Dnf` (boolean rule
+compiler), and the `Zerox.Ef.*` family (the database → API foundation for applications). Consumed by
+assetforge as a submodule.
 
 ## Stack locks
 
 - .NET 10 (SDK 10.0.400, C# 14), solution `zerox.csharp.core.slnx`, central package management in `Directory.Packages.props` (no version in a `.csproj`)
-- Projects: `src/Zerox.Core` (no UI), `src/Zerox.Core.Avalonia` (Avalonia 12.1.4, references `Zerox.Core`), `src/Zerox.Dnf`; tests in `tests/<Project>.Tests`
+- Projects: `src/Zerox.Core` (no UI), `src/Zerox.Core.Avalonia` (Avalonia 12.1.4, references `Zerox.Core`), `src/Zerox.Dnf`, the database → API family `src/Zerox.Ef.{Core,Db,Domain,Api}` (each references the one before; `Zerox.Ef.Core` has no dependency); tests in `tests/<Project>.Tests`
 - Tests: xunit.v3.mtp-v2 4.0.2 + AwesomeAssertions 9.6.0 on the Microsoft Testing Platform; names `Should_<Outcome>_When<Condition>`; Avalonia tests through `HeadlessUi.RunAsync` (Avalonia.Headless 12.1.4 `HeadlessUnitTestSession` + plain `[Fact]`; never Avalonia.Headless.XUnit); in a test the UI thread is recognised by `SynchronizationContext.Current is AvaloniaSynchronizationContext` (headless `Dispatcher.UIThread.CheckAccess()` is true on any thread)
 - Version: `version.build` → every assembly `1.0.<n>`
 
