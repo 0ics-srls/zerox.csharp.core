@@ -86,6 +86,7 @@ Paths are relative to `src/`.
 | An entity with its own int key | `IEntity` | `Zerox.Core/Data/IEntity.cs` |
 | The port to a table: read (not tracked by default), unsaved rows, get, add, update, delete, save | `IRepository<T>` | `Zerox.Core/Data/IRepository.cs` |
 | The repository of a type decided at run time, on the same context | `IRepositoryFactory` (`For<T>`) | `Zerox.Core/Data/IRepositoryFactory.cs` |
+| One write for an operation over several repositories: saves inside are swallowed, `ApplyAsync` writes once (nested = slave) | `IUnitOfWork` (from `IRepository<T>.OpenUnitOfWork()`) | `Zerox.Core/Data/IUnitOfWork.cs` |
 
 ## Zerox.Core.Avalonia
 

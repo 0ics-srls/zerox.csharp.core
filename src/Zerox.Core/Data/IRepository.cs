@@ -26,6 +26,11 @@ public interface IRepository<T> where T : class, IEntity
 
     void DeleteRange(IEnumerable<T> entities);
 
-    // Writes. The caller does not need to know whether something above it decides when.
+    // Writes — or is swallowed, returning 0, when a unit of work is open above: then the unit of work
+    // writes. The caller does not know which, and does not need to.
     Task<int> SaveChangesAsync(CancellationToken ct = default);
+
+    // Opens the boundary for an operation that writes more than one repository. Opened while another
+    // is open, it is a slave: the outermost one writes.
+    IUnitOfWork OpenUnitOfWork();
 }

@@ -39,4 +39,6 @@ internal sealed class Repository<T> : IRepository<T> where T : class, IEntity
     public void DeleteRange(IEnumerable<T> entities) => _db.Set<T>().RemoveRange(entities);
 
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
+
+    public IUnitOfWork OpenUnitOfWork() => DbSession.Of(_db).OpenBoundary(_db);
 }
