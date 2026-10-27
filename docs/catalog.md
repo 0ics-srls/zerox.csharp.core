@@ -79,6 +79,14 @@ Paths are relative to `src/`.
 | Properties marked by an attribute, an attribute of a property | `AttributeExtensions` | `Zerox.Core/Reflection/AttributeExtensions.cs` |
 | Fast get/set of a property through compiled delegates | `FastProperty<TInstance,TValue>`, `FastProperty.For` | `Zerox.Core/Reflection/FastProperty.cs` |
 
+### Data contracts (no EF type: what an application's own layers reference)
+
+| Need | Type | File |
+|---|---|---|
+| An entity with its own int key | `IEntity` | `Zerox.Core/Data/IEntity.cs` |
+| The port to a table: read (not tracked by default), unsaved rows, get, add, update, delete, save | `IRepository<T>` | `Zerox.Core/Data/IRepository.cs` |
+| The repository of a type decided at run time, on the same context | `IRepositoryFactory` (`For<T>`) | `Zerox.Core/Data/IRepositoryFactory.cs` |
+
 ## Zerox.Core.Avalonia
 
 | Need | Type | File |
@@ -98,3 +106,11 @@ Paths are relative to `src/`.
 | Parse an expression to a tree, build one by code | `BoolExprParser`, `BoolExpr` (+ `ConstExpr`, `BitRefExpr`, `NotExpr`, `AndExpr`, `OrExpr`), `ExpressionNode` | `Zerox.Dnf/` |
 | Disjunctive normal form, minimized | `DnfConverter`, `DnfResult`, `DnfTerm` | `Zerox.Dnf/DnfConverter.cs` |
 | Rules to bytes and back | `RuleSerializer`, `IRuleSerializer` | `Zerox.Dnf/RuleCompiler.cs` |
+
+## Zerox.Db
+
+| Need | Type | File |
+|---|---|---|
+| The context the library works on (a project writes `MyContext : DbContext, IDbContext`, nothing else) | `IDbContext` | `Zerox.Db/IDbContext.cs` |
+| Register a context with the session rules, `IRepository<>` and `IRepositoryFactory` | `ServiceCollectionExtensions.AddZeroxDb<TContext>` | `Zerox.Db/ServiceCollectionExtensions.cs` |
+| Build context options by hand with the session rules (synchronous save refused) | `DbContextOptionsBuilderExtensions.UseZeroxSession` | `Zerox.Db/DbContextOptionsBuilderExtensions.cs` |

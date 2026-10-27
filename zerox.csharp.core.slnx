@@ -11,10 +11,12 @@
     <Project Path="src/Zerox.Core/Zerox.Core.csproj" />
     <Project Path="src/Zerox.Core.Avalonia/Zerox.Core.Avalonia.csproj" />
     <Project Path="src/Zerox.Dnf/Zerox.Dnf.csproj" />
+    <Project Path="src/Zerox.Db/Zerox.Db.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Zerox.Core.Tests/Zerox.Core.Tests.csproj" />
     <Project Path="tests/Zerox.Core.Avalonia.Tests/Zerox.Core.Avalonia.Tests.csproj" />
     <Project Path="tests/Zerox.Dnf.Tests/Zerox.Dnf.Tests.csproj" />
+    <Project Path="tests/Zerox.Db.Tests/Zerox.Db.Tests.csproj" />
   </Folder>
 </Solution>
