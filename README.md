@@ -8,6 +8,7 @@ The reusable C# core of 0ics.
 | `Zerox.Core.Avalonia` | throttled property notifications, async commands | `Zerox.Core`, Avalonia 12.1.4 |
 | `Zerox.Dnf` | boolean rule compiler (expression → disjunctive normal form → masks) | nothing |
 | `Zerox.Db` | the database foundation on EF Core: `IDbContext`, repositories, session rules on save | `Zerox.Core`, EF Core Relational 10 |
+| `Zerox.Domain` | the DevExtreme search over an `IQueryable`: load options validator, safe options | `Zerox.Db`, DevExtreme.AspNet.Data 5.1 |
 
 What each project offers, by need: [docs/catalog.md](docs/catalog.md).
 

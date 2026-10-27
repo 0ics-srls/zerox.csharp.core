@@ -118,3 +118,11 @@ Paths are relative to `src/`.
 | Register a context with the session rules, `IRepository<>` and `IRepositoryFactory` | `ServiceCollectionExtensions.AddZeroxDb<TContext>` | `Zerox.Db/ServiceCollectionExtensions.cs` |
 | Build context options by hand with the session rules (synchronous save refused) | `DbContextOptionsBuilderExtensions.UseZeroxSession` | `Zerox.Db/DbContextOptionsBuilderExtensions.cs` |
 | Mark `Version` as concurrency token on every `IHasOptimisticLock` entity (end of `OnModelCreating`) | `ModelBuilderExtensions.ApplyOptimisticLock` | `Zerox.Db/ModelBuilderExtensions.cs` |
+
+## Zerox.Domain
+
+| Need | Type | File |
+|---|---|---|
+| A request that cannot be executed, with the reason for whoever built it (the API answers 400) | `InvalidRequestException` | `Zerox.Domain/InvalidRequestException.cs` |
+| Check DevExtreme load options before running them: unknown field, operator, value type, interval → the reason and the right form | `LoadOptionsValidator.Validate<T>` | `Zerox.Domain/LoadOptionsValidator.cs` |
+| The options a client does not decide (no sync over async, grouping and projection in SQL, no negative paging) | `Search.MakeSafe` | `Zerox.Domain/Search.cs` |
