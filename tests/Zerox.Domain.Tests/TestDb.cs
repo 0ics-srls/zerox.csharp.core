@@ -70,11 +70,28 @@ public sealed class Sample
     public long Counter { get; set; }
 }
 
+public sealed class Memo : IEntity, IHasOptimisticLock
+{
+    public int Id { get; set; }
+
+    public string Owner { get; set; } = "";
+
+    public string Text { get; set; } = "";
+
+    public string Note { get; set; } = "";
+
+    public int Version { get; set; }
+}
+
 public sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options), IDbContext
 {
     public DbSet<Item> Items => Set<Item>();
 
     public DbSet<Box> Boxes => Set<Box>();
+
+    public DbSet<Memo> Memos => Set<Memo>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock();
 }
 
 // One Sqlite database in memory per test class: alive while the connection is open.

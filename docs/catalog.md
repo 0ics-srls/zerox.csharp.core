@@ -131,3 +131,4 @@ Paths are relative to `src/`.
 | Only the asked columns, names through navigations, keys as the C# names | `Search.ProjectionAsync` | `Zerox.Domain/Search.cs` |
 | A `[JsonIgnore]` field never readable through load options | `Search` (reserved fields check) | `Zerox.Domain/Search.cs` |
 | The distinct values of a text column for a filter dropdown, in SQL | `DistinctTextValues` (`IsTextColumn<T>`, `ValuesAsync`) | `Zerox.Domain/DistinctTextValues.cs` |
+| A single-field action that wins even if somebody saved in between: re-read and re-apply on conflict, stale client caught | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Domain/LastWriterWins.cs` |
