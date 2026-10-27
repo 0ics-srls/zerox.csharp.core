@@ -41,4 +41,7 @@ internal sealed class Repository<T> : IRepository<T> where T : class, IEntity
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
 
     public IUnitOfWork OpenUnitOfWork() => DbSession.Of(_db).OpenBoundary(_db);
+
+    public Task<IMassiveOpHandler<T>> OpenMassiveAsync(CancellationToken ct = default) =>
+        DbSession.Of(_db).OpenMassiveAsync<T>(_db, ct);
 }

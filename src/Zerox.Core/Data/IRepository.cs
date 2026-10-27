@@ -33,4 +33,8 @@ public interface IRepository<T> where T : class, IEntity
     // Opens the boundary for an operation that writes more than one repository. Opened while another
     // is open, it is a slave: the outermost one writes.
     IUnitOfWork OpenUnitOfWork();
+
+    // Opens the exclusive mode to update or delete many rows without loading them. Refused with
+    // pending changes, inside a unit of work, or while another one is open.
+    Task<IMassiveOpHandler<T>> OpenMassiveAsync(CancellationToken ct = default);
 }

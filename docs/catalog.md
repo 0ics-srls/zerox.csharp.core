@@ -87,6 +87,7 @@ Paths are relative to `src/`.
 | The port to a table: read (not tracked by default), unsaved rows, get, add, update, delete, save | `IRepository<T>` | `Zerox.Core/Data/IRepository.cs` |
 | The repository of a type decided at run time, on the same context | `IRepositoryFactory` (`For<T>`) | `Zerox.Core/Data/IRepositoryFactory.cs` |
 | One write for an operation over several repositories: saves inside are swallowed, `ApplyAsync` writes once (nested = slave) | `IUnitOfWork` (from `IRepository<T>.OpenUnitOfWork()`) | `Zerox.Core/Data/IUnitOfWork.cs` |
+| Update or delete many rows without loading them, exclusive, in its own transaction (no commit = rollback) | `IMassiveOpHandler<T>` (from `IRepository<T>.OpenMassiveAsync()`), `IFieldsToSet<T>` | `Zerox.Core/Data/IMassiveOpHandler.cs`, `IFieldsToSet.cs` |
 
 ## Zerox.Core.Avalonia
 

@@ -22,6 +22,9 @@ internal sealed class SessionInterceptor : SaveChangesInterceptor
         ArgumentNullException.ThrowIfNull(eventData);
         var session = DbSession.Of(eventData.Context!);
 
+        if (session.Massive is not null)
+            throw new InvalidOperationException("A massive operation is open: no repository can save until it is closed.");
+
         // Inside a unit of work the save is swallowed: the unit of work writes, once.
         if (session.Boundary is not null)
             return ValueTask.FromResult(InterceptionResult<int>.SuppressWithResult(0));
