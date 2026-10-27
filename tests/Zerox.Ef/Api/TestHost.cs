@@ -1,12 +1,12 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Zerox.Ef.Core;
 using Zerox.Ef.Db;
+using Zerox.Ef.Tests;
 
 namespace Zerox.Ef.Api.Tests;
 
@@ -57,15 +57,15 @@ public sealed class LogCapture : ILoggerProvider
     }
 }
 
-// A real WebApplication on TestServer with the error handling and the JSON of Zerox.Ef.Api, Sqlite in memory.
+// A real WebApplication on TestServer with the error handling and the JSON of Zerox.Ef.Api, on the test database (Sqlite in memory, or PostgreSQL).
 public sealed class TestHost : IAsyncDisposable
 {
-    private readonly SqliteConnection _connection;
+    private readonly TestDatabase _database;
     private readonly WebApplication _app;
 
-    private TestHost(SqliteConnection connection, WebApplication app, LogCapture logs)
+    private TestHost(TestDatabase database, WebApplication app, LogCapture logs)
     {
-        _connection = connection;
+        _database = database;
         _app = app;
         Logs = logs;
         Client = app.GetTestClient();
@@ -79,14 +79,13 @@ public sealed class TestHost : IAsyncDisposable
 
     public static async Task<TestHost> StartAsync(Action<WebApplication> map)
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        await connection.OpenAsync();
+        var database = await TestDatabase.OpenAsync();
         var logs = new LogCapture();
 
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders().AddProvider(logs);
-        builder.Services.AddZeroxDb<HostDbContext>(o => o.UseSqlite(connection));
+        builder.Services.AddZeroxDb<HostDbContext>(o => database.Use(o));
         builder.Services.AddControllers().AddZeroxJson();
 
         var app = builder.Build();
@@ -96,18 +95,18 @@ public sealed class TestHost : IAsyncDisposable
         await using (var scope = app.Services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<HostDbContext>().Database.EnsureCreatedAsync();
         await app.StartAsync();
-        return new TestHost(connection, app, logs);
+        return new TestHost(database, app, logs);
     }
 
     // A context of its own on the same database.
     public HostDbContext NewContext() =>
-        new(new DbContextOptionsBuilder<HostDbContext>().UseSqlite(_connection).UseZeroxSession().Options);
+        new(_database.Use(new DbContextOptionsBuilder<HostDbContext>()).UseZeroxSession().Options);
 
     public async ValueTask DisposeAsync()
     {
         Client.Dispose();
         await _app.StopAsync();
         await _app.DisposeAsync();
-        await _connection.DisposeAsync();
+        await _database.DisposeAsync();
     }
 }

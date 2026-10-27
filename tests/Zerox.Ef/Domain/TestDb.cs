@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Zerox.Ef.Core;
 using Zerox.Ef.Db;
+using Zerox.Ef.Tests;
 
 namespace Zerox.Ef.Domain.Tests;
 
@@ -94,22 +94,22 @@ public sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbC
     protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock();
 }
 
-// One Sqlite database in memory per test class: alive while the connection is open.
+// One database per test class (TestDatabase: Sqlite in memory, or PostgreSQL).
 public sealed class TestDb : IAsyncDisposable
 {
-    private readonly SqliteConnection _connection = new("DataSource=:memory:");
+    private readonly TestDatabase _database;
     private ServiceProvider? _provider;
 
-    private TestDb()
-    {
-    }
+    private TestDb(TestDatabase database) => _database = database;
 
-    public SqliteConnection Connection => _connection;
+    // The provider of this database on the options of a context a test builds by hand.
+    public DbContextOptionsBuilder<TestDbContext> Use(DbContextOptionsBuilder<TestDbContext> builder) => _database.Use(builder);
+
+    public DbContextOptionsBuilder Use(DbContextOptionsBuilder builder) => _database.Use(builder);
 
     public static async Task<TestDb> CreateAsync()
     {
-        var db = new TestDb();
-        await db._connection.OpenAsync();
+        var db = new TestDb(await TestDatabase.OpenAsync());
         await using var context = db.NewContext();
         await context.Database.EnsureCreatedAsync();
         return db;
@@ -117,13 +117,13 @@ public sealed class TestDb : IAsyncDisposable
 
     // A context of its own on the same database: to seed, and to check what is really written.
     public TestDbContext NewContext() =>
-        new(new DbContextOptionsBuilder<TestDbContext>().UseSqlite(_connection).UseZeroxSession().Options);
+        new(_database.Use(new DbContextOptionsBuilder<TestDbContext>()).UseZeroxSession().Options);
 
     // A scope of a provider built once with AddZeroxDb, as an application has it.
     public AsyncServiceScope NewScope()
     {
         _provider ??= new ServiceCollection()
-            .AddZeroxDb<TestDbContext>(o => o.UseSqlite(_connection))
+            .AddZeroxDb<TestDbContext>(o => _database.Use(o))
             .BuildServiceProvider();
         return _provider.CreateAsyncScope();
     }
@@ -132,6 +132,6 @@ public sealed class TestDb : IAsyncDisposable
     {
         if (_provider is not null)
             await _provider.DisposeAsync();
-        await _connection.DisposeAsync();
+        await _database.DisposeAsync();
     }
 }

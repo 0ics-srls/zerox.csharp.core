@@ -198,10 +198,10 @@ public sealed class RepositoryTests : IAsyncLifetime
         // The real way it happens: the context is registered by hand with options of its own before
         // AddZeroxDb (AddDbContext adds the context with TryAdd, so the hand-made one wins). Two
         // AddDbContext calls do NOT lose the session: since EF Core 9 their configurations add up.
-        var withoutSession = new DbContextOptionsBuilder<TestDbContext>().UseSqlite(Db.Connection).Options;
+        var withoutSession = Db.Use(new DbContextOptionsBuilder<TestDbContext>()).Options;
         await using var provider = new ServiceCollection()
             .AddScoped(_ => new TestDbContext(withoutSession))
-            .AddZeroxDb<TestDbContext>(o => o.UseSqlite(Db.Connection))
+            .AddZeroxDb<TestDbContext>(o => Db.Use(o))
             .BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
 
@@ -221,7 +221,7 @@ public sealed class RepositoryTests : IAsyncLifetime
         services.GetService<IRepositoryFactory>().Should().NotBeNull();
 
         // The boundary and the massive handler are handed out by a repository, never injected.
-        new ServiceCollection().AddZeroxDb<TestDbContext>(o => o.UseSqlite(Db.Connection))
+        new ServiceCollection().AddZeroxDb<TestDbContext>(o => Db.Use(o))
             .Should().NotContain(d => d.ServiceType.Name.Contains("UnitOfWork") || d.ServiceType.Name.Contains("Massive"));
     }
 

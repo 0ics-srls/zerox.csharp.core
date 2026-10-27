@@ -14,7 +14,8 @@ public sealed class SampleDbContext(DbContextOptions<SampleDbContext> options) :
     {
         // Sqlite cannot ORDER BY or SUM a decimal (EF Core: OrderByNotSupported,
         // AggregateOperationNotSupported); a real database keeps decimal.
-        modelBuilder.Entity<Order>().Property(o => o.Amount).HasConversion<double>();
+        if (Database.IsSqlite())
+            modelBuilder.Entity<Order>().Property(o => o.Amount).HasConversion<double>();
         modelBuilder.ApplyOptimisticLock();
     }
 }

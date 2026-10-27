@@ -65,5 +65,6 @@ piece. The complete example, tested from the repository to HTTP, is
     dotnet build zerox.csharp.core.slnx -warnaserror
     dotnet test --solution zerox.csharp.core.slnx
     tools/verify.sh        # every check, [k/4]
+    tools/test-postgres.sh # the Zerox.Ef tests on PostgreSQL in Docker, [k/5]
 
 Requires the .NET SDK 10.0.400 (see `global.json`).

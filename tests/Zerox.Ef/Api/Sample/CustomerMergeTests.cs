@@ -68,7 +68,7 @@ public sealed class CustomerMergeTests : IAsyncLifetime
         // Commands run only in the applying write; the orders are updated first, then the DELETE of the
         // customer fails and EF rolls back its own transaction.
         await using var provider = new ServiceCollection()
-            .AddZeroxDb<SampleDbContext>(o => o.UseSqlite(App.Connection).AddInterceptors(new FailingDelete()))
+            .AddZeroxDb<SampleDbContext>(o => App.Use(o).AddInterceptors(new FailingDelete()))
             .AddScoped<ICustomerMerge, CustomerMerge>()
             .BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();

@@ -1,44 +1,43 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Zerox.Ef.Api.Tests.Sample.Core;
 using Zerox.Ef.Api.Tests.Sample.Db;
 using Zerox.Ef.Api.Tests.Sample.Domain;
 using Zerox.Ef.Db;
+using Zerox.Ef.Tests;
 using Zerox.Ef.Domain;
 
 namespace Zerox.Ef.Api.Tests.Sample.Api;
 
-// The example application: what a project writes in its Program.cs, on TestServer with Sqlite in memory.
+// The example application: what a project writes in its Program.cs, on TestServer with the test database.
 public sealed class SampleApp : IAsyncDisposable
 {
-    private readonly SqliteConnection _connection;
+    private readonly TestDatabase _database;
     private readonly WebApplication _app;
 
-    private SampleApp(SqliteConnection connection, WebApplication app)
+    private SampleApp(TestDatabase database, WebApplication app)
     {
-        _connection = connection;
+        _database = database;
         _app = app;
         Client = app.GetTestClient();
     }
 
     public HttpClient Client { get; }
 
-    // The database connection, for a test that builds its own provider on the same database.
-    public SqliteConnection Connection => _connection;
+    // The provider of the database, for a test that builds its own provider on the same database.
+    public DbContextOptionsBuilder Use(DbContextOptionsBuilder builder) => _database.Use(builder);
 
     public IServiceProvider Services => _app.Services;
 
     public static async Task<SampleApp> StartAsync()
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        await connection.OpenAsync();
+        var database = await TestDatabase.OpenAsync();
 
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Services.AddZeroxDb<SampleDbContext>(o => o.UseSqlite(connection));
+        builder.Services.AddZeroxDb<SampleDbContext>(o => database.Use(o));
         builder.Services.AddScoped<ICustomerMerge, CustomerMerge>();
         builder.Services.AddScoped<LastWriterWins>();
         builder.Services.AddControllers().AddApplicationPart(typeof(SampleApp).Assembly).AddZeroxJson();
@@ -50,12 +49,12 @@ public sealed class SampleApp : IAsyncDisposable
         await using (var scope = app.Services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<SampleDbContext>().Database.EnsureCreatedAsync();
         await app.StartAsync();
-        return new SampleApp(connection, app);
+        return new SampleApp(database, app);
     }
 
     // A context of its own on the same database: to seed and to check what is really written.
     public SampleDbContext NewContext() =>
-        new(new DbContextOptionsBuilder<SampleDbContext>().UseSqlite(_connection).UseZeroxSession().Options);
+        new(_database.Use(new DbContextOptionsBuilder<SampleDbContext>()).UseZeroxSession().Options);
 
     // 3 customers (Acme/Rome, Bolt/Milan, Cargo/no city) and 25 orders: order i belongs to customer i % 3,
     // Amount = i * 10, Closed when i % 5 == 0, Date = 2026-01-01 + i days.
@@ -83,6 +82,6 @@ public sealed class SampleApp : IAsyncDisposable
         Client.Dispose();
         await _app.StopAsync();
         await _app.DisposeAsync();
-        await _connection.DisposeAsync();
+        await _database.DisposeAsync();
     }
 }

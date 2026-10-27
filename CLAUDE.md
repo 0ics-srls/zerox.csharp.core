@@ -44,6 +44,7 @@ capability, then read the type with LSAI. A change to the public surface updates
 - Fast tests: `dotnet test --solution zerox.csharp.core.slnx -- --filter-not-trait "Category=Integration"`
 - All tests: `dotnet test --solution zerox.csharp.core.slnx`
 - Everything: `tools/verify.sh` ([1/4] build, [2/4] format, [3/4] tests, [4/4] ast-grep)
+- Zerox.Ef on a real PostgreSQL: `tools/test-postgres.sh` (a throwaway `postgres:16-alpine` in Docker, the three Ef test projects against it through `ZEROX_EF_TEST_POSTGRES`, one database per test class); without it the Ef tests run on Sqlite in memory
 
 ## Memory Bank - Critical System
 

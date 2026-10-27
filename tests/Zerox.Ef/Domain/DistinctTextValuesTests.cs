@@ -56,8 +56,7 @@ public sealed class DistinctTextValuesTests : IAsyncLifetime
     public async Task Should_NotLoadTheRows_WhenDistinctValuesAreAsked()
     {
         var commands = new CommandCapture();
-        var options = new DbContextOptionsBuilder<TestDbContext>()
-            .UseSqlite(Db.Connection)
+        var options = Db.Use(new DbContextOptionsBuilder<TestDbContext>())
             .UseZeroxSession()
             .AddInterceptors(commands)
             .Options;
