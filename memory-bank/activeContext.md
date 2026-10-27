@@ -3,9 +3,9 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [TASK]
-@state::DONE ✓ (CVM run-20261027-zerox-07 10/10,verify.sh 4/4,all tests green);waiting for the user's review;NOT pushed;global.json lowered locally (10.0.100) and NEVER committed
+@state::DONE ✓ (CVM run-20261027-zerox-07 10/10,verify.sh 4/4,all tests green);reviewed 2026-10-27 (3 bugs fixed);pushed to origin;global.json lowered locally (10.0.100) and NEVER committed
 @feature::07-port-db-api (the DB → API foundation:context → repository → unit of work → controller,ported from Filo,read-only source `../../home/laco/Gestionale`)
-@branch::feature/07-port-db-api (local,from feature/06-port-scheduler which waits for review;never pushed)
+@branch::feature/07-port-db-api (from feature/06-port-scheduler which waits for review;pushed to origin)
 @plan::tasks/07-port-db-api/index.md (TDDAB multi-file:01-db.md blocks 01–04,02-domain.md 05–07,03-api.md 08–10;notes.md = request,code organization,inventory source→target,the example)
 
 [DECISIONS ©User 2026-10-27]
@@ -34,4 +34,6 @@
 ?with SDK 10.0.400:restore global.json (git checkout global.json) and rerun tools/verify.sh
 ?06-port-scheduler still waiting for the user's review
 ?charts (ChartSeriesSource,palettes,histogram curves) = own stage on ScottPlot.Avalonia 5 when a view needs them
-?remote::github repo created by the user;then assetforge commits externals/zerox.csharp.core
+✓remote::github.com/0ics-srls/zerox.csharp.core private (2026-10-27),every branch pushed
+✓review fixes 2026-10-27 (©User):values/{column} refuses a reserved field;PUT loads the stored row → 404 when missing,EntityFields.CopyEditable (no key,navigations,reserved fields) + PinReadVersion;EF 10.0.13 = assetforge's lock
+?to discuss with the user::ErrorHandlingMiddleware catch(Exception) → 500 vs P9;LastWriterWins versionReadByClient changes no outcome (stale client wins on the retry)

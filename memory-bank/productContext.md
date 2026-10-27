@@ -12,7 +12,7 @@
 
 [USERS]
 @the user::Ladislav Sopko,senior developer (40 years);decides design;conversation Italian,repository English
-!user rules::questions only via AskUserQuestion;commit only when asked or by the plan;never push;never delete branches;KISS,DRY,SOLID as heuristics (signal = real or very likely change);no exception hidden (P9)
+!user rules::questions only via AskUserQuestion;commit only when asked or by the plan;push to origin (GitHub 0ics-srls) so no work lives in one copy only;never delete branches;KISS,DRY,SOLID as heuristics (signal = real or very likely change);no exception hidden (P9)
 
 [SUCCESS]
 ✓criteria::every kept capability ported with its tests green on xunit v3;zero warnings;assetforge consumes it as submodule

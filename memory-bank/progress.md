@@ -16,7 +16,7 @@
 ✓layout decided:Zerox.Core/Data contracts,Zerox.Db IDbContext+EF implementation,Zerox.Domain search/validator/last writer wins,Zerox.Api controller/errors/JSON;sample with its own Core (ICustomerMerge)
 ✓01 db-repository:Zerox.Core/Data/{IEntity,IRepository<T>,IRepositoryFactory};Zerox.Db/{IDbContext,DbSession (ConditionalWeakTable),SessionInterceptor (sync save throws),UseZeroxSession (+typed overload),Repository<T> (refuses a context without the session),RepositoryFactory,AddZeroxDb};14 tests;catalog+README
 !found::EF Core 9+ AddDbContext configurations ADD UP (two AddDbContext keep the session) → the refusal test uses a context registered by hand with its own options
-!found::EF 10.0.0 pulls SQLitePCLRaw 2.1.11 (NU1903 high,audit as error) → EF packages 10.0.14
+!found::EF 10.0.0 pulls SQLitePCLRaw 2.1.11 (NU1903 high,audit as error) → EF packages 10.0.13 (= assetforge's lock,restore clean)
 !lint::ast-grep forbids SaveChanges() text and null! → test helper property instead of null!,ast-grep-ignore on the one line that proves the sync save is refused
 ✓02 db-unit-of-work:Zerox.Core/Data/IUnitOfWork + IRepository.OpenUnitOfWork;Zerox.Db/{DbSession.Boundary (root/slave,ApplyAsync clears the tracker on failure and rethrows,close without applying),UnitOfWork handle,interceptor swallows (SuppressWithResult 0) also a save called directly on the context};10 tests (24 in Zerox.Db.Tests)
 !kiss::no Applying flag:the boundary is cleared before the applying save,so the swallow rule needs Boundary only
