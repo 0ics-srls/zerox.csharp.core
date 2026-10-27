@@ -1,22 +1,10 @@
 namespace Zerox.Core.Concurrency;
 
 // Mutual exclusion that holds across await (SemaphoreSlim is not bound to a thread, unlike lock/Monitor).
+// Acquired only with await: a thread never blocks waiting for it.
 public sealed class CriticalSection : IDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
-
-    public CriticalSectionLock Lock()
-    {
-        _gate.Wait();
-        return new CriticalSectionLock(_gate);
-    }
-
-    public CriticalSectionLock Lock(TimeSpan timeout)
-        => _gate.Wait(timeout) ? new CriticalSectionLock(_gate) : throw new TimeoutException($"Critical section not acquired in {timeout}");
-
-    // A handle with IsLocked false when the section was not acquired in time.
-    public CriticalSectionLock TryLock(TimeSpan timeout)
-        => _gate.Wait(timeout) ? new CriticalSectionLock(_gate) : default;
 
     public async ValueTask<CriticalSectionLock> LockAsync(CancellationToken cancellationToken = default)
     {

@@ -54,15 +54,10 @@ public abstract class PocoProxy<T> : NotifyingObject
         return !Data.IsChanged(other.Data);
     }
 
-    public string ToJson() => JsonSerializer.Serialize(Data, JsonDefaults.Options);
-
-    // Deserializes first: a bad document leaves the data as it was.
-    public void Populate(string json)
-        => Replace(JsonSerializer.Deserialize<T>(json, JsonDefaults.Options) ?? throw new JsonException("The document holds no data"));
-
     public Task SerializeAsync(Stream stream, CancellationToken cancellationToken = default)
         => JsonSerializer.SerializeAsync(stream, Data, JsonDefaults.Options, cancellationToken);
 
+    // Deserializes first: a bad document leaves the data as it was.
     public async Task PopulateAsync(Stream stream, CancellationToken cancellationToken = default)
         => Replace(await JsonSerializer.DeserializeAsync<T>(stream, JsonDefaults.Options, cancellationToken).ConfigureAwait(false)
                    ?? throw new JsonException("The document holds no data"));

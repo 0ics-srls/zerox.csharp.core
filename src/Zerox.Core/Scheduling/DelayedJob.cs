@@ -3,10 +3,10 @@ namespace Zerox.Core.Scheduling;
 // A one-time job that does nothing until its time.
 public sealed class DelayedJob : JobBase
 {
-    private readonly Action _action;
+    private readonly Func<CancellationToken, Task> _action;
     private readonly TimeProvider _time;
 
-    public DelayedJob(string name, Action action, TimeProvider timeProvider, DateTimeOffset dueAt)
+    public DelayedJob(string name, Func<CancellationToken, Task> action, TimeProvider timeProvider, DateTimeOffset dueAt)
         : base(name, JobKind.RunOnce)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -18,11 +18,11 @@ public sealed class DelayedJob : JobBase
 
     public DateTimeOffset DueAt { get; }
 
-    protected override bool ExecuteCore()
+    protected override async Task<bool> ExecuteCoreAsync(CancellationToken cancellationToken)
     {
         if (_time.GetUtcNow() < DueAt)
             return false;
-        _action();
+        await _action(cancellationToken).ConfigureAwait(false);
         return true;
     }
 }

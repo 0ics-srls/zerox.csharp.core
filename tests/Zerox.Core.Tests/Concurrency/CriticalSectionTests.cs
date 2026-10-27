@@ -30,19 +30,19 @@ public sealed class CriticalSectionTests
     {
         using var cs = new CriticalSection();
         var counters = new Counters();
-        using var start = new ManualResetEventSlim(false);
+        var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var workers = Enumerable.Range(0, 2).Select(_ => Task.Run(() =>
+        var workers = Enumerable.Range(0, 2).Select(_ => Task.Run(async () =>
         {
-            start.Wait();
+            await start.Task;
             for (var i = 0; i < 100; ++i)
             {
-                using (cs.Lock(TimeSpan.FromSeconds(15)))
+                using (await cs.LockAsync(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken))
                     counters.Work();
-                Thread.Yield();
+                await Task.Yield();
             }
         })).ToArray();
-        start.Set();
+        start.SetResult();
         await Task.WhenAll(workers).WaitAsync(TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
 
         Assert.Equal(0, counters.Wrong);
@@ -54,35 +54,19 @@ public sealed class CriticalSectionTests
     public async Task Test_No_CriticalSection()
     {
         var counters = new Counters();
-        using var start = new ManualResetEventSlim(false);
+        var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var workers = Enumerable.Range(0, 10).Select(_ => Task.Factory.StartNew(() =>
+        var workers = Enumerable.Range(0, 10).Select(_ => Task.Run(async () =>
         {
-            start.Wait();
+            await start.Task;
             for (var i = 0; i < 100; ++i)
                 counters.Work();
-        }, TaskCreationOptions.LongRunning)).ToArray();
-        start.Set();
+        })).ToArray();
+        start.SetResult();
         await Task.WhenAll(workers).WaitAsync(TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
 
         Assert.True(counters.Wrong > 0);
         Assert.NotEqual(1000, counters.Good);
-    }
-
-    [Fact]
-    public async Task Test_CriticalSectionAsyncCompatibilityAsync()
-    {
-        using var cs = new CriticalSection();
-
-        var exception = await Record.ExceptionAsync(async () =>
-        {
-#pragma warning disable CA1849 // the test proves that the synchronous Lock holds across an await
-            using (cs.Lock(TimeSpan.FromSeconds(100)))
-                await Task.Delay(100, TestContext.Current.CancellationToken);
-#pragma warning restore CA1849
-        });
-
-        Assert.Null(exception);
     }
 
     [Fact]
@@ -116,7 +100,6 @@ public sealed class CriticalSectionTests
         using var cs = new CriticalSection();
         using var held = await cs.LockAsync(TestContext.Current.CancellationToken);
 
-        TryNow(cs).Should().BeFalse();
         (await cs.TryLockAsync(TimeSpan.Zero, TestContext.Current.CancellationToken)).IsLocked.Should().BeFalse();
     }
 
@@ -126,7 +109,6 @@ public sealed class CriticalSectionTests
         using var cs = new CriticalSection();
         using var held = await cs.LockAsync(TestContext.Current.CancellationToken);
 
-        FluentActions.Invoking(() => cs.Lock(TimeSpan.FromMilliseconds(10))).Should().Throw<TimeoutException>();
         await FluentActions.Awaiting(async () => await cs.LockAsync(TimeSpan.FromMilliseconds(10), TestContext.Current.CancellationToken))
             .Should().ThrowAsync<TimeoutException>();
     }
@@ -143,23 +125,21 @@ public sealed class CriticalSectionTests
     }
 
     [Fact]
-    public void Should_ReleaseOnce_WhenTheHandleIsDisposed()
+    public async Task Should_ReleaseOnce_WhenTheHandleIsDisposed()
     {
+        var ct = TestContext.Current.CancellationToken;
         using var cs = new CriticalSection();
-        var held = cs.Lock();
-        var notAcquired = cs.TryLock(TimeSpan.Zero);
+        var held = await cs.LockAsync(ct);
+        var notAcquired = await cs.TryLockAsync(TimeSpan.Zero, ct);
         notAcquired.IsLocked.Should().BeFalse();
         notAcquired.Dispose();   // releases nothing: the section stays held
 
-        cs.TryLock(TimeSpan.Zero).IsLocked.Should().BeFalse();
+        (await cs.TryLockAsync(TimeSpan.Zero, ct)).IsLocked.Should().BeFalse();
         held.Dispose();
 
-        using var again = cs.TryLock(TimeSpan.Zero);
+        using var again = await cs.TryLockAsync(TimeSpan.Zero, ct);
         again.IsLocked.Should().BeTrue();
     }
-
-    // synchronous on purpose: the synchronous TryLock is the one under test
-    private static bool TryNow(CriticalSection cs) => cs.TryLock(TimeSpan.Zero).IsLocked;
 
     private static void InterlockedMax(ref int target, int value)
     {

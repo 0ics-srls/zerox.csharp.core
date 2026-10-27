@@ -43,12 +43,12 @@ public sealed class JobScheduler
     public bool IsSuspended => _main.State == JobState.Suspended;
 
     // One element of the main ring, then one of the priority ring.
-    public void Tick()
+    public async Task TickAsync(CancellationToken cancellationToken = default)
     {
         if (_main.State == JobState.Ready)
-            _main.Execute();
+            await _main.ExecuteAsync(cancellationToken).ConfigureAwait(false);
         if (_priority.State == JobState.Ready)
-            _priority.Execute();
+            await _priority.ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public void Suspend()
@@ -83,31 +83,31 @@ public sealed class JobScheduler
         AddJob(queue, MainQueue, [.. groups, MainGroup]);
     }
 
-    public void CreateMainJob(string name, Action action, params string[] groups) => AddJob(Job.Cyclic(name, action), MainQueue, [.. groups, MainGroup]);
+    public void CreateMainJob(string name, Func<CancellationToken, Task> action, params string[] groups) => AddJob(Job.Cyclic(name, action), MainQueue, [.. groups, MainGroup]);
 
-    public void CreateSlowJob(string name, Action action, params string[] groups) => AddJob(Job.Cyclic(name, action), SlowQueue, [.. groups, SlowGroup]);
+    public void CreateSlowJob(string name, Func<CancellationToken, Task> action, params string[] groups) => AddJob(Job.Cyclic(name, action), SlowQueue, [.. groups, SlowGroup]);
 
-    public void CreatePriorityJob(string name, Action action, params string[] groups) => AddJob(Job.Cyclic(name, action), PriorityQueue, [.. groups, PriorityGroup]);
+    public void CreatePriorityJob(string name, Func<CancellationToken, Task> action, params string[] groups) => AddJob(Job.Cyclic(name, action), PriorityQueue, [.. groups, PriorityGroup]);
 
-    public void CreateCustomJob(string name, string queueName, Action action, params string[] groups) => AddJob(Job.Cyclic(name, action), queueName, groups);
+    public void CreateCustomJob(string name, string queueName, Func<CancellationToken, Task> action, params string[] groups) => AddJob(Job.Cyclic(name, action), queueName, groups);
 
-    public void CreateMainOneTimeJob(string name, Action action) => AddJob(Job.Once(name, action), MainQueue);
+    public void CreateMainOneTimeJob(string name, Func<CancellationToken, Task> action) => AddJob(Job.Once(name, action), MainQueue);
 
-    public void CreatePriorityOneTimeJob(string name, Action action) => AddJob(Job.Once(name, action), PriorityQueue);
+    public void CreatePriorityOneTimeJob(string name, Func<CancellationToken, Task> action) => AddJob(Job.Once(name, action), PriorityQueue);
 
-    public void CreateCustomOneTimeJob(string name, string queueName, Action action) => AddJob(Job.Once(name, action), queueName);
+    public void CreateCustomOneTimeJob(string name, string queueName, Func<CancellationToken, Task> action) => AddJob(Job.Once(name, action), queueName);
 
-    public void CreateMainOneTimeDelayedJob(string name, Action action, DateTimeOffset when) => AddJob(new DelayedJob(name, action, _time, when), MainQueue);
+    public void CreateMainOneTimeDelayedJob(string name, Func<CancellationToken, Task> action, DateTimeOffset when) => AddJob(new DelayedJob(name, action, _time, when), MainQueue);
 
-    public void CreateMainOneTimeDelayedJob(string name, Action action, TimeSpan after) => CreateMainOneTimeDelayedJob(name, action, _time.GetUtcNow() + after);
+    public void CreateMainOneTimeDelayedJob(string name, Func<CancellationToken, Task> action, TimeSpan after) => CreateMainOneTimeDelayedJob(name, action, _time.GetUtcNow() + after);
 
-    public void CreatePriorityOneTimeDelayedJob(string name, Action action, DateTimeOffset when) => AddJob(new DelayedJob(name, action, _time, when), PriorityQueue);
+    public void CreatePriorityOneTimeDelayedJob(string name, Func<CancellationToken, Task> action, DateTimeOffset when) => AddJob(new DelayedJob(name, action, _time, when), PriorityQueue);
 
-    public void CreatePriorityOneTimeDelayedJob(string name, Action action, TimeSpan after) => CreatePriorityOneTimeDelayedJob(name, action, _time.GetUtcNow() + after);
+    public void CreatePriorityOneTimeDelayedJob(string name, Func<CancellationToken, Task> action, TimeSpan after) => CreatePriorityOneTimeDelayedJob(name, action, _time.GetUtcNow() + after);
 
-    public void CreateCustomOneTimeDelayedJob(string name, string queueName, Action action, DateTimeOffset when) => AddJob(new DelayedJob(name, action, _time, when), queueName);
+    public void CreateCustomOneTimeDelayedJob(string name, string queueName, Func<CancellationToken, Task> action, DateTimeOffset when) => AddJob(new DelayedJob(name, action, _time, when), queueName);
 
-    public void CreateCustomOneTimeDelayedJob(string name, string queueName, Action action, TimeSpan after) => CreateCustomOneTimeDelayedJob(name, queueName, action, _time.GetUtcNow() + after);
+    public void CreateCustomOneTimeDelayedJob(string name, string queueName, Func<CancellationToken, Task> action, TimeSpan after) => CreateCustomOneTimeDelayedJob(name, queueName, action, _time.GetUtcNow() + after);
 
     // Any job into a queue; a cyclic one is indexed by name and joins the groups, a one-time one leaves after running.
     public void AddJob(IJob job, string queueName, params string[] groups)

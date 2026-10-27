@@ -35,3 +35,12 @@
 @numbers::verify.sh 4/4 (build,format,tests,ast-grep),0 warnings
 ✓rename:the four libraries became the Zerox.Ef family (src/Zerox.Ef.{Core,Db,Domain,Api},tests/Zerox.Ef.{Db,Domain,Api}.Tests,namespaces = folders);the contracts left Zerox.Core (Zerox.Core.Data → Zerox.Ef.Core);catalog,README,MB updated;the executed plan keeps the old names (notes.md says so)
 ✓review 2026-10-27 (©User):3 bugs fixed (values reserved field,PUT wiped reserved fields,PUT missing = 404),optimistic lock correct (LastWriterWins client Version = 409,DELETE ?version=N),middleware = top of the request (process never dies),EF 10.0.13;folders src/Zerox.Ef/{Core,Db,Domain,Api} + tests/Zerox.Ef/{Db,Domain,Api} (one folder per namespace segment,git mv)
+
+[08-async-only]
+@branch::feature/08-async-only (from feature/07-port-db-api)
+✓Zerox.Ef:SessionInterceptor also IDbCommandInterceptor+IDbConnectionInterceptor+IDbTransactionInterceptor,sync roads → SyncDatabaseAccessException (public,Zerox.Ef.Db);sync save now the same exception;6 SyncAccessTests;whole Ef suite (181) runs under the guard = proof the library never goes sync
+!found::Sqlite EnsureCreatedAsync runs HasTables synchronously inside (EF internals) → guard only CommandSource LinqQuery,SaveChanges,FromSqlQuery,ExecuteSqlRaw,ExecuteDelete,ExecuteUpdate
+✓Zerox.Core:CriticalSection Lock/Lock(timeout)/TryLock removed (blocking SemaphoreSlim.Wait);PocoProxy ToJson/Populate(string) and JsonDefaults ToJson/FromJson(string) removed (stream async stay);JobScheduler jobs Func<CancellationToken,Task>,IJob.ExecuteAsync,JobQueue takes the job under lock and awaits it outside,TickAsync;WorkingProcess cycle Func<CancellationToken,Task> awaited
+✓Zerox.Core.Avalonia:sync Command<T>/Command.Create removed (AsyncCommand covers;ICommand.Execute async void stays,required by ICommand)
+@kept::lock around short in-memory state (statistics,circular buffer,job states,channels,validator);sync Dispose of in-memory resources (CTS,semaphore;OwnerQueue.Dispose drains in background,never waits);CPU-only helpers (collections,search,reflection,numbers,validation);IRepository tracker methods (Update,Delete,DeleteRange,PinReadVersion,DetachAll,Local:no I/O);STJ converters (sync by STJ contract)
+@numbers::verify.sh 4/4,644 tests

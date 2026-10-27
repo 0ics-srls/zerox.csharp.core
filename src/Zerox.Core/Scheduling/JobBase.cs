@@ -26,7 +26,7 @@ public abstract class JobBase : IJob
         }
     }
 
-    public bool Execute()
+    public async Task<bool> ExecuteAsync(CancellationToken cancellationToken)
     {
         lock (_lock)
         {
@@ -36,7 +36,7 @@ public abstract class JobBase : IJob
         }
         try
         {
-            return ExecuteCore();
+            return await ExecuteCoreAsync(cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -64,5 +64,5 @@ public abstract class JobBase : IJob
         }
     }
 
-    protected abstract bool ExecuteCore();
+    protected abstract Task<bool> ExecuteCoreAsync(CancellationToken cancellationToken);
 }

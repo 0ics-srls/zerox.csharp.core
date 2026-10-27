@@ -59,33 +59,35 @@ public sealed class JobQueue : JobBase
             _ring.Reset();
     }
 
-    protected override bool ExecuteCore()
+    // The job is taken from the ring under the lock and run outside it: a lock is not held across await.
+    // The queue is a job too, so it never runs twice at the same time (Running refuses a second run).
+    protected override async Task<bool> ExecuteCoreAsync(CancellationToken cancellationToken)
     {
+        IJob? job;
         lock (_lock)
-        {
-            var job = _ring.Next();
-            if (job is null || job.State != JobState.Ready)
-                return true;
-            var leaves = true;   // a one-time job that ran, or failed, leaves the ring
-            try
-            {
-                leaves = job.Execute();
-            }
-#pragma warning disable CA1031 // the supervisor (user decision): with a handler, a job's failure is reported and the ring goes on
-            catch (Exception error) when (_onJobError is not null)
-#pragma warning restore CA1031
-            {
-                _onJobError(job, error);
-            }
-            finally
-            {
-                if (leaves && job.Kind == JobKind.RunOnce)
-                {
-                    _ring.Remove(job);
-                    job.Suspend();
-                }
-            }
+            job = _ring.Next();
+        if (job is null || job.State != JobState.Ready)
             return true;
+        var leaves = true;   // a one-time job that ran, or failed, leaves the ring
+        try
+        {
+            leaves = await job.ExecuteAsync(cancellationToken).ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // the supervisor (user decision): with a handler, a job's failure is reported and the ring goes on
+        catch (Exception error) when (_onJobError is not null)
+#pragma warning restore CA1031
+        {
+            _onJobError(job, error);
+        }
+        finally
+        {
+            if (leaves && job.Kind == JobKind.RunOnce)
+            {
+                lock (_lock)
+                    _ring.Remove(job);
+                job.Suspend();
+            }
+        }
+        return true;
     }
 }

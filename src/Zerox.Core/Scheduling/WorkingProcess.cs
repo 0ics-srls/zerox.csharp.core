@@ -2,10 +2,11 @@ using Zerox.Core.Concurrency;
 
 namespace Zerox.Core.Scheduling;
 
-// Runs a cycle at once and then once per period; an exception escaping the cycle stops the process.
+// Runs an async cycle at once and then once per period (a cycle is awaited to its end before the next
+// wait); an exception escaping the cycle stops the process.
 public sealed class WorkingProcess : IAsyncDisposable
 {
-    private readonly Action<CancellationToken> _cycle;
+    private readonly Func<CancellationToken, Task> _cycle;
     private readonly TimeProvider _time;
     private readonly Lock _lock = new();
     private PeriodicTimer? _timer;
@@ -15,7 +16,7 @@ public sealed class WorkingProcess : IAsyncDisposable
     private long _lastTicks;
     private long _totalTicks;
 
-    public WorkingProcess(string name, Action<CancellationToken> cycle, TimeSpan period, TimeProvider timeProvider)
+    public WorkingProcess(string name, Func<CancellationToken, Task> cycle, TimeSpan period, TimeProvider timeProvider)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(cycle);
@@ -104,7 +105,7 @@ public sealed class WorkingProcess : IAsyncDisposable
                 if (stop.IsCancellationRequested)
                     break;
                 var start = _time.GetTimestamp();
-                _cycle(stop);
+                await _cycle(stop).ConfigureAwait(false);
                 var elapsed = _time.GetElapsedTime(start);
                 Interlocked.Exchange(ref _lastTicks, elapsed.Ticks);
                 Interlocked.Add(ref _totalTicks, elapsed.Ticks);

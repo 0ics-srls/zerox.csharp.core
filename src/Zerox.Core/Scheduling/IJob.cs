@@ -10,7 +10,7 @@ public interface IJob
     JobState State { get; }
 
     // False when it had nothing to do yet (a delayed job before its time).
-    bool Execute();
+    Task<bool> ExecuteAsync(CancellationToken cancellationToken);
 
     void Suspend();
 

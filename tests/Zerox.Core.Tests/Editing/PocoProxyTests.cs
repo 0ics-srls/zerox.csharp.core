@@ -191,17 +191,6 @@ public sealed class PocoProxyTests
     }
 
     [Fact]
-    public void Test_Copy_String()
-    {
-        var a = A();
-        var b = new SomeDataProxy();
-
-        b.Populate(a.ToJson());
-
-        Assert.True(a.DataEquals(b));
-    }
-
-    [Fact]
     public void Should_NotifyIsChanged_WhenAPropertyReallyChanges()
     {
         var a = A();
@@ -232,16 +221,22 @@ public sealed class PocoProxyTests
     }
 
     [Fact]
-    public void Should_KeepTheData_WhenPopulateFails()
+    public async Task Should_KeepTheData_WhenPopulateFails()
     {
         var a = A();
         a.Name = "B";
 
-        FluentActions.Invoking(() => a.Populate("{ not json")).Should().Throw<JsonException>();
+        await FluentActions.Awaiting(() => PopulateAsync(a, "{ not json")).Should().ThrowAsync<JsonException>();
         a.Name.Should().Be("B");
         a.IsChanged.Should().BeTrue();
-        FluentActions.Invoking(() => a.Populate("null")).Should().Throw<JsonException>();
+        await FluentActions.Awaiting(() => PopulateAsync(a, "null")).Should().ThrowAsync<JsonException>();
         a.Name.Should().Be("B");
+    }
+
+    private static async Task PopulateAsync(SomeDataProxy proxy, string json)
+    {
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+        await proxy.PopulateAsync(stream, TestContext.Current.CancellationToken);
     }
 
     [Fact]

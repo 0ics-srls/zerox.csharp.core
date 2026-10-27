@@ -29,7 +29,7 @@ assetforge as a submodule.
 - Optimistic lock: a client that sends the `Version` it read never overwrites nor deletes a row changed after that read (409); only a change the server decides alone retries and lets the last writer win
 - Constructor injection only, no DI container inside the components; `internal sealed` by default, `public` is a decision
 - Library code awaits with `ConfigureAwait(false)` (CA2007); UI code in `Zerox.Core.Avalonia` returns to the UI thread through the `Dispatcher`, explicitly
-- Enums instead of strings (in JSON the member name); System.Text.Json only (never Newtonsoft); everything async
+- Enums instead of strings (in JSON the member name); System.Text.Json only (never Newtonsoft); everything async: no synchronous twin of an async method, no blocking wait (`Wait`, `.Result`, `Thread.Sleep`, a sync lock acquire), work handed to the library is a `Func<CancellationToken, Task>`; `lock` only around short in-memory state, never around I/O or an await; `Zerox.Ef` has zero synchronous code against the database and its session refuses every synchronous road at run time (`SyncDatabaseAccessException`); EF's own schema work (`EnsureCreatedAsync`, `MigrateAsync`) is left to EF
 - Paths in the repository are relative to its root; never write a machine's absolute path
 
 ## Catalog

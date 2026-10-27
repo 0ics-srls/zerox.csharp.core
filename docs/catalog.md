@@ -12,7 +12,7 @@ Paths are relative to `src/`.
 |---|---|---|
 | Run jobs one at a time, each to its end, the caller gets its own job's result (owner's queue) | `OwnerQueue` (`RunAsync`, `StartDetached`) | `Zerox.Core/Concurrency/OwnerQueue.cs` |
 | Start work outside the caller's flow; an escaping exception stops the process | `OwnerQueue.StartDetached` | `Zerox.Core/Concurrency/OwnerQueue.cs` |
-| An async lock with timeout, released by `using` | `CriticalSection`, `CriticalSectionLock` | `Zerox.Core/Concurrency/CriticalSection.cs` |
+| An async lock with timeout, released by `using` (acquired only with await: `LockAsync`, `TryLockAsync`) | `CriticalSection`, `CriticalSectionLock` | `Zerox.Core/Concurrency/CriticalSection.cs` |
 | A boolean switched atomically (false→true once) | `AtomicBoolean` (`FalseToTrue`, `TrueToFalse`, `SetWhen`) | `Zerox.Core/Concurrency/AtomicBoolean.cs` |
 | A cancellation tree for the application, scopes with their own timeout | `Terminator`, `CancellationScope`, `CancellationState` | `Zerox.Core/Cancellation/` |
 
@@ -20,13 +20,13 @@ Paths are relative to `src/`.
 
 | Need | Type | File |
 |---|---|---|
-| Many cyclic jobs sharing one cycle: main jobs, one slow job per main lap, one priority job per tick | `JobScheduler` (`Tick`, `Create*Job`, `Errors`) | `Zerox.Core/Scheduling/JobScheduler.cs` |
+| Many cyclic jobs sharing one cycle: main jobs, one slow job per main lap, one priority job per tick | `JobScheduler` (`TickAsync`, `Create*Job` with async work, `Errors`) | `Zerox.Core/Scheduling/JobScheduler.cs` |
 | Jobs that run once, or once after a due time | `Job.Once`, `DelayedJob`, `JobScheduler.Create*OneTime*Job` | `Zerox.Core/Scheduling/` |
 | Suspend and resume a job or a group of jobs | `JobScheduler.SuspendJob/ResumeJob/SuspendGroup/ResumeGroup` | `Zerox.Core/Scheduling/JobScheduler.cs` |
 | A failing job reported without stopping the others | `JobScheduler.Errors` (channel of `JobError`) | `Zerox.Core/Scheduling/JobError.cs` |
 | A ring of jobs, one per call, itself a job | `JobQueue` | `Zerox.Core/Scheduling/JobQueue.cs` |
 | Your own job | `IJob`, `JobBase`, `JobKind`, `JobState` | `Zerox.Core/Scheduling/` |
-| A periodic loop on a `TimeProvider` (first cycle at once, stop awaited, cycle statistics) | `WorkingProcess` | `Zerox.Core/Scheduling/WorkingProcess.cs` |
+| A periodic loop on a `TimeProvider` running an async cycle (first cycle at once, each cycle awaited, stop awaited, cycle statistics) | `WorkingProcess` | `Zerox.Core/Scheduling/WorkingProcess.cs` |
 
 ### Collections and search
 
@@ -57,7 +57,7 @@ Paths are relative to `src/`.
 | Need | Type | File |
 |---|---|---|
 | `INotifyPropertyChanged` with `SetProperty` | `NotifyingObject` | `Zerox.Core/ComponentModel/NotifyingObject.cs` |
-| An edit copy of a plain object: saved state, reset, changed or not, JSON in/out | `PocoProxy<T>` | `Zerox.Core/Editing/PocoProxy.cs` |
+| An edit copy of a plain object: saved state, reset, changed or not, JSON in/out on a stream | `PocoProxy<T>` | `Zerox.Core/Editing/PocoProxy.cs` |
 | Deep clone by fields, compare two objects member by member | `PocoExtensions` (`CloneByFields`, `IsChanged`), `MemberDifference` | `Zerox.Core/Editing/PocoExtensions.cs` |
 | Rules per property, errors for bindings (`INotifyDataErrorInfo`), validatable children | `Validator<T>`, `ValidationRules<T>`, `ValidationRule<T>`, `IValidatable`, `ValidationParameters`, `ValidationException` | `Zerox.Core/Validation/` |
 
@@ -73,7 +73,7 @@ Paths are relative to `src/`.
 | Need | Type | File |
 |---|---|---|
 | A numeric range for any number type: clamp, contains, saturating add/multiply, parse within range | `NumberRange<T>`, `NumberRange` | `Zerox.Core/Numbers/NumberRange.cs` |
-| JSON with the library's options (System.Text.Json), sync and stream | `JsonDefaults` (`ToJson`, `FromJson`, `ToJsonAsync`, `FromJsonAsync`) | `Zerox.Core/Text/JsonDefaults.cs` |
+| JSON with the library's options (System.Text.Json), on a stream | `JsonDefaults` (`Options`, `ToJsonAsync`, `FromJsonAsync`) | `Zerox.Core/Text/JsonDefaults.cs` |
 | Truncate, clip, Base64 UTF-8 | `TextExtensions` | `Zerox.Core/Text/TextExtensions.cs` |
 | Convert a value to a type (enums, nullable, convertible) | `ValueConversion.ConvertTo` | `Zerox.Core/Text/ValueConversion.cs` |
 | Properties marked by an attribute, an attribute of a property | `AttributeExtensions` | `Zerox.Core/Reflection/AttributeExtensions.cs` |
@@ -84,7 +84,6 @@ Paths are relative to `src/`.
 | Need | Type | File |
 |---|---|---|
 | A view model base: `PropertyChanged` on the UI thread, optional throttle and debounce, `MemberChanged` at once | `PropertyContainer` | `Zerox.Core.Avalonia/ComponentModel/PropertyContainer.cs` |
-| A sync command with label and icon, re-queried by a notifying object | `Command<T>`, `Command.Create` | `Zerox.Core.Avalonia/Commands/Command.cs` |
 | An async command: one run at a time, cancellable, timeout, progress on the UI thread | `AsyncCommand<T>`, `AsyncCommand.Create`, `AsyncCommand.WithProgress` | `Zerox.Core.Avalonia/Commands/AsyncCommand.cs` |
 | What menus and toolbars see of a command | `ICommandWithInfo` | `Zerox.Core.Avalonia/Commands/ICommandWithInfo.cs` |
 | A task the bindings can follow (running, failed, done) | `ObservableTask` | `Zerox.Core.Avalonia/Commands/ObservableTask.cs` |
@@ -118,7 +117,8 @@ The contracts of the database foundation, no EF type in them: what an applicatio
 |---|---|---|
 | The context the library works on (a project writes `MyContext : DbContext, IDbContext`, nothing else) | `IDbContext` | `Zerox.Ef/Db/IDbContext.cs` |
 | Register a context with the session rules, `IRepository<>` and `IRepositoryFactory` | `ServiceCollectionExtensions.AddZeroxDb<TContext>` | `Zerox.Ef/Db/ServiceCollectionExtensions.cs` |
-| Build context options by hand with the session rules (synchronous save refused) | `DbContextOptionsBuilderExtensions.UseZeroxSession` | `Zerox.Ef/Db/DbContextOptionsBuilderExtensions.cs` |
+| Build context options by hand with the session rules (every synchronous road to the database refused) | `DbContextOptionsBuilderExtensions.UseZeroxSession` | `Zerox.Ef/Db/DbContextOptionsBuilderExtensions.cs` |
+| The error of a synchronous road to the database (a query read with `ToList`, `SaveChanges`, a command, a transaction or a connection opened without await) | `SyncDatabaseAccessException` | `Zerox.Ef/Db/SyncDatabaseAccessException.cs` |
 | Mark `Version` as concurrency token on every `IHasOptimisticLock` entity (end of `OnModelCreating`) | `ModelBuilderExtensions.ApplyOptimisticLock` | `Zerox.Ef/Db/ModelBuilderExtensions.cs` |
 
 ## Zerox.Ef.Domain

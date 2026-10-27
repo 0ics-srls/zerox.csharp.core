@@ -183,7 +183,7 @@ public sealed class RepositoryTests : IAsyncLifetime
             // The synchronous save is exactly what this test proves refused.
             // ast-grep-ignore: no-sync-dbcontext-savechanges
             var act = () => context.SaveChanges();
-            act.Should().Throw<NotSupportedException>();
+            act.Should().Throw<SyncDatabaseAccessException>();
         }
 
         await using var check = Db.NewContext();

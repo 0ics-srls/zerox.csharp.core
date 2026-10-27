@@ -11,10 +11,11 @@ public sealed class WorkingProcessTests
     private long _count;
 
     // Each cycle writes its number; the test reads them in order.
-    private WorkingProcess Counting(TimeSpan period, Action? body = null)
-        => new("Counting", _ =>
+    private WorkingProcess Counting(TimeSpan period, Func<CancellationToken, Task>? body = null)
+        => new("Counting", async ct =>
         {
-            body?.Invoke();
+            if (body is not null)
+                await body(ct);
             _cycles.Writer.TryWrite(Interlocked.Increment(ref _count));
         }, period, _clock);
 
@@ -67,7 +68,7 @@ public sealed class WorkingProcessTests
     [Fact]
     public async Task Should_MeasureTheCycles_WhenTheyRun()
     {
-        await using var process = Counting(TimeSpan.FromSeconds(1), () => _clock.Advance(TimeSpan.FromMilliseconds(30)));
+        await using var process = Counting(TimeSpan.FromSeconds(1), Work.Of(() => _clock.Advance(TimeSpan.FromMilliseconds(30))));
         process.Start();
         (await NextCycleAsync()).Should().Be(1);
 
@@ -85,10 +86,10 @@ public sealed class WorkingProcessTests
     {
         var scheduler = new JobScheduler("Scheduler", _clock);
         int a = 0, b = 0, p = 0;
-        scheduler.CreateMainJob("A", () => a++);
-        scheduler.CreateMainJob("B", () => b++);
-        scheduler.CreatePriorityJob("P", () => p++);
-        await using var process = Counting(TimeSpan.FromMilliseconds(10), scheduler.Tick);
+        scheduler.CreateMainJob("A", Work.Of(() => a++));
+        scheduler.CreateMainJob("B", Work.Of(() => b++));
+        scheduler.CreatePriorityJob("P", Work.Of(() => p++));
+        await using var process = Counting(TimeSpan.FromMilliseconds(10), scheduler.TickAsync);
         process.Start();
         (await NextCycleAsync()).Should().Be(1);
 
@@ -117,7 +118,7 @@ public sealed class WorkingProcessTests
     [Fact]
     public void Should_RejectThePeriod_WhenItIsNotPositive()
     {
-        FluentActions.Invoking(() => new WorkingProcess("Zero", _ => { }, TimeSpan.Zero, _clock))
+        FluentActions.Invoking(() => new WorkingProcess("Zero", _ => Task.CompletedTask, TimeSpan.Zero, _clock))
             .Should().Throw<ArgumentOutOfRangeException>();
     }
 }

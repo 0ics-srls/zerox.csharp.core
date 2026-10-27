@@ -5,80 +5,82 @@ namespace Zerox.Core.Tests.Scheduling;
 
 public sealed class JobTests
 {
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     [Fact]
-    public void Test_Job()
+    public async Task Test_Job()
     {
         var cycDone = false;
-        var cyclic = Job.Cyclic("J1", () => cycDone = true);
+        var cyclic = Job.Cyclic("J1", Work.Of(() => cycDone = true));
         cyclic.Resume();
         Assert.Equal(JobKind.Cyclic, cyclic.Kind);
         Assert.False(cycDone);
-        cyclic.Execute();
+        await cyclic.ExecuteAsync(Ct);
         Assert.True(cycDone);
 
         var runDone = false;
-        var once = Job.Once("J2", () => runDone = true);
+        var once = Job.Once("J2", Work.Of(() => runDone = true));
         Assert.Equal(JobKind.RunOnce, once.Kind);
         Assert.False(runDone);
         once.Resume();
-        once.Execute();
+        await once.ExecuteAsync(Ct);
         Assert.True(runDone);
     }
 
     [Fact]
-    public void Should_StartSuspended_WhenCreated()
+    public async Task Should_StartSuspended_WhenCreated()
     {
         var ran = false;
-        var job = Job.Cyclic("J", () => ran = true);
+        var job = Job.Cyclic("J", Work.Of(() => ran = true));
 
         job.State.Should().Be(JobState.Suspended);
-        FluentActions.Invoking(() => job.Execute()).Should().Throw<InvalidOperationException>();
+        await FluentActions.Awaiting(() => job.ExecuteAsync(Ct)).Should().ThrowAsync<InvalidOperationException>();
         ran.Should().BeFalse();
     }
 
     [Fact]
-    public void Should_StaySuspended_WhenSuspendedWhileRunning()
+    public async Task Should_StaySuspended_WhenSuspendedWhileRunning()
     {
         Job? job = null;
-        job = Job.Cyclic("J", () => job!.Suspend());
+        job = Job.Cyclic("J", Work.Of(() => job!.Suspend()));
         job.Resume();
 
-        job.Execute();
+        await job.ExecuteAsync(Ct);
 
         job.State.Should().Be(JobState.Suspended);
     }
 
     [Fact]
-    public void Should_BeReadyAgain_WhenResumedWhileRunning()
+    public async Task Should_BeReadyAgain_WhenResumedWhileRunning()
     {
         Job? job = null;
         JobState? during = null;
-        job = Job.Cyclic("J", () =>
+        job = Job.Cyclic("J", Work.Of(() =>
         {
             job!.Resume();
             during = job.State;
-        });
+        }));
         job.Resume();
 
-        job.Execute();
+        await job.ExecuteAsync(Ct);
 
         during.Should().Be(JobState.Running);
         job.State.Should().Be(JobState.Ready);
     }
 
     [Fact]
-    public void Should_WaitForItsTime_WhenDelayed()
+    public async Task Should_WaitForItsTime_WhenDelayed()
     {
         var clock = new FakeTimeProvider();
         var runs = 0;
-        var job = new DelayedJob("D", () => runs++, clock, clock.GetUtcNow().AddSeconds(10));
+        var job = new DelayedJob("D", Work.Of(() => runs++), clock, clock.GetUtcNow().AddSeconds(10));
         job.Resume();
 
-        job.Execute().Should().BeFalse();
+        (await job.ExecuteAsync(Ct)).Should().BeFalse();
         runs.Should().Be(0);
 
         clock.Advance(TimeSpan.FromSeconds(10));
-        job.Execute().Should().BeTrue();
+        (await job.ExecuteAsync(Ct)).Should().BeTrue();
         runs.Should().Be(1);
         job.Kind.Should().Be(JobKind.RunOnce);
     }

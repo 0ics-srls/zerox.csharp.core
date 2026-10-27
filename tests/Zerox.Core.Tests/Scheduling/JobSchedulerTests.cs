@@ -5,6 +5,8 @@ namespace Zerox.Core.Tests.Scheduling;
 
 public sealed class JobSchedulerTests
 {
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     private sealed class Worker
     {
         public int JM_1_cnt; // no suspend
@@ -22,21 +24,53 @@ public sealed class JobSchedulerTests
             JE_1_cnt = JE_2_cnt = JC_1_cnt = JC_2_cnt = 0;
         }
 
-        public void Add_M_1() => JM_1_cnt++;
+        public Task Add_M_1(CancellationToken _)
+        {
+            JM_1_cnt++;
+            return Task.CompletedTask;
+        }
 
-        public void Add_M_2() => JM_2_cnt++;
+        public Task Add_M_2(CancellationToken _)
+        {
+            JM_2_cnt++;
+            return Task.CompletedTask;
+        }
 
-        public void Add_S_1() => JS_1_cnt++;
+        public Task Add_S_1(CancellationToken _)
+        {
+            JS_1_cnt++;
+            return Task.CompletedTask;
+        }
 
-        public void Add_S_2() => JS_2_cnt++;
+        public Task Add_S_2(CancellationToken _)
+        {
+            JS_2_cnt++;
+            return Task.CompletedTask;
+        }
 
-        public void Add_E_1() => JE_1_cnt++;
+        public Task Add_E_1(CancellationToken _)
+        {
+            JE_1_cnt++;
+            return Task.CompletedTask;
+        }
 
-        public void Add_E_2() => JE_2_cnt++;
+        public Task Add_E_2(CancellationToken _)
+        {
+            JE_2_cnt++;
+            return Task.CompletedTask;
+        }
 
-        public void Add_C_1() => JC_1_cnt++;
+        public Task Add_C_1(CancellationToken _)
+        {
+            JC_1_cnt++;
+            return Task.CompletedTask;
+        }
 
-        public void Add_C_2() => JC_2_cnt++;
+        public Task Add_C_2(CancellationToken _)
+        {
+            JC_2_cnt++;
+            return Task.CompletedTask;
+        }
     }
 
     private static JobScheduler WithOldJobs(Worker w, TimeProvider? time = null)
@@ -51,10 +85,10 @@ public sealed class JobSchedulerTests
         return sch;
     }
 
-    private static void Ticks(JobScheduler sch, int count)
+    private static async Task Ticks(JobScheduler sch, int count)
     {
         for (var i = 0; i < count; i++)
-            sch.Tick();
+            await sch.TickAsync(Ct);
     }
 
     private static void AssertOldRunningCounts(Worker w)
@@ -69,7 +103,7 @@ public sealed class JobSchedulerTests
     }
 
     [Fact]
-    public void Test_Create_Scheduler()
+    public async Task Test_Create_Scheduler()
     {
         var w = new Worker();
         var sch = new JobScheduler("Scheduler", new FakeTimeProvider());
@@ -77,7 +111,7 @@ public sealed class JobSchedulerTests
         sch.CreateSlowJob("JS_1", w.Add_S_1);
         sch.CreatePriorityJob("JE_1", w.Add_E_1);
 
-        sch.Tick();
+        await sch.TickAsync(Ct);
 
         // the first main element is the slow queue
         Assert.Equal(0, w.JM_1_cnt);
@@ -86,18 +120,18 @@ public sealed class JobSchedulerTests
     }
 
     [Fact]
-    public void Test_Main_And_Slow_Running()
+    public async Task Test_Main_And_Slow_Running()
     {
         var w = new Worker();
         var sch = WithOldJobs(w);
 
-        Ticks(sch, 600);
+        await Ticks(sch, 600);
 
         AssertOldRunningCounts(w);
     }
 
     [Fact]
-    public void Test_Main_And_Slow_And_custom_Running()
+    public async Task Test_Main_And_Slow_And_custom_Running()
     {
         var w = new Worker();
         var sch = WithOldJobs(w);
@@ -105,7 +139,7 @@ public sealed class JobSchedulerTests
         sch.CreateCustomJob("JC_1", "CustomQueue", w.Add_C_1, "Custom");
         sch.CreateCustomJob("JC_2", "CustomQueue", w.Add_C_2, "CustomSuspend");
 
-        Ticks(sch, 800);
+        await Ticks(sch, 800);
 
         // main ring: SlowQueue, JM_1, JM_2, CustomQueue → a lap of 4 ticks
         Assert.Equal(200, w.JM_1_cnt);
@@ -119,14 +153,14 @@ public sealed class JobSchedulerTests
     }
 
     [Fact]
-    public void Test_Main_And_Slow_suspended()
+    public async Task Test_Main_And_Slow_suspended()
     {
         var w = new Worker();
         var sch = WithOldJobs(w);
         sch.SuspendGroup("MainSuspend");
         sch.SuspendGroup("PrioritySuspend");
 
-        Ticks(sch, 600);
+        await Ticks(sch, 600);
 
         // main ring: SlowQueue, JM_1; priority ring: JE_1
         Assert.Equal(300, w.JM_1_cnt);
@@ -141,7 +175,7 @@ public sealed class JobSchedulerTests
         sch.Reset(); // reset queue pointers
         w.Reset();
 
-        Ticks(sch, 600);
+        await Ticks(sch, 600);
 
         AssertOldRunningCounts(w);
     }
@@ -175,13 +209,13 @@ public sealed class JobSchedulerTests
             for (var i = 0; i < 50; i++)
                 sch.CreatePriorityOneTimeJob("SomeError", w.Add_C_1);
         }, ct);
-        var ticker = Task.Run(() =>
+        var ticker = Task.Run(async () =>
         {
-            // the counters are written only by this thread
+            // the counters are written only by this flow
             var ticks = 0;
             while ((ticks < 200_000 || w.JC_1_cnt < 50) && ticks < 10_000_000)
             {
-                sch.Tick();
+                await sch.TickAsync(Ct);
                 ticks++;
             }
         }, ct);
@@ -195,7 +229,7 @@ public sealed class JobSchedulerTests
     }
 
     [Fact]
-    public void Should_KeepCustomJobsRunning_WhenThePriorityGroupIsSuspended()
+    public async Task Should_KeepCustomJobsRunning_WhenThePriorityGroupIsSuspended()
     {
         var w = new Worker();
         var sch = new JobScheduler("Scheduler", new FakeTimeProvider());
@@ -204,22 +238,22 @@ public sealed class JobSchedulerTests
         sch.CreatePriorityJob("JE_1", w.Add_E_1);
 
         sch.SuspendGroup(JobScheduler.PriorityGroup);
-        Ticks(sch, 4); // main ring: SlowQueue, CustomQueue
+        await Ticks(sch, 4); // main ring: SlowQueue, CustomQueue
 
         w.JC_1_cnt.Should().Be(2);
         w.JE_1_cnt.Should().Be(0);
     }
 
     [Fact]
-    public void Should_ReportTheFailureAndRunThePriority_WhenAMainJobFails()
+    public async Task Should_ReportTheFailureAndRunThePriority_WhenAMainJobFails()
     {
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 26, 8, 0, 0, TimeSpan.Zero));
         var sch = new JobScheduler("Scheduler", clock);
         var priorityRuns = 0;
-        sch.CreateMainJob("F", () => throw new InvalidOperationException("broken"));
-        sch.CreatePriorityJob("P", () => priorityRuns++);
+        sch.CreateMainJob("F", Work.Of(() => throw new InvalidOperationException("broken")));
+        sch.CreatePriorityJob("P", Work.Of(() => priorityRuns++));
 
-        FluentActions.Invoking(() => Ticks(sch, 2)).Should().NotThrow();
+        await FluentActions.Awaiting(() => Ticks(sch, 2)).Should().NotThrowAsync();
 
         priorityRuns.Should().Be(2);
         sch.Errors.TryRead(out var error).Should().BeTrue();
@@ -228,28 +262,28 @@ public sealed class JobSchedulerTests
         error.At.Should().Be(clock.GetUtcNow());
         sch.Errors.TryRead(out _).Should().BeFalse();
 
-        Ticks(sch, 2);
+        await Ticks(sch, 2);
 
         sch.Errors.TryRead(out var second).Should().BeTrue();
         second!.JobName.Should().Be("F");
     }
 
     [Fact]
-    public void Should_RunADelayedJobOnce_WhenItsTimeComes()
+    public async Task Should_RunADelayedJobOnce_WhenItsTimeComes()
     {
         var clock = new FakeTimeProvider();
         var sch = new JobScheduler("Scheduler", clock);
         var runs = 0;
-        sch.CreatePriorityOneTimeDelayedJob("D", () => runs++, TimeSpan.FromSeconds(5));
+        sch.CreatePriorityOneTimeDelayedJob("D", Work.Of(() => runs++), TimeSpan.FromSeconds(5));
 
-        Ticks(sch, 3);
+        await Ticks(sch, 3);
         runs.Should().Be(0);
 
         clock.Advance(TimeSpan.FromSeconds(5));
-        sch.Tick();
+        await sch.TickAsync(Ct);
         runs.Should().Be(1);
 
-        Ticks(sch, 3);
+        await Ticks(sch, 3);
         runs.Should().Be(1);
     }
 
@@ -257,28 +291,28 @@ public sealed class JobSchedulerTests
     public void Should_RejectAName_WhenItIsTakenOrUnknown()
     {
         var sch = new JobScheduler("Scheduler", new FakeTimeProvider());
-        sch.CreateMainJob("A", () => { });
+        sch.CreateMainJob("A", Work.Of(() => { }));
 
-        FluentActions.Invoking(() => sch.CreateMainJob("A", () => { })).Should().Throw<ArgumentException>();
+        FluentActions.Invoking(() => sch.CreateMainJob("A", Work.Of(() => { }))).Should().Throw<ArgumentException>();
         FluentActions.Invoking(() => sch.SuspendJob("Nope")).Should().Throw<ArgumentException>();
         FluentActions.Invoking(() => sch.ResumeGroup("Nope")).Should().Throw<ArgumentException>();
-        FluentActions.Invoking(() => sch.CreateCustomJob("C", "NoQueue", () => { })).Should().Throw<ArgumentException>();
+        FluentActions.Invoking(() => sch.CreateCustomJob("C", "NoQueue", Work.Of(() => { }))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void Should_DoNothing_WhenTheSchedulerIsSuspended()
+    public async Task Should_DoNothing_WhenTheSchedulerIsSuspended()
     {
         var w = new Worker();
         var sch = WithOldJobs(w);
 
         sch.Suspend();
-        Ticks(sch, 6);
+        await Ticks(sch, 6);
 
         sch.IsSuspended.Should().BeTrue();
         (w.JM_1_cnt + w.JM_2_cnt + w.JS_1_cnt + w.JS_2_cnt + w.JE_1_cnt + w.JE_2_cnt).Should().Be(0);
 
         sch.Resume();
-        Ticks(sch, 6);
+        await Ticks(sch, 6);
 
         sch.IsSuspended.Should().BeFalse();
         w.JM_1_cnt.Should().Be(2);
