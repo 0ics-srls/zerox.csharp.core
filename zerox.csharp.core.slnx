@@ -13,6 +13,7 @@
     <Project Path="src/Zerox.Dnf/Zerox.Dnf.csproj" />
     <Project Path="src/Zerox.Db/Zerox.Db.csproj" />
     <Project Path="src/Zerox.Domain/Zerox.Domain.csproj" />
+    <Project Path="src/Zerox.Api/Zerox.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Zerox.Core.Tests/Zerox.Core.Tests.csproj" />
@@ -20,5 +21,6 @@
     <Project Path="tests/Zerox.Dnf.Tests/Zerox.Dnf.Tests.csproj" />
     <Project Path="tests/Zerox.Db.Tests/Zerox.Db.Tests.csproj" />
     <Project Path="tests/Zerox.Domain.Tests/Zerox.Domain.Tests.csproj" />
+    <Project Path="tests/Zerox.Api.Tests/Zerox.Api.Tests.csproj" />
   </Folder>
 </Solution>

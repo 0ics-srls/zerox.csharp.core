@@ -132,3 +132,11 @@ Paths are relative to `src/`.
 | A `[JsonIgnore]` field never readable through load options | `Search` (reserved fields check) | `Zerox.Domain/Search.cs` |
 | The distinct values of a text column for a filter dropdown, in SQL | `DistinctTextValues` (`IsTextColumn<T>`, `ValuesAsync`) | `Zerox.Domain/DistinctTextValues.cs` |
 | A single-field action that wins even if somebody saved in between: re-read and re-apply on conflict, stale client caught | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Domain/LastWriterWins.cs` |
+
+## Zerox.Api
+
+| Need | Type | File |
+|---|---|---|
+| Every error as one JSON body with a code: 400 invalid request (with the reason), 409 optimistic-lock conflict, 500 otherwise | `ApplicationBuilderExtensions.UseZeroxErrorHandling`, `ApiError`, `ApiErrorCode` | `Zerox.Api/ApplicationBuilderExtensions.cs`, `ApiError.cs`, `ErrorHandlingMiddleware.cs` |
+| JSON "as is" (no camelCase), enums as names, days as yyyy-MM-dd — controllers, minimal APIs, OpenAPI alike | `ZeroxJson.AddZeroxJson`, `ZeroxJson.AddConverters` | `Zerox.Api/ZeroxJson.cs` |
+| A day as yyyy-MM-dd, nullable too | `DateOnlyJsonConverter`, `NullableDateOnlyJsonConverter` | `Zerox.Api/DateOnlyJsonConverter.cs` |
