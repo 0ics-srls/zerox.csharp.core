@@ -36,4 +36,4 @@
 ?charts (ChartSeriesSource,palettes,histogram curves) = own stage on ScottPlot.Avalonia 5 when a view needs them
 ✓remote::github.com/0ics-srls/zerox.csharp.core private (2026-10-27),every branch pushed
 ✓review fixes 2026-10-27 (©User):values/{column} refuses a reserved field;PUT loads the stored row → 404 when missing,EntityFields.CopyEditable (no key,navigations,reserved fields) + PinReadVersion;EF 10.0.13 = assetforge's lock
-?to discuss with the user::ErrorHandlingMiddleware catch(Exception) → 500 vs P9;LastWriterWins versionReadByClient changes no outcome (stale client wins on the retry)
+✓decided 2026-10-27 (©User):middleware = top of the request,process never dies (client gone = Information,started response = abort,no second exception);optimistic lock correct everywhere (LastWriterWins with client Version = 409 no retry,DELETE ?version=N on lock entities)

@@ -12,6 +12,8 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
 {
     private TestHost? _host;
 
+    private static readonly TaskCompletionSource Started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     private TestHost Host => _host ?? throw new InvalidOperationException("InitializeAsync has not run.");
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -43,6 +45,19 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
             app.MapGet("/invalid", IResult () => throw new InvalidRequestException("The field 'Nope' does not exist."));
             app.MapGet("/boom", IResult () => throw new InvalidOperationException("secret internals"));
             app.MapGet("/ok", () => Results.Ok(new { Answer = 42 }));
+            // Fails after the first bytes went out: no status or body can be written any more.
+            app.MapGet("/started", async (HttpContext context) =>
+            {
+                await context.Response.WriteAsync("partial");
+                await context.Response.Body.FlushAsync();
+                throw new InvalidOperationException("after the start");
+            });
+            // Waits until the client goes away.
+            app.MapGet("/slow", async (HttpContext context) =>
+            {
+                Started.TrySetResult();
+                await Task.Delay(Timeout.Infinite, context.RequestAborted);
+            });
         });
 
         await using var seed = Host.NewContext();
@@ -108,6 +123,48 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         (await response.Content.ReadAsStringAsync(Ct)).Should().NotContain("secret internals");
         Host.Logs.Entries.Should().Contain(e => e.Level == LogLevel.Error && e.Category.Contains("ErrorHandlingMiddleware", StringComparison.Ordinal));
+    }
+
+    // The middleware entries once the request has gone through it.
+    private async Task<List<(LogLevel Level, string Category, string Message)>> MiddlewareLogsAsync(Func<(LogLevel Level, string Category, string Message), bool> until)
+    {
+        for (var i = 0; i < 500 && !Host.Logs.Entries.Any(until); i++)
+            await Task.Delay(10, Ct);
+        return Host.Logs.Entries.Where(e => e.Category.Contains("ErrorHandlingMiddleware", StringComparison.Ordinal)).ToList();
+    }
+
+    [Fact]
+    public async Task Should_LogAndAbortWithoutASecondException_WhenTheResponseHasStarted()
+    {
+        Exception? cut = null;
+        try
+        {
+            using var response = await Host.Client.GetAsync("/started", Ct);
+            await response.Content.ReadAsStringAsync(Ct);
+        }
+        catch (HttpRequestException e)
+        {
+            cut = e;   // the connection is aborted: the client sees a cut response
+        }
+
+        cut.Should().NotBeNull();
+        cut!.ToString().Should().NotContain("ErrorHandlingMiddleware");   // nothing escaped the middleware
+        var logs = await MiddlewareLogsAsync(e => e.Level == LogLevel.Error);
+        logs.Should().ContainSingle(e => e.Level == LogLevel.Error);
+    }
+
+    [Fact]
+    public async Task Should_NotLogAnError_WhenTheClientGoesAway()
+    {
+        using var gone = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        var call = Host.Client.GetAsync("/slow", gone.Token);
+        await Started.Task.WaitAsync(Ct);
+        await gone.CancelAsync();
+        await call.Invoking(c => c).Should().ThrowAsync<OperationCanceledException>();
+
+        var logs = await MiddlewareLogsAsync(e => e.Category.Contains("ErrorHandlingMiddleware", StringComparison.Ordinal));
+        logs.Should().ContainSingle(e => e.Level == LogLevel.Information);
+        logs.Should().NotContain(e => e.Level >= LogLevel.Warning);
     }
 
     [Fact]

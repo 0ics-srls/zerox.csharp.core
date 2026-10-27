@@ -56,8 +56,9 @@ piece. The complete example, tested from the repository to HTTP, is
    It answers `POST api/Customers/query|groups|projection` (DevExtreme load options, server-side),
    `GET api/Customers/values/{column}`, and the CRUD. A service that writes more than one repository
    opens `IUnitOfWork` (`CustomerMerge`); many rows without loading them go through
-   `IMassiveOpHandler<T>` (`OrdersController.CloseBefore`); a single-field action that must win uses
-   `LastWriterWins` (`CustomersController.Rename`).
+   `IMassiveOpHandler<T>` (`OrdersController.CloseBefore`); a single-field action uses `LastWriterWins`
+   (`CustomersController.Rename`: with the Version the client read, a stale one answers 409). A row
+   with `IHasOptimisticLock` is deleted with the Version the client read: `DELETE api/Customers/5?version=3`.
 
 ## Build and test
 

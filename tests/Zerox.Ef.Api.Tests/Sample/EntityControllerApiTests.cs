@@ -253,8 +253,30 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         using var created = await App.Client.PostAsync("api/Customers", Json("""{"Name":"Temp","City":"Bari"}"""), Ct);
         var location = created.Headers.Location!.ToString();
 
-        (await SendAsync(HttpMethod.Delete, location)).Status.Should().Be(HttpStatusCode.NoContent);
+        (await SendAsync(HttpMethod.Delete, $"{location}?version=0")).Status.Should().Be(HttpStatusCode.NoContent);
         (await SendAsync(HttpMethod.Get, location)).Status.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Should_Answer409_WhenDeleteCarriesAStaleVersion()
+    {
+        await SendAsync(HttpMethod.Put, "api/Customers/2", """{"Id":2,"Name":"Bolt Two","City":"Milan","Version":0}""");   // now at 1
+
+        var (status, body) = await SendAsync(HttpMethod.Delete, "api/Customers/2?version=0");
+
+        status.Should().Be(HttpStatusCode.Conflict);
+        body.GetProperty("Code").GetString().Should().Be("Conflict");
+        await using var check = App.NewContext();
+        (await check.Customers.AnyAsync(c => c.Id == 2, Ct)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Should_Answer400_WhenDeletingALockedRowWithoutItsVersion()
+    {
+        var (status, body) = await SendAsync(HttpMethod.Delete, "api/Customers/2");
+
+        status.Should().Be(HttpStatusCode.BadRequest);
+        body.GetProperty("Message").GetString().Should().Contain("version=");
     }
 
     [Fact]

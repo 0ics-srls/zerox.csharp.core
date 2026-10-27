@@ -71,12 +71,21 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
         return Ok(stored);
     }
 
+    // A row with the optimistic lock is deleted only at the Version the client read (?version=N): a
+    // stale one answers 409, a missing one 400 — a delete must not destroy a change the client never saw.
     [HttpDelete("{id:int}")]
-    public virtual async Task<IActionResult> Delete(int id, CancellationToken ct)
+    public virtual async Task<IActionResult> Delete(int id, [FromQuery] int? version, CancellationToken ct)
     {
         var entity = await Repository.GetByIdAsync(id, ct).ConfigureAwait(false);
         if (entity is null)
             return NotFound();
+        if (entity is IHasOptimisticLock)
+        {
+            if (version is not int read)
+                return BadRequest(new ApiError(ApiErrorCode.InvalidRequest,
+                    $"{typeof(T).Name} has an optimistic lock: give the Version you read, as ?version=N."));
+            Repository.PinReadVersion(entity, read);
+        }
         Repository.Delete(entity);
         await Repository.SaveChangesAsync(ct).ConfigureAwait(false);
         return NoContent();

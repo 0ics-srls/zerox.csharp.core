@@ -24,7 +24,8 @@ assetforge as a submodule.
 
 - Everything in the repository is English (identifiers, comments, strings, files, commits)
 - KISS, DRY, SOLID as heuristics, applied where a change is real or very likely: no interface without a consumer that substitutes it (the consumer owns it), no registration method without something to wire, one implementation per capability, one actor per class, composition instead of deep inheritance
-- No exception is hidden: an expected failure is a Try-pattern or a result; misuse is an `ArgumentException`; an exception nobody expected is never caught to go on
+- No exception is hidden: an expected failure is a Try-pattern or a result; misuse is an `ArgumentException`; an exception nobody expected is never caught to go on — except at the top of a web request: every exception ends in the error middleware (`UseZeroxErrorHandling`), which logs it as an error with its stack and answers 500; a web process never dies of one request
+- Optimistic lock: a client that sends the `Version` it read never overwrites nor deletes a row changed after that read (409); only a change the server decides alone retries and lets the last writer win
 - Constructor injection only, no DI container inside the components; `internal sealed` by default, `public` is a decision
 - Library code awaits with `ConfigureAwait(false)` (CA2007); UI code in `Zerox.Core.Avalonia` returns to the UI thread through the `Dispatcher`, explicitly
 - Enums instead of strings (in JSON the member name); System.Text.Json only (never Newtonsoft); everything async

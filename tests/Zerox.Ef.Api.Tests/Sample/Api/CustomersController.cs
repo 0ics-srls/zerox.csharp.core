@@ -14,7 +14,7 @@ public sealed class CustomersController(IRepository<Customer> repository, ICusto
     public async Task<IActionResult> MergeInto(int id, int intoId, CancellationToken ct) =>
         await merge.MergeAsync(id, intoId, ct) ? NoContent() : NotFound();
 
-    // One field: the last writer wins, even with a stale Version (a full PUT would answer 409).
+    // One field, at the Version the client read: a stale one answers 409, like a full PUT.
     [HttpPut("{id:int}/name")]
     public async Task<ActionResult<Customer>> Rename(int id, [FromBody] RenameRequest body, CancellationToken ct)
     {

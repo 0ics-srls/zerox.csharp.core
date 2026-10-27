@@ -6,9 +6,12 @@ using Zerox.Ef.Domain;
 
 namespace Zerox.Ef.Api;
 
-// The outermost catch of the application: what nobody expected becomes the 500 the client gets, logged.
-// A conflict on the optimistic lock is an expected event (409, a warning); a request that cannot be
-// executed is the client's mistake (400 with the reason, not an error of ours).
+// The top of every request: every exception ends here and none goes further, so a web process never
+// dies of one request. What nobody expected is logged as an error with its stack and becomes the 500
+// the client gets; it is never hidden. A conflict on the optimistic lock is an expected event (409, a
+// warning); a request that cannot be executed is the client's mistake (400 with the reason); a client
+// that went away is nobody's error. When the response has already started nothing more can be written:
+// the connection is aborted.
 internal sealed class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
@@ -27,6 +30,10 @@ internal sealed class ErrorHandlingMiddleware(RequestDelegate next, ILogger<Erro
         {
             await WriteAsync(context, HttpStatusCode.BadRequest, new ApiError(ApiErrorCode.InvalidRequest, e.Message)).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogInformation("Request aborted by the client");
+        }
         catch (Exception e)
         {
             logger.LogError(e, "Unhandled exception");
@@ -40,9 +47,15 @@ internal sealed class ErrorHandlingMiddleware(RequestDelegate next, ILogger<Erro
     private static bool IsOptimisticLockConflict(DbUpdateConcurrencyException e) =>
         e.Entries.Any(entry => entry.Metadata.GetProperties().Any(p => p.IsConcurrencyToken));
 
-    // Written with the HTTP JSON options (AddZeroxJson): the code goes out as its name.
+    // Written with the HTTP JSON options (AddZeroxJson): the code goes out as its name. After the start
+    // of the response the status cannot change: the client gets a cut response, never a wrong one.
     private static Task WriteAsync(HttpContext context, HttpStatusCode status, ApiError error)
     {
+        if (context.Response.HasStarted)
+        {
+            context.Abort();
+            return Task.CompletedTask;
+        }
         context.Response.StatusCode = (int)status;
         return context.Response.WriteAsJsonAsync(error);
     }

@@ -134,14 +134,14 @@ The contracts of the database foundation, no EF type in them: what an applicatio
 | A `[JsonIgnore]` field never readable through load options | `Search` (reserved fields check) | `Zerox.Ef.Domain/Search.cs` |
 | The distinct values of a text column for a filter dropdown, in SQL (never a reserved field) | `DistinctTextValues` (`IsTextColumn<T>`, `ValuesAsync`) | `Zerox.Ef.Domain/DistinctTextValues.cs` |
 | Apply an entity sent whole onto the stored row: every editable field, never the key, the navigations or the reserved fields | `EntityFields.CopyEditable` | `Zerox.Ef.Domain/EntityFields.cs` |
-| A single-field action that wins even if somebody saved in between: re-read and re-apply on conflict, stale client caught | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Ef.Domain/LastWriterWins.cs` |
+| A single-field action: with the client's Version the optimistic lock (stale = conflict, never retried); without it re-read and re-apply on conflict, the last writer wins | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Ef.Domain/LastWriterWins.cs` |
 
 ## Zerox.Ef.Api
 
 | Need | Type | File |
 |---|---|---|
-| The controller of an entity: DevExtreme query/groups/projection, distinct values, CRUD (PUT copies the editable fields onto the stored row, 404 when it is missing) — no `[Authorize]` (the project adds it); a project writes one line per entity | `EntityController<T>` | `Zerox.Ef.Api/EntityController.cs` |
-| Every error as one JSON body with a code: 400 invalid request (with the reason), 409 optimistic-lock conflict, 500 otherwise | `ApplicationBuilderExtensions.UseZeroxErrorHandling`, `ApiError`, `ApiErrorCode` | `Zerox.Ef.Api/ApplicationBuilderExtensions.cs`, `ApiError.cs`, `ErrorHandlingMiddleware.cs` |
+| The controller of an entity: DevExtreme query/groups/projection, distinct values, CRUD (PUT copies the editable fields onto the stored row, 404 when it is missing; PUT and DELETE `?version=N` at the Version the client read, stale = 409) — no `[Authorize]` (the project adds it); a project writes one line per entity | `EntityController<T>` | `Zerox.Ef.Api/EntityController.cs` |
+| The top of every request: every error as one JSON body with a code — 400 invalid request (with the reason), 409 optimistic-lock conflict, 500 otherwise (logged with its stack); a client gone is no error; a started response is aborted; the process never dies of a request | `ApplicationBuilderExtensions.UseZeroxErrorHandling`, `ApiError`, `ApiErrorCode` | `Zerox.Ef.Api/ApplicationBuilderExtensions.cs`, `ApiError.cs`, `ErrorHandlingMiddleware.cs` |
 | JSON "as is" (no camelCase), enums as names, days as yyyy-MM-dd — controllers, minimal APIs, OpenAPI alike | `ZeroxJson.AddZeroxJson`, `ZeroxJson.AddConverters` | `Zerox.Ef.Api/ZeroxJson.cs` |
 | A day as yyyy-MM-dd, nullable too | `DateOnlyJsonConverter`, `NullableDateOnlyJsonConverter` | `Zerox.Ef.Api/DateOnlyJsonConverter.cs` |
 | The complete example of an application on the foundation (Core → Db → Domain → Api), tested from the repository to HTTP | `SampleApp`, `CustomerMerge`, `CustomersController`, `OrdersController` | `../tests/Zerox.Ef.Api.Tests/Sample/` |

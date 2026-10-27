@@ -76,19 +76,19 @@ public sealed class SampleApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_RenameWithTheLastWriterWinning_WhenTheClientVersionIsStale()
+    public async Task Should_Answer409_WhenARenameCarriesAStaleVersion()
     {
-        // Both clients read Acme at Version 0.
+        // Both clients read Acme at Version 0: the first renames, the second decided on a stale row.
         var a = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", """{"Name":"Acme by A","Version":0}""");
         var b = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", """{"Name":"Acme by B","Version":0}""");
 
         a.Status.Should().Be(HttpStatusCode.OK);
-        b.Status.Should().Be(HttpStatusCode.OK);
-        b.Body.GetProperty("Name").GetString().Should().Be("Acme by B");
+        b.Status.Should().Be(HttpStatusCode.Conflict);
+        b.Body.GetProperty("Code").GetString().Should().Be("Conflict");
         await using var check = App.NewContext();
         var saved = await check.Customers.SingleAsync(c => c.Id == Acme, Ct);
-        saved.Name.Should().Be("Acme by B");
-        saved.Version.Should().Be(2);
+        saved.Name.Should().Be("Acme by A");
+        saved.Version.Should().Be(1);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public sealed class SampleApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_StillAnswer409_WhenAFullPutIsStale()
+    public async Task Should_Answer409_WhenAFullPutOrARenameIsStale()
     {
         await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", """{"Name":"Renamed","Version":0}""");   // now at 1
 
@@ -106,7 +106,7 @@ public sealed class SampleApiTests : IAsyncLifetime
         var staleRename = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", """{"Name":"Wins","Version":0}""");
 
         stalePut.Status.Should().Be(HttpStatusCode.Conflict);   // the whole entity would overwrite somebody's work
-        staleRename.Status.Should().Be(HttpStatusCode.OK);      // one field: the last writer wins
+        staleRename.Status.Should().Be(HttpStatusCode.Conflict); // one field: still decided on a stale row
     }
 
     [Fact]

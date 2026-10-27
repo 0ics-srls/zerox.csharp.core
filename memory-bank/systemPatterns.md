@@ -13,6 +13,7 @@
 !KISS::no interface without a consumer that substitutes it;no registration method without something to wire;no base applied by dogma
 !DRY::one implementation per capability (binary search on ReadOnlySpan,one circular buffer,one change notification,one JSON)
 !SOLID::S one actor per class;L no deep hierarchies,composition,no NotImplemented subclasses;I small interfaces seen by the user;D abstraction owned by its consumer;O only on real axes of change
-!P9::expected failure = Try-pattern or result;misuse = ArgumentException;unexpected exception never caught to go on
+!P9::expected failure = Try-pattern or result;misuse = ArgumentException;unexpected exception never caught to go on;web exception (©User 2026-10-27 "processo non può morire,exception devono passare da middleware"):every exception of a request ends in the error middleware (Error log + 500,client gone = Information,response started = connection aborted),a web process never dies
+!optimistic lock::©User 2026-10-27 "gestito in maniera corretta":client Version given → save only at that Version,stale = 409,never retried (PUT,rename via LastWriterWins,DELETE ?version=N required on lock entities);retry + last writer wins only without a client Version
 !DI::constructor injection,no container inside components
 !visibility::internal sealed by default,public is a decision

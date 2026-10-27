@@ -158,7 +158,7 @@ public sealed class LastWriterWinsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_DetectAStaleClient_WhenTheClientVersionIsGiven()
+    public async Task Should_ThrowWithoutRetry_WhenTheClientVersionIsStale()
     {
         var id = await SeedAsync();
         await OtherWriterAsync(id, other => other.Note = "theirs");   // the row is at Version 1
@@ -166,12 +166,47 @@ public sealed class LastWriterWinsTests : IAsyncLifetime
         var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
         var calls = 0;
 
-        var saved = await wins.SaveAsync<Memo>(id, _ => true,
+        var save = () => wins.SaveAsync<Memo>(id, _ => true,
             (m, _) => { calls++; m.Text = "mine"; return Task.CompletedTask; }, versionReadByClient: 0, ct: Ct);
 
-        calls.Should().Be(2);   // the first save saw the stale client, the retry re-read and won
+        await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        calls.Should().Be(1);   // the client decided on a row that is no longer there: it must read again
+        var stored = await ReadAsync(id);
+        stored.Text.Should().Be("first");
+        stored.Version.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Should_ThrowWithoutRetry_WhenAnotherWriterSavesAfterTheClientRead()
+    {
+        var id = await SeedAsync();
+        await using var scope = Db.NewScope();
+        var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
+        var calls = 0;
+
+        // The client read Version 0 and it is still 0 when the row is read here; another writer saves
+        // between this read and this save.
+        var save = () => wins.SaveAsync<Memo>(id, _ => true,
+            async (m, _) => { calls++; await OtherWriterAsync(id, other => other.Note = "theirs"); m.Text = "mine"; },
+            versionReadByClient: 0, ct: Ct);
+
+        await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        calls.Should().Be(1);
+        (await ReadAsync(id)).Text.Should().Be("first");
+    }
+
+    [Fact]
+    public async Task Should_Save_WhenTheClientVersionIsCurrent()
+    {
+        var id = await SeedAsync();
+        await using var scope = Db.NewScope();
+        var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
+
+        var saved = await wins.SaveAsync<Memo>(id, _ => true,
+            (m, _) => { m.Text = "mine"; return Task.CompletedTask; }, versionReadByClient: 0, ct: Ct);
+
         saved!.Text.Should().Be("mine");
-        (await ReadAsync(id)).Version.Should().Be(2);
+        (await ReadAsync(id)).Version.Should().Be(1);
     }
 
     [Fact]
