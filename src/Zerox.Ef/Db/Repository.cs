@@ -32,8 +32,6 @@ internal sealed class Repository<T> : IRepository<T> where T : class, IEntity
     public Task AddRangeAsync(IEnumerable<T> entities, CancellationToken ct = default) =>
         _db.Set<T>().AddRangeAsync(entities, ct);
 
-    public void Update(T entity) => _db.Set<T>().Update(entity);
-
     public void Delete(T entity) => _db.Set<T>().Remove(entity);
 
     public void DeleteRange(IEnumerable<T> entities) => _db.Set<T>().RemoveRange(entities);

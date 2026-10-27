@@ -75,14 +75,16 @@ public sealed class RepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_PersistTheChange_WhenUpdatedAndSaved()
+    public async Task Should_PersistTheChange_WhenATrackedRowIsChangedAndSaved()
     {
         var id = await SeedAsync(new Item { Name = "pen", Quantity = 1 });
 
         await using (var scope = Db.NewScope())
         {
             var items = scope.ServiceProvider.GetRequiredService<IRepository<Item>>();
-            items.Update(new Item { Id = id, Name = "pencil", Quantity = 2 });
+            var item = await items.GetByIdAsync(id, Ct);
+            item!.Name = "pencil";
+            item.Quantity = 2;
             await items.SaveChangesAsync(Ct);
         }
 

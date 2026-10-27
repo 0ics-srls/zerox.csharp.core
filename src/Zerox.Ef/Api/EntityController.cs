@@ -15,11 +15,14 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
 {
     protected IRepository<T> Repository { get; } = repository;
 
+    // The most rows one request of query or projection reads; a controller with larger pages overrides it.
+    protected virtual int MaxTake => Search.DefaultMaxTake;
+
     // POST because the options travel in the body; the meaning is a read. Filter, sort and paging run
     // on the server.
     [HttpPost("query")]
     public virtual async Task<ActionResult<DataSourceResult<T>>> Query([FromBody] DataSourceLoadOptionsBase? options, CancellationToken ct) =>
-        Ok(await Search.RowsAsync(Repository.Query(), options ?? new DataSourceLoadOptionsBase(), ct).ConfigureAwait(false));
+        Ok(await Search.RowsAsync(Repository.Query(), options ?? new DataSourceLoadOptionsBase(), MaxTake, ct).ConfigureAwait(false));
 
     [HttpPost("groups")]
     public virtual async Task<ActionResult<GroupsResult>> Groups([FromBody] DataSourceLoadOptionsBase options, CancellationToken ct) =>
@@ -28,7 +31,7 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
     [HttpPost("projection")]
     public virtual async Task<ActionResult<DataSourceResult<IDictionary<string, object?>>>> Projection(
         [FromBody] DataSourceLoadOptionsBase options, CancellationToken ct) =>
-        Ok(await Search.ProjectionAsync(SearchSource(), options, ct).ConfigureAwait(false));
+        Ok(await Search.ProjectionAsync(SearchSource(), options, MaxTake, ct).ConfigureAwait(false));
 
     // The column name comes from the URL: it is checked against the real properties before any query.
     [HttpGet("values/{column}")]
@@ -47,6 +50,8 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
     public virtual async Task<ActionResult<T>> Create([FromBody] T entity, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(entity);
+        if (entity.Id != 0)
+            return BadRequest(new ApiError(ApiErrorCode.InvalidRequest, "The Id is given by the database: leave it out of a creation."));
         await Repository.AddAsync(entity, ct).ConfigureAwait(false);
         await Repository.SaveChangesAsync(ct).ConfigureAwait(false);
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);

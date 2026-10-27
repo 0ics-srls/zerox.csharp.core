@@ -7,7 +7,8 @@ namespace Zerox.Ef.Db;
 public static class ServiceCollectionExtensions
 {
     // The context with the session rules, and the ports on it. The unit of work and the massive
-    // handler are not registered: a repository hands them out.
+    // handler are not registered: a repository hands them out. The end of the scope checks that none of
+    // them was left open (SessionScopeCheck, created with the context and disposed before it).
     public static IServiceCollection AddZeroxDb<TContext>(
         this IServiceCollection services, Action<DbContextOptionsBuilder> configure)
         where TContext : DbContext, IDbContext
@@ -19,7 +20,12 @@ public static class ServiceCollectionExtensions
             configure(options);
             options.UseZeroxSession();
         });
-        services.AddScoped<IDbContext>(sp => sp.GetRequiredService<TContext>());
+        services.AddScoped(sp => new SessionScopeCheck(sp.GetRequiredService<TContext>()));
+        services.AddScoped<IDbContext>(sp =>
+        {
+            sp.GetRequiredService<SessionScopeCheck>();
+            return sp.GetRequiredService<TContext>();
+        });
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IRepositoryFactory, RepositoryFactory>();
         return services;

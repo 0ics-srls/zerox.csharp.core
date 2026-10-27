@@ -64,11 +64,14 @@ internal sealed class SessionInterceptor : SaveChangesInterceptor, IDbCommandInt
         if (session.Boundary is not null)
             return ValueTask.FromResult(InterceptionResult<int>.SuppressWithResult(0));
 
-        // The save goes through: every modified row with the lock counts one more version (an added
-        // row starts at 0). EF detects the changes after this, so the new Version is written.
+        // The save goes through: an added row with the lock starts at 0 (the Version is the library's,
+        // never the client's), every modified one counts one more. EF detects the changes after this,
+        // so the new Version is written.
         foreach (var entry in eventData.Context!.ChangeTracker.Entries<IHasOptimisticLock>())
         {
-            if (entry.State == EntityState.Modified)
+            if (entry.State == EntityState.Added)
+                entry.Entity.Version = 0;
+            else if (entry.State == EntityState.Modified)
                 entry.Entity.Version++;
         }
 

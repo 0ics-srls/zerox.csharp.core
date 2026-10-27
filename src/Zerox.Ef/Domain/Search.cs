@@ -8,6 +8,9 @@ namespace Zerox.Ef.Domain;
 // is a 400 with the reason, never a silent 500: every refusal is an InvalidRequestException.
 public static class Search
 {
+    // The most rows one request reads when the caller does not set its own limit.
+    public const int DefaultMaxTake = 1000;
+
     // The options a client does not decide: no synchronous code on the database, grouping and
     // projection done by the provider (with EF, in SQL: false would bring the table into memory).
     public static void MakeSafe(DataSourceLoadOptionsBase options)
@@ -22,7 +25,7 @@ public static class Search
 
     // Rows: whole entities, paged, filtered, sorted, with the total count and summaries when asked.
     public static async Task<DataSourceResult<T>> RowsAsync<T>(
-        IQueryable<T> source, DataSourceLoadOptionsBase options, CancellationToken ct = default)
+        IQueryable<T> source, DataSourceLoadOptionsBase options, int maxTake = DefaultMaxTake, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
@@ -34,6 +37,7 @@ public static class Search
         if (options.Select is { Length: > 0 } || options.PreSelect is { Length: > 0 })
             throw new InvalidRequestException("Projection is not asked here: use the projection route. Here whole entities are read.");
         LoadOptionsValidator.Validate<T>(options);
+        CheckPage(options, maxTake);
 
         var loaded = await LoadAsync(source, options, "search", ct).ConfigureAwait(false);
         return new DataSourceResult<T>
@@ -74,7 +78,7 @@ public static class Search
     // Projection: only the asked columns (also through navigations: names instead of ids), projected in
     // SQL. Keys are the C# names, even when the client wrote them in lower case.
     public static async Task<DataSourceResult<IDictionary<string, object?>>> ProjectionAsync<T>(
-        IQueryable<T> source, DataSourceLoadOptionsBase options, CancellationToken ct = default)
+        IQueryable<T> source, DataSourceLoadOptionsBase options, int maxTake = DefaultMaxTake, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
@@ -86,6 +90,7 @@ public static class Search
             throw new InvalidRequestException("Grouping is not asked here: use the groups route. Here columns are read.");
         CheckReserved<T>(options);
         LoadOptionsValidator.Validate<T>(options);
+        CheckPage(options, maxTake);
         // DevExtreme uses the received text as key: "box.label" would come out as {"box":{"label":…}},
         // outside the "names as is" rule.
         if (options.Select is { Length: > 0 })
@@ -119,6 +124,18 @@ public static class Search
         {
             throw new InvalidRequestException($"Invalid {what}: {e.Message}", e);
         }
+    }
+
+    // A request that returns rows says how many, within the limit: without Take DevExtreme reads the whole
+    // table. A count or a summary alone returns no rows and needs no page.
+    private static void CheckPage(DataSourceLoadOptionsBase options, int maxTake)
+    {
+        if (options.IsCountQuery == true || options.IsSummaryQuery == true)
+            return;
+        if (options.Take <= 0)
+            throw new InvalidRequestException($"Give Take, the rows to read (at most {maxTake}): {{\"Skip\": 0, \"Take\": 50}}.");
+        if (options.Take > maxTake)
+            throw new InvalidRequestException($"Take is at most {maxTake}: read the rest with Skip.");
     }
 
     // The path with the C# names ("box.label" → "Box.Label"); the validator already proved it exists.

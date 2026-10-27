@@ -66,10 +66,36 @@ public sealed class SearchTests : IAsyncLifetime
             RequireTotalCount = true,
         };
 
-        var result = await Search.RowsAsync(Items(context), options, Ct);
+        var result = await Search.RowsAsync(Items(context), options, ct: Ct);
 
         result.data.Select(i => i.Quantity).Should().Equal(10, 8, 6, 4, 2);
         result.totalCount.Should().Be(15);
+    }
+
+    [Fact]
+    public async Task Should_Refuse_WhenRowsAreAskedWithoutTake()
+    {
+        await using var context = Db.NewContext();
+
+        var rows = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase(), ct: Ct);
+        var projection = () => Search.ProjectionAsync(Items(context), new DataSourceLoadOptionsBase { Select = ["Name"] }, ct: Ct);
+
+        (await rows.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("Take");
+        (await projection.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("Take");
+    }
+
+    [Fact]
+    public async Task Should_Refuse_WhenTakeIsAboveTheLimit()
+    {
+        await using var context = Db.NewContext();
+
+        var aboveDefault = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Take = Search.DefaultMaxTake + 1 }, ct: Ct);
+        var aboveOwn = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Take = 11 }, maxTake: 10, ct: Ct);
+        var atOwn = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Take = 10 }, maxTake: 10, ct: Ct);
+
+        await aboveDefault.Should().ThrowAsync<InvalidRequestException>();
+        await aboveOwn.Should().ThrowAsync<InvalidRequestException>();
+        atOwn.data.Should().HaveCount(10);
     }
 
     [Fact]
@@ -77,7 +103,7 @@ public sealed class SearchTests : IAsyncLifetime
     {
         await using var context = Db.NewContext();
 
-        var result = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Take = 3 }, Ct);
+        var result = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Take = 3 }, ct: Ct);
 
         result.data.Should().BeOfType<List<Item>>().Which.Should().HaveCount(3);
     }
@@ -87,12 +113,12 @@ public sealed class SearchTests : IAsyncLifetime
     {
         await using var context = Db.NewContext();
 
-        var count = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { IsCountQuery = true }, Ct);
+        var count = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { IsCountQuery = true }, ct: Ct);
         var summary = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase
         {
             IsSummaryQuery = true,
             TotalSummary = [new SummaryInfo { Selector = "Quantity", SummaryType = "sum" }],
-        }, Ct);
+        }, ct: Ct);
 
         count.data.Should().NotBeNull().And.BeEmpty();
         count.totalCount.Should().Be(30);
@@ -105,7 +131,7 @@ public sealed class SearchTests : IAsyncLifetime
     {
         await using var context = Db.NewContext();
 
-        var rows = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Group = [new GroupingInfo { Selector = "Kind" }] }, Ct);
+        var rows = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Group = [new GroupingInfo { Selector = "Kind" }] }, ct: Ct);
 
         (await rows.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("groups route");
     }
@@ -115,8 +141,8 @@ public sealed class SearchTests : IAsyncLifetime
     {
         await using var context = Db.NewContext();
 
-        var select = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Select = ["Name"] }, Ct);
-        var preSelect = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { PreSelect = ["Name"] }, Ct);
+        var select = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Select = ["Name"] }, ct: Ct);
+        var preSelect = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { PreSelect = ["Name"] }, ct: Ct);
 
         (await select.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("projection route");
         (await preSelect.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("projection route");
@@ -128,7 +154,7 @@ public sealed class SearchTests : IAsyncLifetime
         await using var context = Db.NewContext();
 
         // The validator lets a [NotMapped] property through (it exists); the database cannot sort on it.
-        var rows = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Sort = [new SortingInfo { Selector = "Display" }] }, Ct);
+        var rows = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Sort = [new SortingInfo { Selector = "Display" }], Take = 5 }, ct: Ct);
 
         (await rows.Should().ThrowAsync<InvalidRequestException>()).Which.InnerException.Should().NotBeNull();
     }
@@ -155,8 +181,8 @@ public sealed class SearchTests : IAsyncLifetime
         Func<Task> search = option switch
         {
             "Group" => () => Search.GroupsAsync(Items(context), options, Ct),
-            "Select" => () => Search.ProjectionAsync(Items(context), options, Ct),
-            _ => () => Search.RowsAsync(Items(context), options, Ct),
+            "Select" => () => Search.ProjectionAsync(Items(context), options, ct: Ct),
+            _ => () => Search.RowsAsync(Items(context), options, ct: Ct),
         };
 
         (await search.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("'Secret' cannot be read here");
@@ -166,9 +192,9 @@ public sealed class SearchTests : IAsyncLifetime
     public async Task Should_AllowANavigation_EvenWhenItIsJsonIgnored()
     {
         await using var context = Db.NewContext();
-        var options = new DataSourceLoadOptionsBase { Filter = L("Box.Label", "=", "blue"), RequireTotalCount = true };
+        var options = new DataSourceLoadOptionsBase { Filter = L("Box.Label", "=", "blue"), RequireTotalCount = true, Take = 100 };
 
-        var result = await Search.RowsAsync(Items(context), options, Ct);
+        var result = await Search.RowsAsync(Items(context), options, ct: Ct);
 
         result.totalCount.Should().Be(15);
     }
@@ -245,7 +271,7 @@ public sealed class SearchTests : IAsyncLifetime
             Take = 1,
         };
 
-        var result = await Search.ProjectionAsync(Items(context), options, Ct);
+        var result = await Search.ProjectionAsync(Items(context), options, ct: Ct);
 
         var row = result.data.Single();
         row.Should().ContainKey("Name").WhoseValue.Should().Be("item01");
@@ -257,12 +283,12 @@ public sealed class SearchTests : IAsyncLifetime
     {
         await using var context = Db.NewContext();
 
-        var noSelect = () => Search.ProjectionAsync(Items(context), new DataSourceLoadOptionsBase(), Ct);
+        var noSelect = () => Search.ProjectionAsync(Items(context), new DataSourceLoadOptionsBase(), ct: Ct);
         var withGroup = () => Search.ProjectionAsync(Items(context), new DataSourceLoadOptionsBase
         {
             Select = ["Name"],
             Group = [new GroupingInfo { Selector = "Kind" }],
-        }, Ct);
+        }, ct: Ct);
 
         await noSelect.Should().ThrowAsync<InvalidRequestException>();
         (await withGroup.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("groups route");

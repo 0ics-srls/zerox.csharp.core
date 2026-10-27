@@ -55,8 +55,8 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     [Fact]
     public async Task Should_FilterOnTheServer_WhenQueryHasAFilter()
     {
-        var (_, closed) = await PostAsync("api/Orders/query", """{"Filter":["Status","=","Closed"]}""");
-        var (_, cargo) = await PostAsync("api/Orders/query", """{"Filter":["Customer.Name","contains","a"],"RequireTotalCount":true}""");
+        var (_, closed) = await PostAsync("api/Orders/query", """{"Filter":["Status","=","Closed"],"Take":100}""");
+        var (_, cargo) = await PostAsync("api/Orders/query", """{"Filter":["Customer.Name","contains","a"],"RequireTotalCount":true,"Take":100}""");
 
         Data(closed).Should().HaveCount(5).And.OnlyContain(o => o.GetProperty("Status").GetString() == "Closed");
         cargo.GetProperty("totalCount").GetInt32().Should().Be(8);   // only Cargo has a lower-case "a"
@@ -71,12 +71,32 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_ReturnEverything_WhenTheQueryBodyIsNull()
+    public async Task Should_Answer400_WhenTheQueryBodyIsNull()
     {
         var (status, body) = await PostAsync("api/Orders/query", "null");
 
+        status.Should().Be(HttpStatusCode.BadRequest);
+        body.GetProperty("Message").GetString().Should().Contain("Take");
+    }
+
+    [Theory]
+    [InlineData("""{"Skip":0}""")]
+    [InlineData("""{"Take":1001}""")]
+    public async Task Should_Answer400_WhenRowsAreAskedWithoutAPage(string json)
+    {
+        var (status, body) = await PostAsync("api/Orders/query", json);
+
+        status.Should().Be(HttpStatusCode.BadRequest);
+        body.GetProperty("Message").GetString().Should().Contain("Take");
+    }
+
+    [Fact]
+    public async Task Should_CountWithoutAPage_WhenOnlyTheCountIsAsked()
+    {
+        var (status, body) = await PostAsync("api/Orders/query", """{"IsCountQuery":true}""");
+
         status.Should().Be(HttpStatusCode.OK);
-        Data(body).Should().HaveCount(25);
+        body.GetProperty("totalCount").GetInt32().Should().Be(25);
     }
 
     [Fact]
@@ -236,6 +256,26 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         var (status, _) = await SendAsync(HttpMethod.Put, url, json);
 
         status.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Should_Answer400_WhenCreateCarriesAnId()
+    {
+        var (status, body) = await SendAsync(HttpMethod.Post, "api/Customers", """{"Id":1,"Name":"Dup","City":"x"}""");
+
+        status.Should().Be(HttpStatusCode.BadRequest);
+        body.GetProperty("Code").GetString().Should().Be("InvalidRequest");
+    }
+
+    [Fact]
+    public async Task Should_StartAtVersionZero_WhenCreateCarriesAVersion()
+    {
+        var (status, body) = await SendAsync(HttpMethod.Post, "api/Customers", """{"Name":"V","City":"x","Version":99}""");
+
+        status.Should().Be(HttpStatusCode.Created);
+        body.GetProperty("Version").GetInt32().Should().Be(0);
+        await using var check = App.NewContext();
+        (await check.Customers.SingleAsync(c => c.Name == "V", Ct)).Version.Should().Be(0);
     }
 
     [Fact]

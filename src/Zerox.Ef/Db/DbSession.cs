@@ -92,6 +92,23 @@ internal sealed class DbSession
         Massive = null;
     }
 
+    // At the end of the scope: what is still open was never closed by its owner. Closed here (a massive
+    // operation rolls back), and the reason returned so the scope can say it.
+    internal async ValueTask<string?> CloseForgottenAsync()
+    {
+        if (Massive is { } massive)
+        {
+            await CloseMassiveAsync(massive).ConfigureAwait(false);
+            return "A massive operation was opened and never committed or closed: it was rolled back. Open it with await using.";
+        }
+        if (Boundary is not null)
+        {
+            Boundary = null;
+            return "A unit of work was opened and never applied or closed: its saves were swallowed and nothing was written. Open it with await using.";
+        }
+        return null;
+    }
+
     // Leaving without applying is a choice, not an error: nothing reached the database.
     internal void CloseWithoutApplying(UnitOfWork who)
     {

@@ -131,7 +131,7 @@ public sealed class SampleApiTests : IAsyncLifetime
 
         // Project names instead of ids, and sum per customer.
         var names = await SendAsync(HttpMethod.Post, "api/Orders/projection",
-            """{"Select":["Amount","Customer.Name"],"Filter":["Date",">=","2026-03-01"],"Sort":[{"Selector":"Amount","Desc":true}]}""");
+            """{"Select":["Amount","Customer.Name"],"Filter":["Date",">=","2026-03-01"],"Sort":[{"Selector":"Amount","Desc":true}],"Take":10}""");
         names.Body.GetProperty("data")[0].GetProperty("Customer").GetProperty("Name").GetString().Should().Be("South");
         var sums = await SendAsync(HttpMethod.Post, "api/Orders/groups",
             """{"Filter":["Date",">=","2026-03-01"],"Group":[{"Selector":"Customer.Name"}],"GroupSummary":[{"Selector":"Amount","SummaryType":"sum"}]}""");

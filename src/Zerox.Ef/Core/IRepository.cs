@@ -12,15 +12,13 @@ public interface IRepository<T> where T : class, IEntity
     // one page of a sync must find the first one, which the database does not have yet.
     IEnumerable<T> Local();
 
-    // Tracked: "give me that row, I may change it" — a change is then saved without Update.
+    // Tracked: "give me that row, I may change it" — the change is saved by SaveChangesAsync. There is no
+    // Update of a whole detached entity: it would write every column, the fields the client never saw too.
     Task<T?> GetByIdAsync(int id, CancellationToken ct = default);
 
     Task AddAsync(T entity, CancellationToken ct = default);
 
     Task AddRangeAsync(IEnumerable<T> entities, CancellationToken ct = default);
-
-    // Attaches a detached instance and marks it modified.
-    void Update(T entity);
 
     void Delete(T entity);
 

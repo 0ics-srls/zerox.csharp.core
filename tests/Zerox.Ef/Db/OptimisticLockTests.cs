@@ -80,6 +80,22 @@ public sealed class OptimisticLockTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Should_StartAtZero_WhenAnAddedEntityCarriesAVersion()
+    {
+        int id;
+        await using (var context = Db.NewContext())
+        {
+            var row = new Locked { Name = "a", Version = 7 };
+            context.Locked.Add(row);
+            await context.SaveChangesAsync(Ct);
+            id = row.Id;
+            row.Version.Should().Be(0);
+        }
+
+        (await ReadAsync(id)).Version.Should().Be(0);
+    }
+
+    [Fact]
     public async Task Should_ReachTwo_WhenModifiedTwice()
     {
         var id = await SeedAsync("a");
