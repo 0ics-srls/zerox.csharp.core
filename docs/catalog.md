@@ -141,3 +141,4 @@ Paths are relative to `src/`.
 | Every error as one JSON body with a code: 400 invalid request (with the reason), 409 optimistic-lock conflict, 500 otherwise | `ApplicationBuilderExtensions.UseZeroxErrorHandling`, `ApiError`, `ApiErrorCode` | `Zerox.Api/ApplicationBuilderExtensions.cs`, `ApiError.cs`, `ErrorHandlingMiddleware.cs` |
 | JSON "as is" (no camelCase), enums as names, days as yyyy-MM-dd — controllers, minimal APIs, OpenAPI alike | `ZeroxJson.AddZeroxJson`, `ZeroxJson.AddConverters` | `Zerox.Api/ZeroxJson.cs` |
 | A day as yyyy-MM-dd, nullable too | `DateOnlyJsonConverter`, `NullableDateOnlyJsonConverter` | `Zerox.Api/DateOnlyJsonConverter.cs` |
+| The complete example of an application on the foundation (Core → Db → Domain → Api), tested from the repository to HTTP | `SampleApp`, `CustomerMerge`, `CustomersController`, `OrdersController` | `../tests/Zerox.Api.Tests/Sample/` |

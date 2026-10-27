@@ -3,8 +3,11 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Zerox.Api.Tests.Sample.Core;
 using Zerox.Api.Tests.Sample.Db;
+using Zerox.Api.Tests.Sample.Domain;
 using Zerox.Db;
+using Zerox.Domain;
 
 namespace Zerox.Api.Tests.Sample.Api;
 
@@ -23,6 +26,9 @@ public sealed class SampleApp : IAsyncDisposable
 
     public HttpClient Client { get; }
 
+    // The database connection, for a test that builds its own provider on the same database.
+    public SqliteConnection Connection => _connection;
+
     public IServiceProvider Services => _app.Services;
 
     public static async Task<SampleApp> StartAsync()
@@ -33,6 +39,8 @@ public sealed class SampleApp : IAsyncDisposable
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddZeroxDb<SampleDbContext>(o => o.UseSqlite(connection));
+        builder.Services.AddScoped<ICustomerMerge, CustomerMerge>();
+        builder.Services.AddScoped<LastWriterWins>();
         builder.Services.AddControllers().AddApplicationPart(typeof(SampleApp).Assembly).AddZeroxJson();
 
         var app = builder.Build();
