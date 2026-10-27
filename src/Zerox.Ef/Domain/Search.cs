@@ -4,15 +4,21 @@ using DevExtreme.AspNet.Data.ResponseModel;
 
 namespace Zerox.Ef.Domain;
 
-// The DevExtreme search shared by every grid and every client of the load options. A malformed search
-// is a 400 with the reason, never a silent 500: every refusal is an InvalidRequestException.
+/// <summary>
+/// The DevExtreme search shared by every grid and every client of the load options. A malformed search
+/// is a 400 with the reason, never a silent 500: every refusal is an InvalidRequestException.
+/// </summary>
 public static class Search
 {
-    // The most rows one request reads when the caller does not set its own limit.
+    /// <summary>
+    /// The most rows one request reads when the caller does not set its own limit.
+    /// </summary>
     public const int DefaultMaxTake = 1000;
 
-    // The options a client does not decide: no synchronous code on the database, grouping and
-    // projection done by the provider (with EF, in SQL: false would bring the table into memory).
+    /// <summary>
+    /// The options a client does not decide: no synchronous code on the database, grouping and
+    /// projection done by the provider (with EF, in SQL: false would bring the table into memory).
+    /// </summary>
     public static void MakeSafe(DataSourceLoadOptionsBase options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -23,7 +29,9 @@ public static class Search
         options.RemoteSelect = null;
     }
 
-    // Rows: whole entities, paged, filtered, sorted, with the total count and summaries when asked.
+    /// <summary>
+    /// Rows: whole entities, paged, filtered, sorted, with the total count and summaries when asked.
+    /// </summary>
     public static async Task<DataSourceResult<T>> RowsAsync<T>(
         IQueryable<T> source, DataSourceLoadOptionsBase options, int maxTake = DefaultMaxTake, CancellationToken ct = default)
     {
@@ -51,7 +59,9 @@ public static class Search
         };
     }
 
-    // Groups: keys, counts and sums per group, never rows (every level is forced not expanded).
+    /// <summary>
+    /// Groups: keys, counts and sums per group, never rows (every level is forced not expanded).
+    /// </summary>
     public static async Task<GroupsResult> GroupsAsync<T>(
         IQueryable<T> source, DataSourceLoadOptionsBase options, CancellationToken ct = default)
     {
@@ -75,8 +85,10 @@ public static class Search
             loaded.summary);
     }
 
-    // Projection: only the asked columns (also through navigations: names instead of ids), projected in
-    // SQL. Keys are the C# names, even when the client wrote them in lower case.
+    /// <summary>
+    /// Projection: only the asked columns (also through navigations: names instead of ids), projected in
+    /// SQL. Keys are the C# names, even when the client wrote them in lower case.
+    /// </summary>
     public static async Task<DataSourceResult<IDictionary<string, object?>>> ProjectionAsync<T>(
         IQueryable<T> source, DataSourceLoadOptionsBase options, int maxTake = DefaultMaxTake, CancellationToken ct = default)
     {

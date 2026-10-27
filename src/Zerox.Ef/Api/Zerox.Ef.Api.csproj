@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- The public surface is documented: a missing XML comment does not build (CS1591 is silenced only elsewhere). -->
+    <NoWarn>$([System.String]::Copy('$(NoWarn)').Replace('CS1591',''))</NoWarn>
+  </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>

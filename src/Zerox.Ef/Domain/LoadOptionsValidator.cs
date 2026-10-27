@@ -5,12 +5,14 @@ using DevExtreme.AspNet.Data;
 
 namespace Zerox.Ef.Domain;
 
-// The validator of the DevExtreme load options: the error is decided here, and it says how to correct.
-// Whoever builds the options by hand gets a field, an operator, a type wrong. Measured on DevExtreme
-// 5.1.0: for a value that does not convert it does not throw, it returns 0 rows silently; a 4-element
-// condition and an "xor" between two conditions return every row; a Sort without Selector is ignored.
-// An empty or full answer taken as good is the worst damage: here it stops first, with the reason and
-// the right form. The rules hold on what DevExtreme really converts.
+/// <summary>
+/// The validator of the DevExtreme load options: the error is decided here, and it says how to correct.
+/// Whoever builds the options by hand gets a field, an operator, a type wrong. Measured on DevExtreme
+/// 5.1.0: for a value that does not convert it does not throw, it returns 0 rows silently; a 4-element
+/// condition and an "xor" between two conditions return every row; a Sort without Selector is ignored.
+/// An empty or full answer taken as good is the worst damage: here it stops first, with the reason and
+/// the right form. The rules hold on what DevExtreme really converts.
+/// </summary>
 public static class LoadOptionsValidator
 {
     private static readonly string[] TextOperators = ["contains", "notcontains", "startswith", "endswith"];
@@ -20,15 +22,26 @@ public static class LoadOptionsValidator
         "A condition is written [\"Field\", \"operator\", value], for example [\"Quantity\", \">\", 2]; " +
         "conditions are joined with \"and\" or \"or\": [[…], \"and\", […]].";
 
+    /// <summary>
+    /// The operators a condition may use.
+    /// </summary>
     public static IReadOnlyList<string> Operators { get; } =
         ["=", "<>", "<", ">", "<=", ">=", "contains", "notcontains", "startswith", "endswith"];
 
+    /// <summary>
+    /// The summary types of TotalSummary and GroupSummary.
+    /// </summary>
     public static IReadOnlyList<string> Summaries { get; } = ["sum", "min", "max", "avg", "count"];
 
+    /// <summary>
+    /// The date intervals a group may use (a number is a numeric interval).
+    /// </summary>
     public static IReadOnlyList<string> Intervals { get; } =
         ["year", "quarter", "month", "day", "dayOfWeek", "hour", "minute", "second"];
 
-    // Checks the whole object; at the first error throws with the reason and the right form.
+    /// <summary>
+    /// Checks the whole object; at the first error throws with the reason and the right form.
+    /// </summary>
     public static void Validate<T>(DataSourceLoadOptionsBase options)
     {
         ArgumentNullException.ThrowIfNull(options);

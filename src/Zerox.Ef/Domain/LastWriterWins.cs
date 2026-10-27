@@ -4,20 +4,26 @@ using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Domain;
 
-// For an action that changes ONE field. Two ways, chosen by the caller:
-// - with the Version the client read: the optimistic lock. The save goes through only if the row is
-//   still at that Version; otherwise the client decided on a row that is no longer there, and the
-//   conflict reaches it (the API answers 409) — never retried, never overwritten;
-// - without it (a change the server decides alone): on a conflict the row is read again and the change
-//   applied again, so the last writer wins.
-// No lock is ever taken, no explicit transaction: only saves.
+/// <summary>
+/// For an action that changes ONE field. Two ways, chosen by the caller:
+/// - with the Version the client read: the optimistic lock. The save goes through only if the row is
+///   still at that Version; otherwise the client decided on a row that is no longer there, and the
+///   conflict reaches it (the API answers 409) — never retried, never overwritten;
+/// - without it (a change the server decides alone): on a conflict the row is read again and the change
+///   applied again, so the last writer wins.
+/// No lock is ever taken, no explicit transaction: only saves.
+/// </summary>
 public sealed class LastWriterWins(IRepositoryFactory repositories)
 {
-    // Attempts in all before the conflict reaches the caller (the API answers 409).
+    /// <summary>
+    /// Attempts in all before the conflict reaches the caller (the API answers 409).
+    /// </summary>
     public const int MaxAttempts = 3;
 
-    // Returns the saved row, or null when it does not exist or is outside the scope (the caller answers
-    // 404): then nothing is retried.
+    /// <summary>
+    /// Returns the saved row, or null when it does not exist or is outside the scope (the caller answers
+    /// 404): then nothing is retried.
+    /// </summary>
     public async Task<T?> SaveAsync<T>(
         int id,
         Expression<Func<T, bool>> scope,

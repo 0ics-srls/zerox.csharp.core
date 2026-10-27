@@ -4,10 +4,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Zerox.Ef.Api;
 
-// The JSON "as is": the names of the entities travel exactly as they are written (no camelCase), enums
-// as their names, days as yyyy-MM-dd — the same in controllers, minimal APIs and OpenAPI.
+/// <summary>
+/// The JSON "as is": the names of the entities travel exactly as they are written (no camelCase), enums
+/// as their names, days as yyyy-MM-dd — the same in controllers, minimal APIs and OpenAPI.
+/// </summary>
 public static class ZeroxJson
 {
+    /// <summary>
+    /// The JSON as is for the controllers and for the HTTP JSON options (minimal APIs, results, errors).
+    /// </summary>
     public static IServiceCollection AddZeroxJson(this IMvcBuilder mvc)
     {
         ArgumentNullException.ThrowIfNull(mvc);
@@ -24,7 +29,9 @@ public static class ZeroxJson
         return mvc.Services;
     }
 
-    // The converters in one place, so the serializers never diverge.
+    /// <summary>
+    /// The converters in one place, so the serializers never diverge.
+    /// </summary>
     public static void AddConverters(JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);

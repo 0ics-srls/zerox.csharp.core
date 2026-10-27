@@ -16,13 +16,17 @@ internal sealed class SessionInterceptor : SaveChangesInterceptor, IDbCommandInt
     {
     }
 
-    // The synchronous save would also bypass the rules of the session.
+    /// <summary>
+    /// The synchronous save would also bypass the rules of the session.
+    /// </summary>
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result) =>
         throw Refused("Save only with SaveChangesAsync: the synchronous save would also bypass the unit of work.");
 
-    // A query read synchronously (ToList, Count, First, foreach on a query…). Only the roads of an
-    // application are watched: EF's own schema work (EnsureCreatedAsync, MigrateAsync) runs some
-    // commands synchronously inside its async methods, and those are EF's, not ours.
+    /// <summary>
+    /// A query read synchronously (ToList, Count, First, foreach on a query…). Only the roads of an
+    /// application are watched: EF's own schema work (EnsureCreatedAsync, MigrateAsync) runs some
+    /// commands synchronously inside its async methods, and those are EF's, not ours.
+    /// </summary>
     public InterceptionResult<DbDataReader> ReaderExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result) =>
         IsApplicationRoad(eventData) ? throw Refused("Read only asynchronously (ToListAsync, FirstOrDefaultAsync…).") : result;
 

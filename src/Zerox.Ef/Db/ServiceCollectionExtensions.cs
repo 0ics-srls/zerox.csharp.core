@@ -4,11 +4,16 @@ using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Db;
 
+/// <summary>
+/// The registration of a context with the library.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
-    // The context with the session rules, and the ports on it. The unit of work and the massive
-    // handler are not registered: a repository hands them out. The end of the scope checks that none of
-    // them was left open (SessionScopeCheck, created with the context and disposed before it).
+    /// <summary>
+    /// The context with the session rules, and the ports on it. The unit of work and the massive
+    /// handler are not registered: a repository hands them out. The end of the scope closes a unit of work
+    /// or a massive operation left open and throws InvalidOperationException: an await using was forgotten.
+    /// </summary>
     public static IServiceCollection AddZeroxDb<TContext>(
         this IServiceCollection services, Action<DbContextOptionsBuilder> configure)
         where TContext : DbContext, IDbContext
