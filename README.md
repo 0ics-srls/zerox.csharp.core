@@ -19,7 +19,7 @@ What each project offers, by need: [docs/catalog.md](docs/catalog.md).
 The `Zerox.Ef` family: `Zerox.Ef.Core` holds the contracts, `Zerox.Ef.Db` the EF Core side,
 `Zerox.Ef.Domain` the search and `Zerox.Ef.Api` the controller: an application takes from each its
 piece. The complete example, tested from the repository to HTTP, is
-[`tests/Zerox.Ef.Api.Tests/Sample`](tests/Zerox.Ef.Api.Tests/Sample)
+[`tests/Zerox.Ef/Api/Sample`](tests/Zerox.Ef/Api/Sample)
 (`Core` the app's own contracts, `Db` entities and context, `Domain` services, `Api` controllers and host).
 
 1. Entities implement `IEntity` (and `IHasOptimisticLock` for the opt-in lock):

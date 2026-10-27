@@ -6,7 +6,7 @@
 @Zerox.Core::no UI;areas Async,Cancellation,Collections,Statistics,Messaging,Reflection,Text,Numbers,Identity,Validation,Editing
 @Zerox.Core.Avalonia::Avalonia 12.1.4;references Zerox.Core;PropertyContainer + shared throttle pump,async commands
 @Zerox.Dnf::boolean expression → DNF masks → compiled rules
-@Zerox.Ef.*::the database → API foundation,a family of four:Ef.Core (contracts,no deps) → Ef.Db (IDbContext + EF:session interceptor,repository,unit of work,massive op,optimistic lock) → Ef.Domain (DevExtreme search,validator,distinct values,last writer wins) → Ef.Api (EntityController,errors,JSON as is);example in tests/Zerox.Ef.Api.Tests/Sample
+@Zerox.Ef.*::the database → API foundation,a family of four:Ef.Core (contracts,no deps) → Ef.Db (IDbContext + EF:session interceptor,repository,unit of work,massive op,optimistic lock) → Ef.Domain (DevExtreme search,validator,distinct values,last writer wins) → Ef.Api (EntityController,errors,JSON as is);folders src/Zerox.Ef/{Core,Db,Domain,Api} + tests/Zerox.Ef/{Db,Domain,Api} (©User 2026-10-27:one folder per namespace segment);example in tests/Zerox.Ef/Api/Sample
 @tests::tests/<Project>.Tests per project (xunit v3 + AwesomeAssertions on MTP);Avalonia tests through HeadlessUnitTestSession
 
 [RULES]

@@ -16,7 +16,8 @@ assetforge as a submodule.
 ## Stack locks
 
 - .NET 10 (SDK 10.0.400, C# 14), solution `zerox.csharp.core.slnx`, central package management in `Directory.Packages.props` (no version in a `.csproj`)
-- Projects: `src/Zerox.Core` (no UI), `src/Zerox.Core.Avalonia` (Avalonia 12.1.4, references `Zerox.Core`), `src/Zerox.Dnf`, the database → API family `src/Zerox.Ef.{Core,Db,Domain,Api}` (each references the one before; `Zerox.Ef.Core` has no dependency); tests in `tests/<Project>.Tests`
+- Projects: `src/Zerox.Core` (no UI), `src/Zerox.Core.Avalonia` (Avalonia 12.1.4, references `Zerox.Core`), `src/Zerox.Dnf`, the database → API family in `src/Zerox.Ef/{Core,Db,Domain,Api}` (projects `Zerox.Ef.Core` … `Zerox.Ef.Api`, each references the one before; `Zerox.Ef.Core` has no dependency); tests in `tests/<Project>.Tests`, the family's in `tests/Zerox.Ef/{Db,Domain,Api}`
+- Folders follow the namespace, one folder per segment below the root project folder: a family of projects `Zerox.X.A`, `Zerox.X.B` lives in `src/Zerox.X/A`, `src/Zerox.X/B` (never side by side as `src/Zerox.X.A`)
 - Tests: xunit.v3.mtp-v2 4.0.2 + AwesomeAssertions 9.6.0 on the Microsoft Testing Platform; names `Should_<Outcome>_When<Condition>`; Avalonia tests through `HeadlessUi.RunAsync` (Avalonia.Headless 12.1.4 `HeadlessUnitTestSession` + plain `[Fact]`; never Avalonia.Headless.XUnit); in a test the UI thread is recognised by `SynchronizationContext.Current is AvaloniaSynchronizationContext` (headless `Dispatcher.UIThread.CheckAccess()` is true on any thread)
 - Version: `version.build` → every assembly `1.0.<n>`
 

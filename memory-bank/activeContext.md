@@ -17,7 +17,7 @@
 @no-tags::ITag/ITagRepository not ported (Filo workaround);one port IRepository<T> where T : IEntity
 @no-auth::EntityController<T> without [Authorize] and without MCP;out of scope MCP,API key,login,roles,shared test library
 @controller::EntityController<T> Query/Groups/Projection on DevExtreme DataSourceLoadOptions (server-side filter,sort,paging),Values/{column},CRUD;409 on stale Version via the middleware
-@example::tests/Zerox.Ef.Api.Tests/Sample/{Core (ICustomerMerge),Db (Customer,Order,SampleDbContext),Domain (CustomerMerge),Api (controllers,SampleApp on TestServer + Sqlite)} tested at every level up to end-to-end HTTP
+@example::tests/Zerox.Ef/Api/Sample/{Core (ICustomerMerge),Db (Customer,Order,SampleDbContext),Domain (CustomerMerge),Api (controllers,SampleApp on TestServer + Sqlite)} tested at every level up to end-to-end HTTP
 
 [REVIEW FINDINGS FIXED]
 @verified::EF Core 10 source:SaveChangesStartingAsync runs BEFORE TryDetectChanges (Version++ in the interceptor is saved);SavedChanges fires also for suppressed saves (count only EntitiesSavedCount>0);CoreOptionsExtension.Interceptors exists;plain interceptors do not key the service provider

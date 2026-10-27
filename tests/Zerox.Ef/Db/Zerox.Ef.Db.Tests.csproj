@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="../../src/Zerox.Ef.Domain/Zerox.Ef.Domain.csproj" />
+    <ProjectReference Include="../../../src/Zerox.Ef/Db/Zerox.Ef.Db.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />

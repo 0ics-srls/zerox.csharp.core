@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="../Zerox.Ef.Db/Zerox.Ef.Db.csproj" />
+    <ProjectReference Include="../Db/Zerox.Ef.Db.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DevExtreme.AspNet.Data" />

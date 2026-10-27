@@ -3,6 +3,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Zerox.Ef.Domain/Zerox.Ef.Domain.csproj" />
+    <ProjectReference Include="../Domain/Zerox.Ef.Domain.csproj" />
   </ItemGroup>
 </Project>

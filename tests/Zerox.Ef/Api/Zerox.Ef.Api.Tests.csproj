@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="../../src/Zerox.Ef.Api/Zerox.Ef.Api.csproj" />
+    <ProjectReference Include="../../../src/Zerox.Ef/Api/Zerox.Ef.Api.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
