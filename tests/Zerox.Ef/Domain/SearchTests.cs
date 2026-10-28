@@ -1,5 +1,6 @@
-using System.Text.Json;
+using System.Globalization;
 using DevExtreme.AspNet.Data;
+using DevExtreme.AspNet.Data.ResponseModel;
 using Microsoft.EntityFrameworkCore;
 
 namespace Zerox.Ef.Domain.Tests;
@@ -40,18 +41,10 @@ public sealed class SearchTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync() => await Db.DisposeAsync();
 
-    private static readonly JsonSerializerOptions AsIs = new() { PropertyNamingPolicy = null };
-
     private static IQueryable<Item> Items(TestDbContext context) => context.Items.AsNoTracking();
 
-    [Fact]
-    public void Should_ReturnTheDevExtremeShape_WhenSerialized()
-    {
-        var json = JsonSerializer.Serialize(new DataSourceResult<Item>(), AsIs);
-
-        using var document = JsonDocument.Parse(json);
-        document.RootElement.EnumerateObject().Select(p => p.Name).Should().Equal("data", "totalCount", "groupCount", "summary");
-    }
+    private static Task<LoadResult> LoadAsync(TestDbContext context, DataSourceLoadOptionsBase options, int maxTake = Search.DefaultMaxTake) =>
+        Search.LoadAsync(Items(context), options, maxTake, Ct);
 
     [Fact]
     public async Task Should_PageFilterAndSort_WhenRowsAreAsked()
@@ -66,22 +59,22 @@ public sealed class SearchTests : IAsyncLifetime
             RequireTotalCount = true,
         };
 
-        var result = await Search.RowsAsync(Items(context), options, ct: Ct);
+        var result = await LoadAsync(context, options);
 
-        result.data.Select(i => i.Quantity).Should().Equal(10, 8, 6, 4, 2);
+        result.data.Cast<Item>().Select(i => i.Quantity).Should().Equal(10, 8, 6, 4, 2);
         result.totalCount.Should().Be(15);
     }
 
     [Fact]
-    public async Task Should_Refuse_WhenRowsAreAskedWithoutTake()
+    public async Task Should_Refuse_WhenRowsOrColumnsAreAskedWithoutTake()
     {
         await using var context = Db.NewContext();
 
-        var rows = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase(), ct: Ct);
-        var projection = () => Search.ProjectionAsync(Items(context), new DataSourceLoadOptionsBase { Select = ["Name"] }, ct: Ct);
+        var rows = () => LoadAsync(context, new DataSourceLoadOptionsBase());
+        var columns = () => LoadAsync(context, new DataSourceLoadOptionsBase { Select = ["Name"] });
 
         (await rows.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("Take");
-        (await projection.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("Take");
+        (await columns.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("Take");
     }
 
     [Fact]
@@ -89,23 +82,25 @@ public sealed class SearchTests : IAsyncLifetime
     {
         await using var context = Db.NewContext();
 
-        var aboveDefault = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Take = Search.DefaultMaxTake + 1 }, ct: Ct);
-        var aboveOwn = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Take = 11 }, maxTake: 10, ct: Ct);
-        var atOwn = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Take = 10 }, maxTake: 10, ct: Ct);
+        var aboveDefault = () => LoadAsync(context, new DataSourceLoadOptionsBase { Take = Search.DefaultMaxTake + 1 });
+        var aboveOwn = () => LoadAsync(context, new DataSourceLoadOptionsBase { Take = 11 }, maxTake: 10);
+        var atOwn = await LoadAsync(context, new DataSourceLoadOptionsBase { Take = 10 }, maxTake: 10);
 
         await aboveDefault.Should().ThrowAsync<InvalidRequestException>();
         await aboveOwn.Should().ThrowAsync<InvalidRequestException>();
-        atOwn.data.Should().HaveCount(10);
+        atOwn.data.Cast<Item>().Should().HaveCount(10);
     }
 
     [Fact]
-    public async Task Should_ReturnRowsAsEntities_WhenRowsAreAsked()
+    public async Task Should_ReturnRowsAsEntities_WhenNeitherGroupNorSelectIsAsked()
     {
         await using var context = Db.NewContext();
 
-        var result = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Take = 3 }, ct: Ct);
+        var result = await LoadAsync(context, new DataSourceLoadOptionsBase { Take = 3 });
 
-        result.data.Should().BeOfType<List<Item>>().Which.Should().HaveCount(3);
+        // Materialized: an error of the query leaves the search, not the serializer.
+        result.data.Should().BeAssignableTo<System.Collections.IList>();
+        result.data.Cast<object>().Should().HaveCount(3).And.AllBeOfType<Item>();
     }
 
     [Fact]
@@ -113,39 +108,17 @@ public sealed class SearchTests : IAsyncLifetime
     {
         await using var context = Db.NewContext();
 
-        var count = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { IsCountQuery = true }, ct: Ct);
-        var summary = await Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase
+        var count = await LoadAsync(context, new DataSourceLoadOptionsBase { IsCountQuery = true });
+        var summary = await LoadAsync(context, new DataSourceLoadOptionsBase
         {
             IsSummaryQuery = true,
             TotalSummary = [new SummaryInfo { Selector = "Quantity", SummaryType = "sum" }],
-        }, ct: Ct);
+        });
 
-        count.data.Should().NotBeNull().And.BeEmpty();
+        count.data.Cast<object>().Should().BeEmpty();
         count.totalCount.Should().Be(30);
-        summary.data.Should().NotBeNull().And.BeEmpty();
-        Convert.ToInt32(summary.summary![0], System.Globalization.CultureInfo.InvariantCulture).Should().Be(465);
-    }
-
-    [Fact]
-    public async Task Should_PointToTheGroupsRoute_WhenGroupIsAskedForRows()
-    {
-        await using var context = Db.NewContext();
-
-        var rows = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Group = [new GroupingInfo { Selector = "Kind" }] }, ct: Ct);
-
-        (await rows.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("groups route");
-    }
-
-    [Fact]
-    public async Task Should_PointToTheProjectionRoute_WhenSelectOrPreSelectIsAskedForRows()
-    {
-        await using var context = Db.NewContext();
-
-        var select = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Select = ["Name"] }, ct: Ct);
-        var preSelect = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { PreSelect = ["Name"] }, ct: Ct);
-
-        (await select.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("projection route");
-        (await preSelect.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("projection route");
+        summary.data.Cast<object>().Should().BeEmpty();
+        Convert.ToInt32(summary.summary![0], CultureInfo.InvariantCulture).Should().Be(465);
     }
 
     [Fact]
@@ -154,7 +127,7 @@ public sealed class SearchTests : IAsyncLifetime
         await using var context = Db.NewContext();
 
         // The validator lets a [NotMapped] property through (it exists); the database cannot sort on it.
-        var rows = () => Search.RowsAsync(Items(context), new DataSourceLoadOptionsBase { Sort = [new SortingInfo { Selector = "Display" }], Take = 5 }, ct: Ct);
+        var rows = () => LoadAsync(context, new DataSourceLoadOptionsBase { Sort = [new SortingInfo { Selector = "Display" }], Take = 5 });
 
         (await rows.Should().ThrowAsync<InvalidRequestException>()).Which.InnerException.Should().NotBeNull();
     }
@@ -168,7 +141,7 @@ public sealed class SearchTests : IAsyncLifetime
     public async Task Should_RefuseAReservedField_InFilterSortGroupSummaryAndSelect(string option)
     {
         await using var context = Db.NewContext();
-        var options = new DataSourceLoadOptionsBase();
+        var options = new DataSourceLoadOptionsBase { Take = 10 };
         switch (option)
         {
             case "Filter": options.Filter = L("Secret", "=", "s"); break;
@@ -178,12 +151,7 @@ public sealed class SearchTests : IAsyncLifetime
             case "Select": options.Select = ["Secret"]; break;
         }
 
-        Func<Task> search = option switch
-        {
-            "Group" => () => Search.GroupsAsync(Items(context), options, Ct),
-            "Select" => () => Search.ProjectionAsync(Items(context), options, ct: Ct),
-            _ => () => Search.RowsAsync(Items(context), options, ct: Ct),
-        };
+        var search = () => LoadAsync(context, options);
 
         (await search.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("'Secret' cannot be read here");
     }
@@ -194,32 +162,33 @@ public sealed class SearchTests : IAsyncLifetime
         await using var context = Db.NewContext();
         var options = new DataSourceLoadOptionsBase { Filter = L("Box.Label", "=", "blue"), RequireTotalCount = true, Take = 100 };
 
-        var result = await Search.RowsAsync(Items(context), options, ct: Ct);
+        var result = await LoadAsync(context, options);
 
         result.totalCount.Should().Be(15);
     }
 
     [Fact]
-    public async Task Should_ReturnKeysCountsAndSums_WhenGroupsAreAsked()
+    public async Task Should_ReturnKeysCountsAndSumsWithoutRows_WhenGroupIsAsked()
     {
         await using var context = Db.NewContext();
         var options = new DataSourceLoadOptionsBase
         {
-            Group = [new GroupingInfo { Selector = "Kind" }],
+            Group = [new GroupingInfo { Selector = "Kind", IsExpanded = true }],
             GroupSummary = [new SummaryInfo { Selector = "Quantity", SummaryType = "sum" }],
         };
 
-        var result = await Search.GroupsAsync(Items(context), options, Ct);
+        var result = await LoadAsync(context, options);
 
-        result.Groups.Should().HaveCount(2);
-        var small = result.Groups.Single(g => Equals(g.Key, ItemKind.Small));
-        small.Count.Should().Be(15);
-        Convert.ToInt32(small.Summary![0], System.Globalization.CultureInfo.InvariantCulture).Should().Be(225);
-        small.Children.Should().BeNull();
+        var groups = result.data.Cast<Group>().ToList();
+        groups.Should().HaveCount(2);
+        var small = groups.Single(g => Equals(g.key, ItemKind.Small));
+        small.count.Should().Be(15);
+        Convert.ToInt32(small.summary![0], CultureInfo.InvariantCulture).Should().Be(225);
+        small.items.Should().BeNull();
     }
 
     [Fact]
-    public async Task Should_ReturnChildren_WhenGroupingOnTwoLevels()
+    public async Task Should_NestTheGroups_WhenGroupingOnTwoLevels()
     {
         await using var context = Db.NewContext();
         var options = new DataSourceLoadOptionsBase
@@ -227,10 +196,13 @@ public sealed class SearchTests : IAsyncLifetime
             Group = [new GroupingInfo { Selector = "Kind" }, new GroupingInfo { Selector = "Box.Label" }],
         };
 
-        var result = await Search.GroupsAsync(Items(context), options, Ct);
+        var result = await LoadAsync(context, options);
 
-        result.Groups.Should().AllSatisfy(g => g.Children.Should().NotBeNull().And.HaveCount(2));
-        result.Groups.SelectMany(g => g.Children!).Sum(c => c.Count ?? 0).Should().Be(30);
+        var groups = result.data.Cast<Group>().ToList();
+        groups.Should().AllSatisfy(g => g.items.Should().NotBeNull().And.Subject.As<System.Collections.IList>().Cast<object>().Should().HaveCount(2));
+        var inner = groups.SelectMany(g => g.items!.Cast<Group>()).ToList();
+        inner.Sum(c => c.count ?? 0).Should().Be(30);
+        inner.Should().AllSatisfy(c => c.items.Should().BeNull());
     }
 
     [Fact]
@@ -239,29 +211,27 @@ public sealed class SearchTests : IAsyncLifetime
         await using var context = Db.NewContext();
         var options = new DataSourceLoadOptionsBase { Group = [new GroupingInfo { Selector = "At", GroupInterval = "month" }] };
 
-        var result = await Search.GroupsAsync(Items(context), options, Ct);
+        var result = await LoadAsync(context, options);
 
-        result.Groups.Select(g => (Convert.ToInt32(g.Key, System.Globalization.CultureInfo.InvariantCulture), g.Count)).Should().Equal((1, 10), (2, 20));
+        result.data.Cast<Group>().Select(g => (Convert.ToInt32(g.key, CultureInfo.InvariantCulture), g.count)).Should().Equal((1, 10), (2, 20));
     }
 
     [Fact]
-    public async Task Should_RequireGroup_WhenGroupsAreAsked()
+    public async Task Should_RefuseSelect_WhenGroupIsAsked()
     {
         await using var context = Db.NewContext();
 
-        var noGroup = () => Search.GroupsAsync(Items(context), new DataSourceLoadOptionsBase(), Ct);
-        var withSelect = () => Search.GroupsAsync(Items(context), new DataSourceLoadOptionsBase
+        var withSelect = () => LoadAsync(context, new DataSourceLoadOptionsBase
         {
             Group = [new GroupingInfo { Selector = "Kind" }],
             Select = ["Name"],
-        }, Ct);
+        });
 
-        await noGroup.Should().ThrowAsync<InvalidRequestException>();
-        (await withSelect.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("projection route");
+        (await withSelect.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("never rows");
     }
 
     [Fact]
-    public async Task Should_ReturnDictionariesWithCSharpNames_WhenProjectionIsAsked()
+    public async Task Should_ReturnDictionariesWithCSharpNames_WhenSelectIsAsked()
     {
         await using var context = Db.NewContext();
         var options = new DataSourceLoadOptionsBase
@@ -271,26 +241,10 @@ public sealed class SearchTests : IAsyncLifetime
             Take = 1,
         };
 
-        var result = await Search.ProjectionAsync(Items(context), options, ct: Ct);
+        var result = await LoadAsync(context, options);
 
-        var row = result.data.Single();
+        var row = result.data.Cast<IDictionary<string, object?>>().Single();
         row.Should().ContainKey("Name").WhoseValue.Should().Be("item01");
         row.Should().ContainKey("Box");
-    }
-
-    [Fact]
-    public async Task Should_RequireSelect_WhenProjectionIsAsked()
-    {
-        await using var context = Db.NewContext();
-
-        var noSelect = () => Search.ProjectionAsync(Items(context), new DataSourceLoadOptionsBase(), ct: Ct);
-        var withGroup = () => Search.ProjectionAsync(Items(context), new DataSourceLoadOptionsBase
-        {
-            Select = ["Name"],
-            Group = [new GroupingInfo { Selector = "Kind" }],
-        }, ct: Ct);
-
-        await noSelect.Should().ThrowAsync<InvalidRequestException>();
-        (await withGroup.Should().ThrowAsync<InvalidRequestException>()).Which.Message.Should().Contain("groups route");
     }
 }

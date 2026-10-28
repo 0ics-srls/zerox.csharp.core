@@ -53,7 +53,8 @@ piece. The complete example, tested from the repository to HTTP, is
 
        public sealed class CustomersController(IRepository<Customer> repository) : EntityController<Customer>(repository);
 
-   It answers `POST api/Customers/query|groups|projection` (DevExtreme load options, server-side),
+   It answers `POST api/Customers/load` (DevExtreme load options, server-side: the options decide
+   rows, columns or groups),
    `GET api/Customers/values/{column}`, and the CRUD. A service that writes more than one repository
    opens `IUnitOfWork` (`CustomerMerge`); many rows without loading them go through
    `IMassiveOpHandler<T>` (`OrdersController.CloseBefore`); a single-field action uses `LastWriterWins`

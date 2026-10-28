@@ -1,4 +1,5 @@
 using DevExtreme.AspNet.Data;
+using DevExtreme.AspNet.Data.ResponseModel;
 using Microsoft.AspNetCore.Mvc;
 using Zerox.Ef.Core;
 using Zerox.Ef.Domain;
@@ -6,7 +7,7 @@ using Zerox.Ef.Domain;
 namespace Zerox.Ef.Api;
 
 /// <summary>
-/// The controller of an entity: the DevExtreme search (query, groups, projection, distinct values) and
+/// The controller of an entity: the DevExtreme search (one load for rows, columns and groups; distinct values) and
 /// the CRUD, all over IRepository&lt;T&gt;. A project writes `class XController(IRepository&lt;X&gt; r) : EntityController&lt;X&gt;(r)`
 /// and puts its own [Authorize]: the base has none. Every action is virtual; one repository per action,
 /// no unit of work (whoever writes more than one repository opens the boundary).
@@ -21,32 +22,18 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
     protected IRepository<T> Repository { get; } = repository;
 
     /// <summary>
-    /// The most rows one request of query or projection reads; a controller with larger pages overrides it.
+    /// The most rows one load reads; a controller with larger pages overrides it.
     /// </summary>
     protected virtual int MaxTake => Search.DefaultMaxTake;
 
     /// <summary>
-    /// POST because the options travel in the body; the meaning is a read. Filter, sort and paging run
-    /// on the server.
+    /// The one search of the entity, POST because the options travel in the body; the meaning is a read.
+    /// The options decide what comes back: rows, only the asked columns (Select), or keys, counts and sums
+    /// per group (Group) — filter, sort, paging, grouping and summaries run on the server.
     /// </summary>
-    [HttpPost("query")]
-    public virtual async Task<ActionResult<DataSourceResult<T>>> Query([FromBody] DataSourceLoadOptionsBase? options, CancellationToken ct) =>
-        Ok(await Search.RowsAsync(Repository.Query(), options ?? new DataSourceLoadOptionsBase(), MaxTake, ct).ConfigureAwait(false));
-
-    /// <summary>
-    /// Keys, counts and sums per group, never rows (POST: the options travel in the body).
-    /// </summary>
-    [HttpPost("groups")]
-    public virtual async Task<ActionResult<GroupsResult>> Groups([FromBody] DataSourceLoadOptionsBase options, CancellationToken ct) =>
-        Ok(await Search.GroupsAsync(SearchSource(), options, ct).ConfigureAwait(false));
-
-    /// <summary>
-    /// Only the asked columns, also through navigations (names instead of ids), paged like a query.
-    /// </summary>
-    [HttpPost("projection")]
-    public virtual async Task<ActionResult<DataSourceResult<IDictionary<string, object?>>>> Projection(
-        [FromBody] DataSourceLoadOptionsBase options, CancellationToken ct) =>
-        Ok(await Search.ProjectionAsync(SearchSource(), options, MaxTake, ct).ConfigureAwait(false));
+    [HttpPost("load")]
+    public virtual async Task<ActionResult<LoadResult>> Load([FromBody] DataSourceLoadOptionsBase? options, CancellationToken ct) =>
+        Ok(await Search.LoadAsync(SearchSource(), options ?? new DataSourceLoadOptionsBase(), MaxTake, ct).ConfigureAwait(false));
 
     /// <summary>
     /// The column name comes from the URL: it is checked against the real properties before any query.
@@ -125,7 +112,7 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
     }
 
     /// <summary>
-    /// The rows groups and projection work on. A controller with its own view of the rows overrides it.
+    /// The rows the load works on. A controller with its own view of the rows overrides it.
     /// </summary>
     protected virtual IQueryable<T> SearchSource() => Repository.Query();
 }

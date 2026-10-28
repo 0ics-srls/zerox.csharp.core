@@ -40,12 +40,12 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
 
     private static List<JsonElement> Data(JsonElement body) => body.GetProperty("data").EnumerateArray().ToList();
 
-    // --- query: the DevExtreme load options, server-side ---
+    // --- load: the DevExtreme load options, server-side; the options decide rows, columns or groups ---
 
     [Fact]
-    public async Task Should_PageTheRows_WhenQueryHasSkipAndTake()
+    public async Task Should_PageTheRows_WhenLoadHasSkipAndTake()
     {
-        var (status, body) = await PostAsync("api/Orders/query", """{"Skip":10,"Take":5,"RequireTotalCount":true}""");
+        var (status, body) = await PostAsync("api/Orders/load", """{"Skip":10,"Take":5,"RequireTotalCount":true}""");
 
         status.Should().Be(HttpStatusCode.OK);
         Data(body).Should().HaveCount(5);
@@ -53,27 +53,27 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_FilterOnTheServer_WhenQueryHasAFilter()
+    public async Task Should_FilterOnTheServer_WhenLoadHasAFilter()
     {
-        var (_, closed) = await PostAsync("api/Orders/query", """{"Filter":["Status","=","Closed"],"Take":100}""");
-        var (_, cargo) = await PostAsync("api/Orders/query", """{"Filter":["Customer.Name","contains","a"],"RequireTotalCount":true,"Take":100}""");
+        var (_, closed) = await PostAsync("api/Orders/load", """{"Filter":["Status","=","Closed"],"Take":100}""");
+        var (_, cargo) = await PostAsync("api/Orders/load", """{"Filter":["Customer.Name","contains","a"],"RequireTotalCount":true,"Take":100}""");
 
         Data(closed).Should().HaveCount(5).And.OnlyContain(o => o.GetProperty("Status").GetString() == "Closed");
         cargo.GetProperty("totalCount").GetInt32().Should().Be(8);   // only Cargo has a lower-case "a"
     }
 
     [Fact]
-    public async Task Should_SortOnTheServer_WhenQueryHasSort()
+    public async Task Should_SortOnTheServer_WhenLoadHasSort()
     {
-        var (_, body) = await PostAsync("api/Orders/query", """{"Sort":[{"Selector":"Amount","Desc":true}],"Take":3}""");
+        var (_, body) = await PostAsync("api/Orders/load", """{"Sort":[{"Selector":"Amount","Desc":true}],"Take":3}""");
 
         Data(body).Select(o => o.GetProperty("Amount").GetDecimal()).Should().Equal(250m, 240m, 230m);
     }
 
     [Fact]
-    public async Task Should_Answer400_WhenTheQueryBodyIsNull()
+    public async Task Should_Answer400_WhenTheLoadBodyIsNull()
     {
-        var (status, body) = await PostAsync("api/Orders/query", "null");
+        var (status, body) = await PostAsync("api/Orders/load", "null");
 
         status.Should().Be(HttpStatusCode.BadRequest);
         body.GetProperty("Message").GetString().Should().Contain("Take");
@@ -84,7 +84,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     [InlineData("""{"Take":1001}""")]
     public async Task Should_Answer400_WhenRowsAreAskedWithoutAPage(string json)
     {
-        var (status, body) = await PostAsync("api/Orders/query", json);
+        var (status, body) = await PostAsync("api/Orders/load", json);
 
         status.Should().Be(HttpStatusCode.BadRequest);
         body.GetProperty("Message").GetString().Should().Contain("Take");
@@ -93,7 +93,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     [Fact]
     public async Task Should_CountWithoutAPage_WhenOnlyTheCountIsAsked()
     {
-        var (status, body) = await PostAsync("api/Orders/query", """{"IsCountQuery":true}""");
+        var (status, body) = await PostAsync("api/Orders/load", """{"IsCountQuery":true}""");
 
         status.Should().Be(HttpStatusCode.OK);
         body.GetProperty("totalCount").GetInt32().Should().Be(25);
@@ -102,8 +102,8 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     [Fact]
     public async Task Should_AcceptCamelCaseOptionKeys()
     {
-        var (_, camel) = await PostAsync("api/Orders/query", """{"skip":0,"take":2}""");
-        var (_, pascal) = await PostAsync("api/Orders/query", """{"Skip":0,"Take":2}""");
+        var (_, camel) = await PostAsync("api/Orders/load", """{"skip":0,"take":2}""");
+        var (_, pascal) = await PostAsync("api/Orders/load", """{"Skip":0,"Take":2}""");
 
         Data(camel).Should().HaveCount(2);
         Data(camel).Select(o => o.GetProperty("Id").GetInt32()).Should().Equal(Data(pascal).Select(o => o.GetProperty("Id").GetInt32()));
@@ -112,7 +112,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     [Fact]
     public async Task Should_ReturnTheTotalSummary_WhenAsked()
     {
-        var (_, body) = await PostAsync("api/Orders/query", """{"TotalSummary":[{"Selector":"Amount","SummaryType":"sum"}],"Take":1}""");
+        var (_, body) = await PostAsync("api/Orders/load", """{"TotalSummary":[{"Selector":"Amount","SummaryType":"sum"}],"Take":1}""");
 
         body.GetProperty("summary")[0].GetDecimal().Should().Be(3250m);
     }
@@ -120,7 +120,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     [Fact]
     public async Task Should_Answer400WithTheReason_WhenTheFilterIsWrong()
     {
-        var (status, body) = await PostAsync("api/Orders/query", """{"Filter":["Nope","=",1]}""");
+        var (status, body) = await PostAsync("api/Orders/load", """{"Filter":["Nope","=",1]}""");
 
         status.Should().Be(HttpStatusCode.BadRequest);
         body.GetProperty("Code").GetString().Should().Be("InvalidRequest");
@@ -130,32 +130,32 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     [Fact]
     public async Task Should_Answer400_WhenAReservedFieldIsNamed()
     {
-        var (status, body) = await PostAsync("api/Orders/query", """{"Filter":["InternalNote","=","internal"]}""");
+        var (status, body) = await PostAsync("api/Orders/load", """{"Filter":["InternalNote","=","internal"]}""");
 
         status.Should().Be(HttpStatusCode.BadRequest);
         body.GetProperty("Message").GetString().Should().Contain("InternalNote");
     }
 
-    // --- groups, projection, values ---
+    // --- groups, columns, values ---
 
     [Fact]
-    public async Task Should_ReturnGroups_WhenGroupsIsCalled()
+    public async Task Should_ReturnGroupsWithoutRows_WhenLoadHasGroup()
     {
-        var (status, body) = await PostAsync("api/Orders/groups",
-            """{"Group":[{"Selector":"Status"}],"GroupSummary":[{"Selector":"Amount","SummaryType":"sum"}]}""");
+        var (status, body) = await PostAsync("api/Orders/load",
+            """{"Group":[{"Selector":"Status","IsExpanded":true}],"GroupSummary":[{"Selector":"Amount","SummaryType":"sum"}]}""");
 
         status.Should().Be(HttpStatusCode.OK);
-        var groups = body.GetProperty("Groups").EnumerateArray()
-            .ToDictionary(g => g.GetProperty("Key").ToString(), g => (Count: g.GetProperty("Count").GetInt32(), Sum: g.GetProperty("Summary")[0].GetDecimal()));
+        var groups = Data(body).ToDictionary(g => g.GetProperty("key").ToString(), g => g);
         groups.Should().HaveCount(2);
-        groups.Values.Sum(g => g.Count).Should().Be(25);
-        groups.Values.Select(g => g.Sum).Should().BeEquivalentTo([750m, 2500m]);
+        groups.Values.Sum(g => g.GetProperty("count").GetInt32()).Should().Be(25);
+        groups.Values.Select(g => g.GetProperty("summary")[0].GetDecimal()).Should().BeEquivalentTo([750m, 2500m]);
+        groups.Values.Should().AllSatisfy(g => g.GetProperty("items").ValueKind.Should().Be(JsonValueKind.Null));
     }
 
     [Fact]
-    public async Task Should_ReturnNamesInsteadOfIds_WhenProjectionIsCalled()
+    public async Task Should_ReturnNamesInsteadOfIds_WhenLoadHasSelect()
     {
-        var (status, body) = await PostAsync("api/Orders/projection",
+        var (status, body) = await PostAsync("api/Orders/load",
             """{"Select":["Amount","Customer.Name"],"Sort":[{"Selector":"Amount"}],"Take":1}""");
 
         status.Should().Be(HttpStatusCode.OK);

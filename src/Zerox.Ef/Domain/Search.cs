@@ -30,99 +30,49 @@ public static class Search
     }
 
     /// <summary>
-    /// Rows: whole entities, paged, filtered, sorted, with the total count and summaries when asked.
+    /// The one search: the request decides what comes back, in DevExtreme's own result, as it is. Without
+    /// Group and Select, whole entities; with Select, only the asked columns (also through navigations:
+    /// names instead of ids), projected in SQL, with the C# names even when the client wrote them in lower
+    /// case; with Group, keys, counts and sums per group, never rows (every level is forced not expanded).
+    /// Rows and columns are paged within the limit; a count or a summary alone returns no rows.
     /// </summary>
-    public static async Task<DataSourceResult<T>> RowsAsync<T>(
+    public static async Task<LoadResult> LoadAsync<T>(
         IQueryable<T> source, DataSourceLoadOptionsBase options, int maxTake = DefaultMaxTake, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
         MakeSafe(options);
         CheckReserved<T>(options);
+        LoadOptionsValidator.Validate<T>(options);
         if (options.Group is { Length: > 0 })
-            throw new InvalidRequestException("Grouping is not asked here: use the groups route. Here rows are read.");
-        // PreSelect alone projects too (measured on 5.1.0): it would return dictionaries, not entities.
-        if (options.Select is { Length: > 0 } || options.PreSelect is { Length: > 0 })
-            throw new InvalidRequestException("Projection is not asked here: use the projection route. Here whole entities are read.");
-        LoadOptionsValidator.Validate<T>(options);
-        CheckPage(options, maxTake);
-
-        var loaded = await LoadAsync(source, options, "search", ct).ConfigureAwait(false);
-        return new DataSourceResult<T>
         {
-            // Materialized here: an error leaves this method, not the serializer. With IsCountQuery and
-            // IsSummaryQuery DevExtreme returns no rows (data null, measured on 5.1.0).
-            data = loaded.data?.Cast<T>().ToList() ?? [],
-            totalCount = loaded.totalCount,
-            groupCount = loaded.groupCount,
-            summary = loaded.summary,
-        };
-    }
-
-    /// <summary>
-    /// Groups: keys, counts and sums per group, never rows (every level is forced not expanded).
-    /// </summary>
-    public static async Task<GroupsResult> GroupsAsync<T>(
-        IQueryable<T> source, DataSourceLoadOptionsBase options, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(options);
-        MakeSafe(options);
-        if (options.Group is not { Length: > 0 })
-            throw new InvalidRequestException("Give at least one field in Group, for example {\"Group\": [{\"Selector\": \"Kind\"}]}.");
-        if (options.Select is { Length: > 0 })
-            throw new InvalidRequestException("Projection is not asked here: use the projection route. Here groups are counted and summed.");
-        CheckReserved<T>(options);
-        LoadOptionsValidator.Validate<T>(options);
-        foreach (var level in options.Group)
-            level.IsExpanded = false;
-
-        var loaded = await LoadAsync(source, options, "grouping", ct).ConfigureAwait(false);
-        return new GroupsResult(
-            loaded.data.Cast<Group>().Select(ToNode).ToList(),
-            loaded.groupCount < 0 ? null : loaded.groupCount,
-            loaded.totalCount < 0 ? null : loaded.totalCount,
-            loaded.summary);
-    }
-
-    /// <summary>
-    /// Projection: only the asked columns (also through navigations: names instead of ids), projected in
-    /// SQL. Keys are the C# names, even when the client wrote them in lower case.
-    /// </summary>
-    public static async Task<DataSourceResult<IDictionary<string, object?>>> ProjectionAsync<T>(
-        IQueryable<T> source, DataSourceLoadOptionsBase options, int maxTake = DefaultMaxTake, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(options);
-        MakeSafe(options);
-        // PreSelect alone chooses the columns too (measured on 5.1.0).
-        if (options.Select is not { Length: > 0 } && options.PreSelect is not { Length: > 0 })
-            throw new InvalidRequestException("Give in Select the fields to read, for example {\"Select\": [\"Name\", \"Box.Label\"]}.");
-        if (options.Group is { Length: > 0 })
-            throw new InvalidRequestException("Grouping is not asked here: use the groups route. Here columns are read.");
-        CheckReserved<T>(options);
-        LoadOptionsValidator.Validate<T>(options);
-        CheckPage(options, maxTake);
-        // DevExtreme uses the received text as key: "box.label" would come out as {"box":{"label":…}},
-        // outside the "names as is" rule.
-        if (options.Select is { Length: > 0 })
-            options.Select = options.Select.Select(CSharpNames<T>).ToArray();
-        if (options.PreSelect is { Length: > 0 })
-            options.PreSelect = options.PreSelect.Select(CSharpNames<T>).ToArray();
-
-        var loaded = await LoadAsync(source, options, "projection", ct).ConfigureAwait(false);
-        return new DataSourceResult<IDictionary<string, object?>>
+            // PreSelect alone projects too (measured on 5.1.0).
+            if (options.Select is { Length: > 0 } || options.PreSelect is { Length: > 0 })
+                throw new InvalidRequestException("Select has no effect with Group: a group carries its key, count and sums, never rows.");
+            foreach (var level in options.Group)
+                level.IsExpanded = false;
+        }
+        else
         {
-            data = loaded.data?.Cast<IDictionary<string, object?>>().ToList() ?? [],
-            totalCount = loaded.totalCount,
-            groupCount = loaded.groupCount,
-            summary = loaded.summary,
-        };
+            CheckPage(options, maxTake);
+            // DevExtreme uses the received text as key: "box.label" would come out as {"box":{"label":…}},
+            // outside the "names as is" rule.
+            if (options.Select is { Length: > 0 })
+                options.Select = options.Select.Select(CSharpNames<T>).ToArray();
+            if (options.PreSelect is { Length: > 0 })
+                options.PreSelect = options.PreSelect.Select(CSharpNames<T>).ToArray();
+        }
+
+        var loaded = await LoadCoreAsync(source, options, ct).ConfigureAwait(false);
+        // With IsCountQuery and IsSummaryQuery DevExtreme returns no rows (data null, measured on 5.1.0):
+        // the client always reads a list.
+        loaded.data ??= Array.Empty<object>();
+        return loaded;
     }
 
     // The one place where an exception becomes another: a request DevExtreme or the database cannot
     // run is the client's mistake, a 400 with the reason, not a crash. The original stays as inner.
-    private static async Task<LoadResult> LoadAsync<T>(IQueryable<T> source, DataSourceLoadOptionsBase options, string what, CancellationToken ct)
+    private static async Task<LoadResult> LoadCoreAsync<T>(IQueryable<T> source, DataSourceLoadOptionsBase options, CancellationToken ct)
     {
         try
         {
@@ -134,7 +84,7 @@ public static class Search
         }
         catch (Exception e) when (e is ArgumentException or InvalidOperationException or FormatException or NotSupportedException)
         {
-            throw new InvalidRequestException($"Invalid {what}: {e.Message}", e);
+            throw new InvalidRequestException($"Invalid search: {e.Message}", e);
         }
     }
 
@@ -153,12 +103,6 @@ public static class Search
     // The path with the C# names ("box.label" → "Box.Label"); the validator already proved it exists.
     private static string CSharpNames<T>(string path) =>
         EntityPaths.Resolve(typeof(T), path) is { } chain ? string.Join('.', chain.Select(p => p.Name)) : path;
-
-    private static GroupNode ToNode(Group group) => new(
-        group.key,
-        group.count,
-        group.summary,
-        group.items?.OfType<Group>().Select(ToNode).ToList() is { Count: > 0 } children ? children : null);
 
     // Every path named in the options is resolved segment by segment; a reserved property throws. A
     // route with load options is full access to the table: this keeps a secret out of Select and Group.

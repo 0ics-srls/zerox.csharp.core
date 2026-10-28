@@ -123,20 +123,20 @@ public sealed class SampleApiTests : IAsyncLifetime
             (await SendAsync(HttpMethod.Post, "api/Orders", $$"""{"CustomerId":{{customer}},"Date":"{{date}}","Amount":{{amount}},"Status":"Open"}""")).Status
                 .Should().Be(HttpStatusCode.Created);
 
-        // Query with a filter and paging.
-        var page = await SendAsync(HttpMethod.Post, "api/Orders/query",
+        // Load with a filter and paging.
+        var page = await SendAsync(HttpMethod.Post, "api/Orders/load",
             $$"""{"Filter":["CustomerId","=",{{northId}}],"Sort":[{"Selector":"Amount"}],"Take":1,"RequireTotalCount":true}""");
         page.Body.GetProperty("totalCount").GetInt32().Should().Be(2);
         page.Body.GetProperty("data")[0].GetProperty("Amount").GetDecimal().Should().Be(100m);
 
-        // Project names instead of ids, and sum per customer.
-        var names = await SendAsync(HttpMethod.Post, "api/Orders/projection",
+        // Load names instead of ids, and sums per customer: the same route, other options.
+        var names = await SendAsync(HttpMethod.Post, "api/Orders/load",
             """{"Select":["Amount","Customer.Name"],"Filter":["Date",">=","2026-03-01"],"Sort":[{"Selector":"Amount","Desc":true}],"Take":10}""");
         names.Body.GetProperty("data")[0].GetProperty("Customer").GetProperty("Name").GetString().Should().Be("South");
-        var sums = await SendAsync(HttpMethod.Post, "api/Orders/groups",
+        var sums = await SendAsync(HttpMethod.Post, "api/Orders/load",
             """{"Filter":["Date",">=","2026-03-01"],"Group":[{"Selector":"Customer.Name"}],"GroupSummary":[{"Selector":"Amount","SummaryType":"sum"}]}""");
-        sums.Body.GetProperty("Groups").EnumerateArray()
-            .ToDictionary(g => g.GetProperty("Key").GetString()!, g => g.GetProperty("Summary")[0].GetDecimal())
+        sums.Body.GetProperty("data").EnumerateArray()
+            .ToDictionary(g => g.GetProperty("key").GetString()!, g => g.GetProperty("summary")[0].GetDecimal())
             .Should().BeEquivalentTo(new Dictionary<string, decimal> { ["North"] = 300m, ["South"] = 300m });
 
         // Merge South into North, close everything before April, rename North, delete an order.
