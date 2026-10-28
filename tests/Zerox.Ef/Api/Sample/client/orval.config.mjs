@@ -2,12 +2,12 @@
 // server's address is read at every request from SAMPLE_URL.
 export default {
   sample: {
-    input: '../openapi/Sample.json',
+    input: "../openapi/Sample.json",
     output: {
-      target: 'src/api/sample.ts',
-      schemas: 'src/api/model',
-      client: 'fetch',
-      mode: 'tags-split',
+      target: "src/api/sample.ts",
+      schemas: "src/api/model",
+      client: "fetch",
+      mode: "tags-split",
       clean: true,
       baseUrl: { runtime: "process.env['SAMPLE_URL'] ?? ''" },
     },

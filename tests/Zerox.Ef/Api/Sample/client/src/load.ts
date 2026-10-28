@@ -1,20 +1,35 @@
 // The load of an entity, typed from the request: the request says what comes back — rows, only the
 // asked columns, or groups — and the compiler computes that shape from the entity of the generated call.
-import type { ApiError, DataSourceLoadOptionsBase, LoadGroup } from './api/model';
+import type {
+  ApiError,
+  DataSourceLoadOptionsBase,
+  LoadGroup,
+} from "./api/model";
 
 // Four levels of nesting, counted by the length of a tuple.
 type Limit = [unknown, unknown, unknown, unknown];
-type Nested<V> = NonNullable<V> extends readonly unknown[] ? never : NonNullable<V> extends object ? NonNullable<V> : never;
+type Nested<V> =
+  NonNullable<V> extends readonly unknown[]
+    ? never
+    : NonNullable<V> extends object
+      ? NonNullable<V>
+      : never;
 
 /** Every field path of T, the nested ones with a dot: 'Amount', 'Customer.Name'. */
 export type Path<T, Seen extends unknown[] = []> = Seen extends Limit
   ? never
   : {
-      [K in keyof T & string]-?: K | ([Nested<T[K]>] extends [never] ? never : `${K}.${Path<Nested<T[K]>, [...Seen, unknown]>}`);
+      [K in keyof T & string]-?:
+        | K
+        | ([Nested<T[K]>] extends [never]
+            ? never
+            : `${K}.${Path<Nested<T[K]>, [...Seen, unknown]>}`);
     }[keyof T & string];
 
 type Head<P extends string> = P extends `${infer H}.${string}` ? H : P;
-type Rest<P extends string, K extends string> = P extends `${K}.${infer R}` ? R : never;
+type Rest<P extends string, K extends string> = P extends `${K}.${infer R}`
+  ? R
+  : never;
 
 /** T with only the selected paths, nested objects kept: what the server returns for Select. */
 export type Selected<T, P extends string> = {
@@ -27,10 +42,36 @@ export type Selected<T, P extends string> = {
         : Selected<T[K], Rest<P, K & string>>;
 };
 
-export type Operator = '=' | '<>' | '<' | '<=' | '>' | '>=' | 'contains' | 'notcontains' | 'startswith' | 'endswith';
-export type Condition<T> = readonly [Path<T>, Operator, string | number | boolean | null];
-export type Filter<T> = Condition<T> | readonly ['!', Filter<T>] | readonly (Filter<T> | 'and' | 'or')[];
-export type Interval = 'year' | 'quarter' | 'month' | 'day' | 'dayOfWeek' | 'hour' | 'minute' | 'second' | number;
+export type Operator =
+  | "="
+  | "<>"
+  | "<"
+  | "<="
+  | ">"
+  | ">="
+  | "contains"
+  | "notcontains"
+  | "startswith"
+  | "endswith";
+export type Condition<T> = readonly [
+  Path<T>,
+  Operator,
+  string | number | boolean | null,
+];
+export type Filter<T> =
+  | Condition<T>
+  | readonly ["!", Filter<T>]
+  | readonly (Filter<T> | "and" | "or")[];
+export type Interval =
+  | "year"
+  | "quarter"
+  | "month"
+  | "day"
+  | "dayOfWeek"
+  | "hour"
+  | "minute"
+  | "second"
+  | number;
 
 export interface SortBy<T> {
   readonly Selector: Path<T>;
@@ -43,7 +84,7 @@ export interface GroupBy<T> {
 }
 export interface SummaryOf<T> {
   readonly Selector: Path<T>;
-  readonly SummaryType: 'sum' | 'min' | 'max' | 'avg' | 'count';
+  readonly SummaryType: "sum" | "min" | "max" | "avg" | "count";
 }
 
 /** The load options, with every field checked against the entity. */
@@ -64,17 +105,27 @@ export interface LoadRequest<T> {
 
 /** A group: its key, how many rows, the group summaries; the inner level's groups, never rows. */
 export interface GroupOf<I> {
-  key: LoadGroup['key'];
+  key: LoadGroup["key"];
   items: I;
   count?: number;
   summary?: (number | null)[];
 }
 
-type Row<T, R> = R extends { readonly Select: readonly (infer S extends string)[] } ? Selected<T, S> : T;
-type Groups<G> = G extends readonly [unknown, ...infer Tail] ? GroupOf<Tail extends readonly [] ? null : Groups<Tail>[]> : never;
+type Row<T, R> = R extends {
+  readonly Select: readonly (infer S extends string)[];
+}
+  ? Selected<T, S>
+  : T;
+type Groups<G> = G extends readonly [unknown, ...infer Tail]
+  ? GroupOf<Tail extends readonly [] ? null : Groups<Tail>[]>
+  : never;
 
 /** What data holds for the request R on the rows of T. */
-export type LoadData<T, R> = R extends { readonly Group: infer G extends readonly [unknown, ...unknown[]] } ? Groups<G>[] : Row<T, R>[];
+export type LoadData<T, R> = R extends {
+  readonly Group: infer G extends readonly [unknown, ...unknown[]];
+}
+  ? Groups<G>[]
+  : Row<T, R>[];
 
 export interface Loaded<D> {
   data: D;
@@ -90,7 +141,7 @@ export type LoadCall = (
 
 /** The entity a generated load call lists, read from its result: the rows of LoadResultOf<T>. */
 export type EntityOf<C extends LoadCall> =
-  Exclude<Awaited<ReturnType<C>>['data'], ApiError> extends { data: infer D }
+  Exclude<Awaited<ReturnType<C>>["data"], ApiError> extends { data: infer D }
     ? D extends readonly (infer X)[]
       ? Exclude<X, LoadGroup>
       : never
@@ -134,13 +185,16 @@ const body = <T>(request: LoadRequest<T>): DataSourceLoadOptionsBase => {
  * Runs the load and returns its result typed from the request: the overload declares that the shape of
  * data follows the request, as the server's protocol does — the server's tests and these hold it.
  */
-export async function load<C extends LoadCall, const R extends LoadRequest<EntityOf<C>>>(
-  call: C,
-  request: R,
-): Promise<Loaded<LoadData<EntityOf<C>, R>>>;
-export async function load(call: LoadCall, request: LoadRequest<unknown>): Promise<unknown> {
+export async function load<
+  C extends LoadCall,
+  const R extends LoadRequest<EntityOf<C>>,
+>(call: C, request: R): Promise<Loaded<LoadData<EntityOf<C>, R>>>;
+export async function load(
+  call: LoadCall,
+  request: LoadRequest<unknown>,
+): Promise<unknown> {
   const { data, status } = await call(body(request));
-  if ('Code' in data) {
+  if ("Code" in data) {
     throw new LoadError(status, data);
   }
   return data;
