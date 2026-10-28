@@ -43,11 +43,15 @@ piece. The complete example, tested from the repository to HTTP, is
 
        builder.Services.AddZeroxDb<SampleDbContext>(o => o.UseSqlite(connection));
 
-4. Controllers with the JSON as is, and the error middleware first:
+4. Controllers with the JSON as is, the OpenAPI document clients are generated from, and the error
+   middleware first; in Development the document and the Scalar UI (the project's package
+   `Scalar.AspNetCore`):
 
        builder.Services.AddControllers().AddZeroxJson();
+       builder.Services.AddZeroxOpenApi();
        app.UseZeroxErrorHandling();
        app.MapControllers();
+       if (app.Environment.IsDevelopment()) { app.MapOpenApi(); app.MapScalarApiReference(); }
 
 5. One line per entity — the project adds its own `[Authorize]`:
 
@@ -61,11 +65,19 @@ piece. The complete example, tested from the repository to HTTP, is
    (`CustomersController.Rename`: with the Version the client read, a stale one answers 409). A row
    with `IHasOptimisticLock` is deleted with the Version the client read: `DELETE api/Customers/5?version=3`.
 
+6. A TypeScript client is generated from the document with Orval, and its load is typed from the
+   request: `tests/Zerox.Ef/Api/Sample/client/` (`src/load.ts`, run by `ClientTests` against the Sample).
+   The document is a file of the repository, `openapi/Sample.json`, kept equal to the served one by
+   `OpenApiDocumentTests`.
+
 ## Build and test
 
     dotnet build zerox.csharp.core.slnx -warnaserror
     dotnet test --solution zerox.csharp.core.slnx
     tools/verify.sh        # every check, [k/4]
     tools/test-postgres.sh # the Zerox.Ef tests on PostgreSQL in Docker, [k/5]
+
+The integration tests include `ClientTests`, which needs Node 22.18 or later on the PATH and the npm
+registry.
 
 Requires the .NET SDK 10.0.400 (see `global.json`).

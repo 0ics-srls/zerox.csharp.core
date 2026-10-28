@@ -14,6 +14,7 @@ namespace Zerox.Ef.Api;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[Produces("application/json")]
 public abstract class EntityController<T>(IRepository<T> repository) : ControllerBase where T : class, IEntity
 {
     /// <summary>

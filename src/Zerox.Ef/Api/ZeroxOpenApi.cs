@@ -26,6 +26,7 @@ public static class ZeroxOpenApi
         return services.AddOpenApi(options =>
         {
             options.AddOperationTransformer<OperationNames>();
+            options.AddOperationTransformer<Responses>();
             options.AddOperationTransformer<LoadResults>();
             options.AddSchemaTransformer<Days>();
             options.AddDocumentTransformer<UnusedLoadResult>();
@@ -51,6 +52,58 @@ public static class ZeroxOpenApi
                 operation.OperationId ??= $"{action.ControllerName}_{action.ActionName}";
             return Task.CompletedTask;
         }
+    }
+
+    // The answers the platform cannot see: the ApiError of the error middleware (400 and 500 on every
+    // action), and those of the actions of EntityController<T> — 201 of a creation, 204 of a deletion,
+    // 404 of a missing row, 409 of a stale Version. Declared here and not with attributes: an attribute
+    // on the base would hide the success answer the platform infers for every action of a project.
+    private sealed class Responses : IOpenApiOperationTransformer
+    {
+        public async Task TransformAsync(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
+        {
+            if (context.Description.ActionDescriptor is not ControllerActionDescriptor action || context.Document is not { } document)
+                return;
+
+            if (document.Components?.Schemas?.ContainsKey(nameof(ApiError)) != true)
+                document.AddComponent(nameof(ApiError), await context.GetOrCreateSchemaAsync(typeof(ApiError), null, cancellationToken).ConfigureAwait(false));
+            var responses = operation.Responses ??= [];
+            responses.TryAdd("400", Error(document, "The request is invalid: the message says why."));
+            responses.TryAdd("500", Error(document, "An unexpected error."));
+
+            if (action.MethodInfo.GetBaseDefinition().DeclaringType is not { IsGenericType: true } declaring
+                || declaring.GetGenericTypeDefinition() != typeof(EntityController<>))
+                return;
+            switch (action.ActionName)
+            {
+                case nameof(EntityController<>.Create):
+                    if (responses.Remove("200", out var created))
+                        responses["201"] = created;
+                    break;
+                case nameof(EntityController<>.Delete):
+                    responses.Remove("200");
+                    responses["204"] = new OpenApiResponse { Description = "Deleted." };
+                    responses["404"] = new OpenApiResponse { Description = "No row with that Id." };
+                    responses["409"] = Error(document, "The row was changed by another user.");
+                    break;
+                case nameof(EntityController<>.GetById):
+                    responses["404"] = new OpenApiResponse { Description = "No row with that Id." };
+                    break;
+                case nameof(EntityController<>.Update):
+                    responses["404"] = new OpenApiResponse { Description = "No row with that Id." };
+                    responses["409"] = Error(document, "The row was changed by another user.");
+                    break;
+            }
+        }
+
+        private static OpenApiResponse Error(OpenApiDocument document, string description) => new()
+        {
+            Description = description,
+            Content = new Dictionary<string, OpenApiMediaType>
+            {
+                ["application/json"] = new() { Schema = new OpenApiSchemaReference(nameof(ApiError), document) },
+            },
+        };
     }
 
     // The load of EntityController<T> answers DevExtreme's LoadResult, whose data the platform cannot
@@ -95,8 +148,9 @@ public static class ZeroxOpenApi
                     ["summary"] = summary,
                 },
             });
-            foreach (var media in operation.Responses?.Values.SelectMany(r => r.Content?.Values ?? []) ?? [])
-                media.Schema = new OpenApiSchemaReference(ResultSchema(entity), document);
+            if (operation.Responses?.TryGetValue("200", out var ok) == true)
+                foreach (var media in ok.Content?.Values.AsEnumerable() ?? [])
+                    media.Schema = new OpenApiSchemaReference(ResultSchema(entity), document);
         }
 
         internal static Type? EntityOf(Type? controller)

@@ -1,0 +1,3 @@
+node_modules/
+# Generated from ../openapi/Sample.json by `npm run generate`, at every run.
+src/api/

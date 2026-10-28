@@ -1,0 +1,19 @@
+{
+  "name": "zerox-ef-sample-client",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "generate": "orval --config orval.config.mjs",
+    "check": "tsc -p .",
+    "test": "node --import tsx --test src/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "orval": "8.45.0",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3"
+  }
+}
