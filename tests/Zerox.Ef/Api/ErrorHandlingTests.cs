@@ -81,7 +81,7 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var body = await BodyAsync(response);
         body.GetProperty("Code").GetString().Should().Be("Conflict");
-        body.GetProperty("Message").GetString().Should().NotBeNullOrWhiteSpace();
+        body.GetProperty("detail").GetString().Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
@@ -110,8 +110,10 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var body = await BodyAsync(response);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+        body.GetProperty("status").GetInt32().Should().Be(400);
         body.GetProperty("Code").GetString().Should().Be("InvalidRequest");
-        body.GetProperty("Message").GetString().Should().Be("The field 'Nope' does not exist.");
+        body.GetProperty("detail").GetString().Should().Be("The field 'Nope' does not exist.");
         Host.Logs.Entries.Should().NotContain(e => e.Level >= LogLevel.Error);
     }
 

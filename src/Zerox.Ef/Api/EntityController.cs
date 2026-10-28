@@ -14,7 +14,6 @@ namespace Zerox.Ef.Api;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Produces("application/json")]
 public abstract class EntityController<T>(IRepository<T> repository) : ControllerBase where T : class, IEntity
 {
     /// <summary>
@@ -63,7 +62,7 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
     {
         ArgumentNullException.ThrowIfNull(entity);
         if (entity.Id != 0)
-            return BadRequest(new ApiError(ApiErrorCode.InvalidRequest, "The Id is given by the database: leave it out of a creation."));
+            throw new InvalidRequestException("The Id is given by the database: leave it out of a creation.");
         await Repository.AddAsync(entity, ct).ConfigureAwait(false);
         await Repository.SaveChangesAsync(ct).ConfigureAwait(false);
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
@@ -79,7 +78,7 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
     {
         ArgumentNullException.ThrowIfNull(entity);
         if (id != entity.Id)
-            return BadRequest(new ApiError(ApiErrorCode.InvalidRequest, "The id in the route and in the body differ."));
+            throw new InvalidRequestException("The id in the route and in the body differ.");
         var stored = await Repository.GetByIdAsync(id, ct).ConfigureAwait(false);
         if (stored is null)
             return NotFound();
@@ -103,8 +102,8 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
         if (entity is IHasOptimisticLock)
         {
             if (version is not int read)
-                return BadRequest(new ApiError(ApiErrorCode.InvalidRequest,
-                    $"{typeof(T).Name} has an optimistic lock: give the Version you read, as ?version=N."));
+                throw new InvalidRequestException(
+                    $"{typeof(T).Name} has an optimistic lock: give the Version you read, as ?version=N.");
             Repository.PinReadVersion(entity, read);
         }
         Repository.Delete(entity);

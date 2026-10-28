@@ -76,7 +76,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         var (status, body) = await PostAsync("api/Orders/load", "null");
 
         status.Should().Be(HttpStatusCode.BadRequest);
-        body.GetProperty("Message").GetString().Should().Contain("Take");
+        body.GetProperty("detail").GetString().Should().Contain("Take");
     }
 
     [Theory]
@@ -87,7 +87,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         var (status, body) = await PostAsync("api/Orders/load", json);
 
         status.Should().Be(HttpStatusCode.BadRequest);
-        body.GetProperty("Message").GetString().Should().Contain("Take");
+        body.GetProperty("detail").GetString().Should().Contain("Take");
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
 
         status.Should().Be(HttpStatusCode.BadRequest);
         body.GetProperty("Code").GetString().Should().Be("InvalidRequest");
-        body.GetProperty("Message").GetString().Should().Contain("'Nope'");
+        body.GetProperty("detail").GetString().Should().Contain("'Nope'");
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         var (status, body) = await PostAsync("api/Orders/load", """{"Filter":["InternalNote","=","internal"]}""");
 
         status.Should().Be(HttpStatusCode.BadRequest);
-        body.GetProperty("Message").GetString().Should().Contain("InternalNote");
+        body.GetProperty("detail").GetString().Should().Contain("InternalNote");
     }
 
     // --- groups, columns, values ---
@@ -191,7 +191,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         var (status, body) = await SendAsync(HttpMethod.Get, "api/Orders/values/InternalNote");
 
         status.Should().Be(HttpStatusCode.BadRequest);
-        body.GetProperty("Message").GetString().Should().NotContain("internal\"");
+        body.GetProperty("detail").GetString().Should().NotContain("internal\"");
     }
 
     // --- CRUD ---
@@ -316,7 +316,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         var (status, body) = await SendAsync(HttpMethod.Delete, "api/Customers/2");
 
         status.Should().Be(HttpStatusCode.BadRequest);
-        body.GetProperty("Message").GetString().Should().Contain("version=");
+        body.GetProperty("detail").GetString().Should().Contain("version=");
     }
 
     [Fact]

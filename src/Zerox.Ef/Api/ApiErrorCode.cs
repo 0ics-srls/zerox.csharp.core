@@ -1,19 +1,20 @@
 namespace Zerox.Ef.Api;
 
 /// <summary>
-/// The body of every error the API answers: a code a client can switch on, and a message for a person.
-/// </summary>
-public sealed record ApiError(ApiErrorCode Code, string Message);
-
-/// <summary>
-/// What went wrong, as a client switches on it (in JSON the member name).
+/// What went wrong, as a client switches on it: the "Code" of every ProblemDetails the API answers (in
+/// JSON the member name), given by its status in one place (AddZeroxProblemDetails).
 /// </summary>
 public enum ApiErrorCode
 {
     /// <summary>
-    /// The request cannot be executed as written (400); the message says why and the right form.
+    /// The request cannot be executed as written (400); the detail says why and the right form.
     /// </summary>
     InvalidRequest,
+
+    /// <summary>
+    /// Nothing answers at that address: no row with that id, or no route (404).
+    /// </summary>
+    NotFound,
 
     /// <summary>
     /// The row was changed by somebody else after the client read it (409): read it again.

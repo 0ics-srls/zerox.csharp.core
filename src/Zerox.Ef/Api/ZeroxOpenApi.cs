@@ -1,4 +1,6 @@
 using DevExtreme.AspNet.Data.ResponseModel;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,54 +56,83 @@ public static class ZeroxOpenApi
         }
     }
 
-    // The answers the platform cannot see: the ApiError of the error middleware (400 and 500 on every
-    // action), and those of the actions of EntityController<T> — 201 of a creation, 204 of a deletion,
-    // 404 of a missing row, 409 of a stale Version. Declared here and not with attributes: an attribute
-    // on the base would hide the success answer the platform infers for every action of a project.
+    // The answers the platform cannot see, all errors as the one ProblemDetails of AddZeroxProblemDetails:
+    // 400 and 500 on every action (the error middleware, a failed binding), and those of the actions of
+    // EntityController<T> — 201 of a creation, 204 of a deletion, 404 of a missing row, 409 of a stale
+    // Version. Declared here and not with attributes: an attribute on the base would hide the success
+    // answer the platform infers for every action of a project. An error a project's action declares is
+    // documented as the same ProblemDetails.
     private sealed class Responses : IOpenApiOperationTransformer
     {
+        private const string ProblemMediaType = "application/problem+json";
+
         public async Task TransformAsync(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
         {
             if (context.Description.ActionDescriptor is not ControllerActionDescriptor action || context.Document is not { } document)
                 return;
 
-            if (document.Components?.Schemas?.ContainsKey(nameof(ApiError)) != true)
-                document.AddComponent(nameof(ApiError), await context.GetOrCreateSchemaAsync(typeof(ApiError), null, cancellationToken).ConfigureAwait(false));
+            await ProblemSchemaAsync(document, context, cancellationToken).ConfigureAwait(false);
             var responses = operation.Responses ??= [];
-            responses.TryAdd("400", Error(document, "The request is invalid: the message says why."));
-            responses.TryAdd("500", Error(document, "An unexpected error."));
+            responses.TryAdd("400", Problem(document, "The request is invalid: the detail says why."));
+            responses.TryAdd("500", Problem(document, "An unexpected error."));
 
-            if (action.MethodInfo.GetBaseDefinition().DeclaringType is not { IsGenericType: true } declaring
-                || declaring.GetGenericTypeDefinition() != typeof(EntityController<>))
-                return;
-            switch (action.ActionName)
+            if (action.MethodInfo.GetBaseDefinition().DeclaringType is { IsGenericType: true } declaring
+                && declaring.GetGenericTypeDefinition() == typeof(EntityController<>))
             {
-                case nameof(EntityController<>.Create):
-                    if (responses.Remove("200", out var created))
-                        responses["201"] = created;
-                    break;
-                case nameof(EntityController<>.Delete):
-                    responses.Remove("200");
-                    responses["204"] = new OpenApiResponse { Description = "Deleted." };
-                    responses["404"] = new OpenApiResponse { Description = "No row with that Id." };
-                    responses["409"] = Error(document, "The row was changed by another user.");
-                    break;
-                case nameof(EntityController<>.GetById):
-                    responses["404"] = new OpenApiResponse { Description = "No row with that Id." };
-                    break;
-                case nameof(EntityController<>.Update):
-                    responses["404"] = new OpenApiResponse { Description = "No row with that Id." };
-                    responses["409"] = Error(document, "The row was changed by another user.");
-                    break;
+                switch (action.ActionName)
+                {
+                    case nameof(EntityController<>.Create):
+                        if (responses.Remove("200", out var created))
+                            responses["201"] = created;
+                        break;
+                    case nameof(EntityController<>.Delete):
+                        responses.Remove("200");
+                        responses["204"] = new OpenApiResponse { Description = "Deleted." };
+                        responses["404"] = Problem(document, "No row with that Id.");
+                        responses["409"] = Problem(document, "The row was changed by another user.");
+                        break;
+                    case nameof(EntityController<>.GetById):
+                        responses["404"] = Problem(document, "No row with that Id.");
+                        break;
+                    case nameof(EntityController<>.Update):
+                        responses["404"] = Problem(document, "No row with that Id.");
+                        responses["409"] = Problem(document, "The row was changed by another user.");
+                        break;
+                }
             }
+
+            foreach (var (status, response) in responses.ToList())
+                if (int.TryParse(status, System.Globalization.CultureInfo.InvariantCulture, out var code) && code >= StatusCodes.Status400BadRequest)
+                    responses[status] = Problem(document, response.Description ?? "An error.");
         }
 
-        private static OpenApiResponse Error(OpenApiDocument document, string description) => new()
+        // The platform's ProblemDetails schema with the members AddZeroxProblemDetails and the framework add:
+        // the code of the domain, and the errors per field of a failed binding.
+        private static async Task ProblemSchemaAsync(OpenApiDocument document, OpenApiOperationTransformerContext context, CancellationToken ct)
+        {
+            if (document.Components?.Schemas?.TryGetValue(nameof(ProblemDetails), out var existing) == true && existing is OpenApiSchema { Properties: { } known } && known.ContainsKey(ZeroxProblemDetails.CodeMember))
+                return;
+            if (document.Components?.Schemas?.ContainsKey(nameof(ApiErrorCode)) != true)
+                document.AddComponent(nameof(ApiErrorCode), await context.GetOrCreateSchemaAsync(typeof(ApiErrorCode), null, ct).ConfigureAwait(false));
+            var problem = await context.GetOrCreateSchemaAsync(typeof(ProblemDetails), null, ct).ConfigureAwait(false);
+            problem.Properties ??= new Dictionary<string, IOpenApiSchema>();
+            problem.Properties[ZeroxProblemDetails.CodeMember] = new OpenApiSchemaReference(nameof(ApiErrorCode), document);
+            problem.Properties["errors"] = new OpenApiSchema
+            {
+                Type = JsonSchemaType.Object,
+                AdditionalProperties = new OpenApiSchema { Type = JsonSchemaType.Array, Items = new OpenApiSchema { Type = JsonSchemaType.String } },
+            };
+            document.Components ??= new OpenApiComponents();
+            document.Components.Schemas ??= new Dictionary<string, IOpenApiSchema>();
+            document.Components.Schemas[nameof(ProblemDetails)] = problem;
+        }
+
+        private static OpenApiResponse Problem(OpenApiDocument document, string description) => new()
         {
             Description = description,
             Content = new Dictionary<string, OpenApiMediaType>
             {
-                ["application/json"] = new() { Schema = new OpenApiSchemaReference(nameof(ApiError), document) },
+                [ProblemMediaType] = new() { Schema = new OpenApiSchemaReference(nameof(ProblemDetails), document) },
             },
         };
     }

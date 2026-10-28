@@ -38,15 +38,12 @@
         ],
         "responses": {
           "204": {
-            "description": "No Content",
-            "content": {
-              "application/json": { }
-            }
+            "description": "No Content"
           },
           "404": {
             "description": "Not Found",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
                 }
@@ -54,11 +51,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -66,9 +63,9 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -125,11 +122,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -137,9 +134,9 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -206,11 +203,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -218,9 +215,9 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -260,11 +257,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -272,9 +269,9 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -312,11 +309,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -324,15 +321,22 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
           },
           "404": {
-            "description": "No row with that Id."
+            "description": "No row with that Id.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       },
@@ -384,11 +388,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -396,22 +400,29 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
           },
           "404": {
-            "description": "No row with that Id."
+            "description": "No row with that Id.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           },
           "409": {
             "description": "The row was changed by another user.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -448,11 +459,11 @@
             "description": "Deleted."
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -460,22 +471,29 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
           },
           "404": {
-            "description": "No row with that Id."
+            "description": "No row with that Id.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           },
           "409": {
             "description": "The row was changed by another user.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -521,11 +539,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -533,9 +551,9 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -562,17 +580,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
-            "content": {
-              "application/json": { }
-            }
+            "description": "OK"
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -580,9 +595,9 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -649,11 +664,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -661,9 +676,9 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -703,11 +718,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -715,9 +730,9 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -755,11 +770,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -767,15 +782,22 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
           },
           "404": {
-            "description": "No row with that Id."
+            "description": "No row with that Id.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       },
@@ -827,11 +849,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -839,22 +861,29 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
           },
           "404": {
-            "description": "No row with that Id."
+            "description": "No row with that Id.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           },
           "409": {
             "description": "The row was changed by another user.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -891,11 +920,11 @@
             "description": "Deleted."
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -903,22 +932,29 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
           },
           "404": {
-            "description": "No row with that Id."
+            "description": "No row with that Id.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           },
           "409": {
             "description": "The row was changed by another user.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -964,11 +1000,11 @@
             }
           },
           "400": {
-            "description": "The request is invalid: the message says why.",
+            "description": "The request is invalid: the detail says why.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -976,9 +1012,9 @@
           "500": {
             "description": "An unexpected error.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -989,26 +1025,14 @@
   },
   "components": {
     "schemas": {
-      "ApiError": {
-        "required": [
-          "Code",
-          "Message"
+      "ApiErrorCode": {
+        "enum": [
+          "InvalidRequest",
+          "NotFound",
+          "Conflict",
+          "InternalError"
         ],
-        "type": "object",
-        "properties": {
-          "Code": {
-            "enum": [
-              "InvalidRequest",
-              "Conflict",
-              "InternalError"
-            ],
-            "description": "What went wrong, as a client switches on it (in JSON the member name)."
-          },
-          "Message": {
-            "type": "string"
-          }
-        },
-        "description": "The body of every error the API answers: a code a client can switch on, and a message for a person."
+        "description": "What went wrong, as a client switches on it: the \"Code\" of every ProblemDetails the API answers (in\nJSON the member name), given by its status in one place (AddZeroxProblemDetails)."
       },
       "Customer": {
         "type": "object",
@@ -1386,6 +1410,18 @@
               "null",
               "string"
             ]
+          },
+          "Code": {
+            "$ref": "#/components/schemas/ApiErrorCode"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         }
       },

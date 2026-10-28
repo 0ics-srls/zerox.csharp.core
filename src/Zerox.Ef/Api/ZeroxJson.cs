@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Zerox.Ef.Api;
@@ -21,6 +22,15 @@ public static class ZeroxJson
         {
             o.JsonSerializerOptions.PropertyNamingPolicy = null;
             AddConverters(o.JsonSerializerOptions);
+        });
+        // JSON only: application/json for the answers, application/problem+json for the errors (through
+        // application/*+json). Plain text and text/json would be one more answer for every action of the
+        // document, and one more variant of every call of a generated client.
+        mvc.AddMvcOptions(o =>
+        {
+            o.OutputFormatters.RemoveType<StringOutputFormatter>();
+            foreach (var json in o.OutputFormatters.OfType<SystemTextJsonOutputFormatter>())
+                json.SupportedMediaTypes.Remove("text/json");
         });
         mvc.Services.ConfigureHttpJsonOptions(o =>
         {

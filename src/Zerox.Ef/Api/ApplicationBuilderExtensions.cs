@@ -8,8 +8,9 @@ namespace Zerox.Ef.Api;
 public static class ApplicationBuilderExtensions
 {
     /// <summary>
-    /// Put it first in the pipeline: every error after it becomes an ApiError (400, 409 or 500).
+    /// Put it first in the pipeline: every error after it becomes a ProblemDetails (400, 409 or 500), and
+    /// every error status answered without a body — an unknown route, a NotFound() — gets one.
     /// </summary>
     public static IApplicationBuilder UseZeroxErrorHandling(this IApplicationBuilder app) =>
-        app.UseMiddleware<ErrorHandlingMiddleware>();
+        app.UseMiddleware<ErrorHandlingMiddleware>().UseStatusCodePages();
 }

@@ -1,5 +1,5 @@
-using System.Net;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Zerox.Ef.Domain;
@@ -10,9 +10,10 @@ namespace Zerox.Ef.Api;
 // dies of one request. What nobody expected is logged as an error with its stack and becomes the 500
 // the client gets; it is never hidden. A conflict on the optimistic lock is an expected event (409, a
 // warning); a request that cannot be executed is the client's mistake (400 with the reason); a client
-// that went away is nobody's error. When the response has already started nothing more can be written:
-// the connection is aborted.
-internal sealed class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
+// that went away is nobody's error. Every answer is a ProblemDetails written by the platform's service
+// (AddZeroxProblemDetails adds the code). When the response has already started nothing more can be
+// written: the connection is aborted.
+internal sealed class ErrorHandlingMiddleware(RequestDelegate next, IProblemDetailsService problems, ILogger<ErrorHandlingMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -23,12 +24,11 @@ internal sealed class ErrorHandlingMiddleware(RequestDelegate next, ILogger<Erro
         catch (DbUpdateConcurrencyException e) when (IsOptimisticLockConflict(e))
         {
             logger.LogWarning(e, "Optimistic lock conflict");
-            await WriteAsync(context, HttpStatusCode.Conflict,
-                new ApiError(ApiErrorCode.Conflict, "The row was changed by another user.")).ConfigureAwait(false);
+            await WriteAsync(context, StatusCodes.Status409Conflict, "The row was changed by another user.").ConfigureAwait(false);
         }
         catch (InvalidRequestException e)
         {
-            await WriteAsync(context, HttpStatusCode.BadRequest, new ApiError(ApiErrorCode.InvalidRequest, e.Message)).ConfigureAwait(false);
+            await WriteAsync(context, StatusCodes.Status400BadRequest, e.Message).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
@@ -37,8 +37,7 @@ internal sealed class ErrorHandlingMiddleware(RequestDelegate next, ILogger<Erro
         catch (Exception e)
         {
             logger.LogError(e, "Unhandled exception");
-            await WriteAsync(context, HttpStatusCode.InternalServerError,
-                new ApiError(ApiErrorCode.InternalError, "An unexpected error occurred.")).ConfigureAwait(false);
+            await WriteAsync(context, StatusCodes.Status500InternalServerError, "An unexpected error occurred.").ConfigureAwait(false);
         }
     }
 
@@ -47,16 +46,20 @@ internal sealed class ErrorHandlingMiddleware(RequestDelegate next, ILogger<Erro
     private static bool IsOptimisticLockConflict(DbUpdateConcurrencyException e) =>
         e.Entries.Any(entry => entry.Metadata.GetProperties().Any(p => p.IsConcurrencyToken));
 
-    // Written with the HTTP JSON options (AddZeroxJson): the code goes out as its name. After the start
-    // of the response the status cannot change: the client gets a cut response, never a wrong one.
-    private static Task WriteAsync(HttpContext context, HttpStatusCode status, ApiError error)
+    // Written by the platform's ProblemDetails service with the HTTP JSON options (AddZeroxJson). After
+    // the start of the response the status cannot change: the client gets a cut response, never a wrong one.
+    private async Task WriteAsync(HttpContext context, int status, string detail)
     {
         if (context.Response.HasStarted)
         {
             context.Abort();
-            return Task.CompletedTask;
+            return;
         }
-        context.Response.StatusCode = (int)status;
-        return context.Response.WriteAsJsonAsync(error);
+        context.Response.StatusCode = status;
+        await problems.WriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = context,
+            ProblemDetails = new ProblemDetails { Status = status, Detail = detail },
+        }).ConfigureAwait(false);
     }
 }

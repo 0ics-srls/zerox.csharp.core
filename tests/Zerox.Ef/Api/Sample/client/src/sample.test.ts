@@ -1,13 +1,14 @@
 // The example application through its generated client and the typed load, against the Sample on a
 // real port. expectTypeOf is checked by tsc, the rest at run time.
+import type { Customer, Order } from "./api/model/index.ts";
 import { type GroupOf, LoadError, type LoadRequest, load } from "./load.ts";
 import {
   customersCreate,
   customersDelete,
   customersGetById,
+  customersLoad,
 } from "./api/customers/customers.ts";
 import { describe, expect, expectTypeOf, test } from "vitest";
-import type { Order } from "./api/model/index.ts";
 import { ordersLoad } from "./api/orders/orders.ts";
 
 // The seed of the Sample: 3 customers (Acme/Rome, Bolt/Milan, Cargo) and 25 orders — order i belongs to
@@ -105,12 +106,12 @@ describe("the load of orders", () => {
     expect(result.data).toEqual([]);
   });
 
-  test("an invalid request: the ApiError of the server", async () => {
+  test("an invalid request: the ProblemDetails of the server", async () => {
     const refused = load(ordersLoad, { Take: ABOVE_THE_PAGE_LIMIT });
 
     await expect(refused).rejects.toBeInstanceOf(LoadError);
     await expect(refused).rejects.toMatchObject({
-      error: { Code: "InvalidRequest" },
+      problem: { Code: "InvalidRequest", status: STATUS.invalid },
       status: STATUS.invalid,
     });
   });
@@ -138,6 +139,19 @@ describe("the load of orders", () => {
   });
 });
 
+describe("the load of customers", () => {
+  test("rows: the customers in a city, their names only", async () => {
+    const result = await load(customersLoad, {
+      Filter: ["City", "=", "Rome"],
+      Select: ["Name"],
+      Take: ALL,
+    });
+
+    expectTypeOf(result.data).toEqualTypeOf<Pick<Customer, "Name">[]>();
+    expect(result.data).toEqual([{ Name: "Acme" }]);
+  });
+});
+
 describe("the CRUD through the generated client", () => {
   test("201, 200, 204, 404", async () => {
     const created = await customersCreate({ City: "Turin", Name: "Delta" });
@@ -156,6 +170,9 @@ describe("the CRUD through the generated client", () => {
     expect((await customersDelete(id, { version })).status).toBe(
       STATUS.deleted,
     );
-    expect((await customersGetById(id)).status).toBe(STATUS.missing);
+    expect(await customersGetById(id)).toMatchObject({
+      data: { Code: "NotFound" },
+      status: STATUS.missing,
+    });
   });
 });

@@ -1,9 +1,9 @@
 // The load of an entity, typed from the request: the request says what comes back — rows, only the
 // asked columns, or groups — and the compiler computes that shape from the entity of the generated call.
 import type {
-  ApiError,
   DataSourceLoadOptionsBase,
   LoadGroup,
+  ProblemDetails,
 } from "./api/model";
 
 // Four levels of nesting, counted by the length of a tuple.
@@ -134,28 +134,33 @@ export interface Loaded<D> {
   summary?: (number | null)[];
 }
 
-/** A generated load call — Customers_Load, Orders_Load — with its answers: the result, or the ApiError. */
-export type LoadCall = (
-  options?: DataSourceLoadOptionsBase | null,
-) => Promise<{ status: number; data: { data: readonly unknown[] } | ApiError }>;
+/** A generated load call — Customers_Load, Orders_Load — with its answers: the result, or the ProblemDetails. */
+export type LoadCall = (options?: DataSourceLoadOptionsBase | null) => Promise<{
+  status: number;
+  data: { data: readonly unknown[] } | ProblemDetails;
+}>;
 
 /** The entity a generated load call lists, read from its result: the rows of LoadResultOf<T>. */
 export type EntityOf<C extends LoadCall> =
-  Exclude<Awaited<ReturnType<C>>["data"], ApiError> extends { data: infer D }
+  Exclude<Awaited<ReturnType<C>>["data"], ProblemDetails> extends {
+    data: infer D;
+  }
     ? D extends readonly (infer X)[]
       ? Exclude<X, LoadGroup>
       : never
     : never;
 
-/** The error the server answered, with its code and message. */
+/** The failure the server answered: its status and its ProblemDetails, with the code of the domain. */
 export class LoadError extends Error {
   public readonly status: number;
-  public readonly error: ApiError;
+  public readonly problem: ProblemDetails;
 
-  public constructor(status: number, error: ApiError) {
-    super(`${String(status)} ${error.Code}: ${error.Message}`);
+  public constructor(status: number, problem: ProblemDetails) {
+    super(
+      `${String(status)} ${problem.Code ?? ""}: ${problem.detail ?? problem.title ?? ""}`,
+    );
     this.status = status;
-    this.error = error;
+    this.problem = problem;
   }
 }
 
@@ -194,7 +199,7 @@ export async function load(
   request: LoadRequest<unknown>,
 ): Promise<unknown> {
   const { data, status } = await call(body(request));
-  if ("Code" in data) {
+  if (!("data" in data)) {
     throw new LoadError(status, data);
   }
   return data;

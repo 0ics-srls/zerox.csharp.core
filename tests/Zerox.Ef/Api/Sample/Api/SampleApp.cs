@@ -51,6 +51,7 @@ public sealed class SampleApp : IAsyncDisposable
         builder.Services.AddScoped<ICustomerMerge, CustomerMerge>();
         builder.Services.AddScoped<LastWriterWins>();
         builder.Services.AddControllers().AddApplicationPart(typeof(SampleApp).Assembly).AddZeroxJson();
+        builder.Services.AddZeroxProblemDetails();
         builder.Services.AddZeroxOpenApi();
 
         var app = builder.Build();

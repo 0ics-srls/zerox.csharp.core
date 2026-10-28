@@ -87,6 +87,7 @@ public sealed class TestHost : IAsyncDisposable
         builder.Logging.ClearProviders().AddProvider(logs);
         builder.Services.AddZeroxDb<HostDbContext>(o => database.Use(o));
         builder.Services.AddControllers().AddZeroxJson();
+        builder.Services.AddZeroxProblemDetails();
 
         var app = builder.Build();
         app.UseZeroxErrorHandling();

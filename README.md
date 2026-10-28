@@ -10,7 +10,7 @@ The reusable C# core of 0ics.
 | `Zerox.Ef.Core` | the contracts of the database foundation: entity, repository, unit of work, massive operation, optimistic lock | nothing |
 | `Zerox.Ef.Db` | the database foundation on EF Core: `IDbContext`, repositories, session rules on save | `Zerox.Ef.Core`, EF Core Relational 10 |
 | `Zerox.Ef.Domain` | the DevExtreme search over an `IQueryable`: rows, groups, projection, validator, distinct values, last writer wins | `Zerox.Ef.Db`, DevExtreme.AspNet.Data 5.1 |
-| `Zerox.Ef.Api` | ASP.NET Core: `EntityController<T>`, error middleware (400/409/500), JSON as is | `Zerox.Ef.Domain`, ASP.NET Core |
+| `Zerox.Ef.Api` | ASP.NET Core: `EntityController<T>`, one error format (ProblemDetails with the code of the domain), JSON as is, the OpenAPI document | `Zerox.Ef.Domain`, ASP.NET Core |
 
 What each project offers, by need: [docs/catalog.md](docs/catalog.md).
 
@@ -48,6 +48,7 @@ piece. The complete example, tested from the repository to HTTP, is
    `Scalar.AspNetCore`):
 
        builder.Services.AddControllers().AddZeroxJson();
+       builder.Services.AddZeroxProblemDetails();
        builder.Services.AddZeroxOpenApi();
        app.UseZeroxErrorHandling();
        app.MapControllers();
