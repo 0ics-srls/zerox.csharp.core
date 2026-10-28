@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Scalar.AspNetCore;
 using Zerox.Ef.Api.Tests.Sample.Core;
 using Zerox.Ef.Api.Tests.Sample.Db;
 using Zerox.Ef.Api.Tests.Sample.Domain;
@@ -11,17 +14,18 @@ using Zerox.Ef.Domain;
 
 namespace Zerox.Ef.Api.Tests.Sample.Api;
 
-// The example application: what a project writes in its Program.cs, on TestServer with the test database.
+// The example application: what a project writes in its Program.cs, in Development, with the test
+// database — on TestServer, or on a real port for a client outside the process (the TypeScript one).
 public sealed class SampleApp : IAsyncDisposable
 {
     private readonly TestDatabase _database;
     private readonly WebApplication _app;
 
-    private SampleApp(TestDatabase database, WebApplication app)
+    private SampleApp(TestDatabase database, WebApplication app, HttpClient client)
     {
         _database = database;
         _app = app;
-        Client = app.GetTestClient();
+        Client = client;
     }
 
     public HttpClient Client { get; }
@@ -31,25 +35,40 @@ public sealed class SampleApp : IAsyncDisposable
 
     public IServiceProvider Services => _app.Services;
 
-    public static async Task<SampleApp> StartAsync()
+    // The address the application listens on, when it was started on a real port.
+    public Uri Address => Client.BaseAddress ?? throw new InvalidOperationException("The application runs on TestServer.");
+
+    public static async Task<SampleApp> StartAsync(bool onARealPort = false)
     {
         var database = await TestDatabase.OpenAsync();
 
-        var builder = WebApplication.CreateBuilder();
-        builder.WebHost.UseTestServer();
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
+        if (onARealPort)
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+        else
+            builder.WebHost.UseTestServer();
         builder.Services.AddZeroxDb<SampleDbContext>(o => database.Use(o));
         builder.Services.AddScoped<ICustomerMerge, CustomerMerge>();
         builder.Services.AddScoped<LastWriterWins>();
         builder.Services.AddControllers().AddApplicationPart(typeof(SampleApp).Assembly).AddZeroxJson();
+        builder.Services.AddZeroxOpenApi();
 
         var app = builder.Build();
         app.UseZeroxErrorHandling();
         app.MapControllers();
+        if (app.Environment.IsDevelopment())
+        {
+            app.MapOpenApi();
+            app.MapScalarApiReference();
+        }
 
         await using (var scope = app.Services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<SampleDbContext>().Database.EnsureCreatedAsync();
         await app.StartAsync();
-        return new SampleApp(database, app);
+        var client = onARealPort
+            ? new HttpClient { BaseAddress = new Uri(app.Urls.Single()) }
+            : app.GetTestClient();
+        return new SampleApp(database, app, client);
     }
 
     // A context of its own on the same database: to seed and to check what is really written.

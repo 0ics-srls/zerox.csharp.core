@@ -6,7 +6,8 @@ namespace Zerox.Ef.Api;
 
 /// <summary>
 /// The JSON "as is": the names of the entities travel exactly as they are written (no camelCase), enums
-/// as their names, days as yyyy-MM-dd — the same in controllers, minimal APIs and OpenAPI.
+/// as their names, days as yyyy-MM-dd, numbers as numbers — the same in controllers, minimal APIs and
+/// OpenAPI.
 /// </summary>
 public static class ZeroxJson
 {
@@ -30,11 +31,14 @@ public static class ZeroxJson
     }
 
     /// <summary>
-    /// The converters in one place, so the serializers never diverge.
+    /// The converters and the number handling in one place, so the serializers never diverge. A number is
+    /// read only from a number: the OpenAPI document then types it integer or number, not "number or
+    /// string".
     /// </summary>
     public static void AddConverters(JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+        options.NumberHandling = JsonNumberHandling.Strict;
         options.Converters.Add(new JsonStringEnumConverter());
         options.Converters.Add(new DateOnlyJsonConverter());
         options.Converters.Add(new NullableDateOnlyJsonConverter());

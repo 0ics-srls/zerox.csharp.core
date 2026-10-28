@@ -1,0 +1,1140 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Zerox.Ef.Api.Tests | v1",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost/"
+    }
+  ],
+  "paths": {
+    "/api/Customers/{id}/merge-into/{intoId}": {
+      "post": {
+        "tags": [
+          "Customers"
+        ],
+        "operationId": "Customers_MergeInto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "intoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Customers/{id}/name": {
+      "put": {
+        "tags": [
+          "Customers"
+        ],
+        "operationId": "Customers_Rename",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Customers/load": {
+      "post": {
+        "tags": [
+          "Customers"
+        ],
+        "summary": "The one search of the entity, POST because the options travel in the body; the meaning is a read.\nThe options decide what comes back: rows, only the asked columns (Select), or keys, counts and sums\nper group (Group) — filter, sort, paging, grouping and summaries run on the server.",
+        "operationId": "Customers_Load",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                  }
+                ]
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadResultOfCustomer"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadResultOfCustomer"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadResultOfCustomer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Customers/values/{column}": {
+      "get": {
+        "tags": [
+          "Customers"
+        ],
+        "summary": "The column name comes from the URL: it is checked against the real properties before any query.",
+        "operationId": "Customers_Values",
+        "parameters": [
+          {
+            "name": "column",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Customers/{id}": {
+      "get": {
+        "tags": [
+          "Customers"
+        ],
+        "summary": "The row with that Id, or 404.",
+        "operationId": "Customers_GetById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Customers"
+        ],
+        "operationId": "Customers_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Customer"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Customer"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Customer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Customers"
+        ],
+        "summary": "A row with the optimistic lock is deleted only at the Version the client read (?version=N): a\nstale one answers 409, a missing one 400 — a delete must not destroy a change the client never saw.",
+        "operationId": "Customers_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Customers": {
+      "post": {
+        "tags": [
+          "Customers"
+        ],
+        "operationId": "Customers_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Customer"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Customer"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Customer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Orders/close-before/{date}": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_CloseBefore",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Orders/load": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "The one search of the entity, POST because the options travel in the body; the meaning is a read.\nThe options decide what comes back: rows, only the asked columns (Select), or keys, counts and sums\nper group (Group) — filter, sort, paging, grouping and summaries run on the server.",
+        "operationId": "Orders_Load",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                  }
+                ]
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadResultOfOrder"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadResultOfOrder"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadResultOfOrder"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Orders/values/{column}": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "The column name comes from the URL: it is checked against the real properties before any query.",
+        "operationId": "Orders_Values",
+        "parameters": [
+          {
+            "name": "column",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Orders/{id}": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "The row with that Id, or 404.",
+        "operationId": "Orders_GetById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "A row with the optimistic lock is deleted only at the Version the client read (?version=N): a\nstale one answers 409, a missing one 400 — a delete must not destroy a change the client never saw.",
+        "operationId": "Orders_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Orders": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "Id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Name": {
+            "type": "string"
+          },
+          "City": {
+            "type": "string"
+          },
+          "Version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DataSourceLoadOptionsBase": {
+        "type": "object",
+        "properties": {
+          "RequireTotalCount": {
+            "type": "boolean"
+          },
+          "RequireGroupCount": {
+            "type": "boolean"
+          },
+          "IsCountQuery": {
+            "type": "boolean"
+          },
+          "IsSummaryQuery": {
+            "type": "boolean"
+          },
+          "Skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Take": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Sort": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SortingInfo"
+            }
+          },
+          "Group": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/GroupingInfo"
+            }
+          },
+          "Filter": {
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "TotalSummary": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SummaryInfo"
+            }
+          },
+          "GroupSummary": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SummaryInfo"
+            }
+          },
+          "Select": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "PreSelect": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "RemoteSelect": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "RemoteGrouping": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "ExpandLinqSumType": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "PrimaryKey": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "DefaultSort": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "StringToLower": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "PaginateViaPrimaryKey": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "SortByPrimaryKey": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "AllowAsyncOverSync": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GroupingInfo": {
+        "type": "object",
+        "properties": {
+          "GroupInterval": { },
+          "IsExpanded": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "Selector": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "Desc": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LoadGroup": {
+        "required": [
+          "key",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": [
+              "null",
+              "boolean",
+              "number",
+              "string"
+            ]
+          },
+          "items": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LoadGroup"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "count": {
+            "type": "integer"
+          },
+          "summary": {
+            "type": "array",
+            "items": {
+              "type": [
+                "null",
+                "number"
+              ]
+            }
+          }
+        }
+      },
+      "LoadResultOfCustomer": {
+        "required": [
+          "data",
+          "totalCount",
+          "groupCount"
+        ],
+        "type": "object",
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LoadGroup"
+                }
+              }
+            ]
+          },
+          "totalCount": {
+            "type": "integer"
+          },
+          "groupCount": {
+            "type": "integer"
+          },
+          "summary": {
+            "type": "array",
+            "items": {
+              "type": [
+                "null",
+                "number"
+              ]
+            }
+          }
+        }
+      },
+      "LoadResultOfOrder": {
+        "required": [
+          "data",
+          "totalCount",
+          "groupCount"
+        ],
+        "type": "object",
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LoadGroup"
+                }
+              }
+            ]
+          },
+          "totalCount": {
+            "type": "integer"
+          },
+          "groupCount": {
+            "type": "integer"
+          },
+          "summary": {
+            "type": "array",
+            "items": {
+              "type": [
+                "null",
+                "number"
+              ]
+            }
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "Id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "CustomerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Customer": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Customer"
+              }
+            ]
+          },
+          "Date": {
+            "type": "string",
+            "format": "date"
+          },
+          "Amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "Status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          }
+        }
+      },
+      "OrderStatus": {
+        "enum": [
+          "Open",
+          "Closed"
+        ]
+      },
+      "RenameRequest": {
+        "required": [
+          "Name",
+          "Version"
+        ],
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "SortingInfo": {
+        "type": "object",
+        "properties": {
+          "Selector": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "Desc": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SummaryInfo": {
+        "type": "object",
+        "properties": {
+          "Selector": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "SummaryType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Customers"
+    },
+    {
+      "name": "Orders"
+    }
+  ]
+}
