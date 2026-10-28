@@ -66,7 +66,8 @@ piece. The complete example, tested from the repository to HTTP, is
    with `IHasOptimisticLock` is deleted with the Version the client read: `DELETE api/Customers/5?version=3`.
 
 6. A TypeScript client is generated from the document with Orval, and its load is typed from the
-   request: `tests/Zerox.Ef/Api/Sample/client/` (`src/load.ts`, run by `ClientTests` against the Sample).
+   request: `tests/Zerox.Ef/Api/Sample/client/` (`src/load.ts`, no type assertion; checked by `tsc`, ESLint with
+   every rule on except the ones decided off, Prettier; run with Vitest by `ClientTests` against the Sample).
    The document is a file of the repository, `openapi/Sample.json`, kept equal to the served one by
    `OpenApiDocumentTests`.
 

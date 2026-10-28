@@ -4,7 +4,7 @@ using Zerox.Ef.Api.Tests.Sample.Api;
 namespace Zerox.Ef.Api.Tests.Sample;
 
 // The TypeScript client of the example application (client/): generated from openapi/Sample.json,
-// type-checked, and run against the Sample on a real port. It needs Node (22.18 or later) and the npm
+// type-checked and linted, and run against the Sample on a real port. It needs Node (22.18 or later) and the npm
 // registry, so it is an integration test.
 [Trait("Category", "Integration")]
 public sealed class ClientTests : IAsyncLifetime
@@ -43,7 +43,8 @@ public sealed class ClientTests : IAsyncLifetime
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        start.Environment["SAMPLE_URL"] = App.Address.ToString();
+        // The origin without the trailing slash: the generated client appends the absolute paths of the document.
+        start.Environment["SAMPLE_URL"] = App.Address.GetLeftPart(UriPartial.Authority);
         using var npm = Process.Start(start) ?? throw new InvalidOperationException("npm did not start.");
         var output = npm.StandardOutput.ReadToEndAsync(Ct);
         var error = npm.StandardError.ReadToEndAsync(Ct);

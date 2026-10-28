@@ -7,13 +7,17 @@
   },
   "scripts": {
     "generate": "orval --config orval.config.mjs",
-    "check": "tsc -p .",
-    "test": "node --import tsx --test src/*.test.ts"
+    "check": "tsc -p . && eslint --max-warnings 0 . && prettier --check .",
+    "test": "vitest run"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@types/node": "24.19.2",
+    "eslint": "10.13.0",
     "orval": "8.45.0",
-    "tsx": "4.21.0",
-    "typescript": "5.9.3"
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.0.5"
   }
 }

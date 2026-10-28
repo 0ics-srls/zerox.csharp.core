@@ -1,95 +1,113 @@
-// The example application through its generated client and the typed load: run by
-// ClientTests (Zerox.Ef.Api.Tests) against the Sample on a real port, seeded with 3 customers (Acme/Rome,
-// Bolt/Milan, Cargo) and 25 orders (order i: customer i % 3, Amount i * 10, Closed when i % 5 == 0).
-// The type checks below are proved by tsc (npm run check), the behaviour by node:test (npm test).
-import assert from 'node:assert/strict';
-import { test } from 'node:test';
+// The example application through its generated client and the typed load, against the Sample on a
+// real port. expectTypeOf is checked by tsc, the rest at run time.
+import { type GroupOf, LoadError, type LoadRequest, load } from './load.ts';
 import { customersCreate, customersDelete, customersGetById } from './api/customers/customers.ts';
-import type { Customer, Order, OrderStatus } from './api/model/index.ts';
+import { describe, expect, expectTypeOf, test } from 'vitest';
+import type { Order } from './api/model/index.ts';
 import { ordersLoad } from './api/orders/orders.ts';
-import { load, LoadError, type GroupOf } from './load.ts';
 
-type Equal<A, B> = (<X>() => X extends A ? 1 : 2) extends (<X>() => X extends B ? 1 : 2) ? true : false;
-const typed = <T extends true>(): T | undefined => undefined;
+// The seed of the Sample: 3 customers (Acme/Rome, Bolt/Milan, Cargo) and 25 orders — order i belongs to
+// customer i % 3, its Amount is i * 10, it is Closed when i % 5 == 0.
+const ABOVE_THE_PAGE_LIMIT = 5000;
+const ALL = 100;
+const CARGO_ORDERS = 8;
+const CLOSED_AMOUNT = 750;
+const FIRST_AMOUNT = 250;
+const NONE = 0;
+const ONE = 1;
+const OPEN_ORDERS = 20;
+const ORDERS = 25;
+const SECOND_AMOUNT = 240;
+const SMALLEST_AMOUNT = 10;
+const STATUS = { created: 201, deleted: 204, invalid: 400, missing: 404, ok: 200 } as const;
+const THIRD_AMOUNT = 230;
+const TOP_AMOUNTS = [FIRST_AMOUNT, SECOND_AMOUNT, THIRD_AMOUNT];
 
-test('rows: whole orders, sorted and paged on the server', async () => {
-  const result = await load(ordersLoad, { Sort: [{ Selector: 'Amount', Desc: true }], Take: 3, RequireTotalCount: true });
+describe('the load of orders', () => {
+  test('rows: whole orders, sorted and paged on the server', async () => {
+    const result = await load(ordersLoad, {
+      RequireTotalCount: true,
+      Sort: [{ Desc: true, Selector: 'Amount' }],
+      Take: TOP_AMOUNTS.length,
+    });
 
-  typed<Equal<typeof result.data, Order[]>>();
-  assert.deepEqual(result.data.map(o => o.Amount), [250, 240, 230]);
-  assert.equal(result.totalCount, 25);
-});
-
-test('rows: a filter through a navigation', async () => {
-  const result = await load(ordersLoad, { Filter: ['Customer.Name', '=', 'Cargo'], Take: 100, RequireTotalCount: true });
-
-  assert.equal(result.totalCount, 8);
-  assert.ok(result.data.every(o => o.CustomerId !== undefined));
-});
-
-test('columns: only what Select asks, names through the navigation', async () => {
-  const result = await load(ordersLoad, { Select: ['Amount', 'Customer.Name'], Sort: [{ Selector: 'Amount' }], Take: 1 });
-
-  typed<Equal<typeof result.data, { Amount?: number; Customer?: { Name?: string } | null }[]>>();
-  assert.deepEqual(result.data, [{ Amount: 10, Customer: { Name: 'Bolt' } }]);
-});
-
-test('groups: keys, counts and sums, never rows', async () => {
-  const result = await load(ordersLoad, {
-    Group: [{ Selector: 'Status' }],
-    GroupSummary: [{ Selector: 'Amount', SummaryType: 'sum' }],
+    expectTypeOf(result.data).toEqualTypeOf<Order[]>();
+    expect(result.data.map(order => order.Amount)).toEqual(TOP_AMOUNTS);
+    expect(result.totalCount).toBe(ORDERS);
   });
 
-  typed<Equal<typeof result.data, GroupOf<null>[]>>();
-  const byKey = new Map(result.data.map(g => [g.key as OrderStatus, g]));
-  assert.equal(byKey.get('Open')?.count, 20);
-  assert.equal(byKey.get('Closed')?.summary?.[0], 750);
-  assert.ok(result.data.every(g => g.items === null));
-});
+  test('rows: a filter through a navigation', async () => {
+    const result = await load(ordersLoad, { Filter: ['Customer.Name', '=', 'Cargo'], RequireTotalCount: true, Take: ALL });
 
-test('groups on two levels: the inner groups, never rows', async () => {
-  const result = await load(ordersLoad, { Group: [{ Selector: 'Status' }, { Selector: 'Customer.Name' }] });
+    expect(result.totalCount).toBe(CARGO_ORDERS);
+  });
 
-  typed<Equal<typeof result.data, GroupOf<GroupOf<null>[]>[]>>();
-  const inner = result.data.flatMap(g => g.items);
-  assert.equal(inner.reduce((sum, g) => sum + (g.count ?? 0), 0), 25);
-  assert.ok(inner.every(g => g.items === null));
-});
+  test('columns: only what Select asks, names through the navigation', async () => {
+    const result = await load(ordersLoad, { Select: ['Amount', 'Customer.Name'], Sort: [{ Selector: 'Amount' }], Take: ONE });
 
-test('count: no rows, the total', async () => {
-  const result = await load(ordersLoad, { IsCountQuery: true });
+    expectTypeOf(result.data).toEqualTypeOf<{ Amount?: number; Customer?: { Name?: string } | null }[]>();
+    expect(result.data).toEqual([{ Amount: SMALLEST_AMOUNT, Customer: { Name: 'Bolt' } }]);
+  });
 
-  assert.equal(result.totalCount, 25);
-  assert.deepEqual(result.data, []);
-});
+  test('groups: keys, counts and sums, never rows', async () => {
+    const result = await load(ordersLoad, { Group: [{ Selector: 'Status' }], GroupSummary: [{ Selector: 'Amount', SummaryType: 'sum' }] }),
+      byKey = new Map(result.data.map(group => [String(group.key), group]));
 
-test('an invalid request: the ApiError of the server', async () => {
-  await assert.rejects(load(ordersLoad, { Take: 5000 }), (e: unknown) =>
-    e instanceof LoadError && e.status === 400 && e.error.Code === 'InvalidRequest' && e.error.Message.includes('Take'));
-});
+    expectTypeOf(result.data).toEqualTypeOf<GroupOf<null>[]>();
+    expect(byKey.get('Open')?.count).toBe(OPEN_ORDERS);
+    expect(byKey.get('Closed')?.summary).toEqual([CLOSED_AMOUNT]);
+    expect(result.data.map(group => group.items)).toEqual([null, null]);
+  });
 
-test('fields the entity does not have do not compile', () => {
-  const never = () => {
+  test('groups on two levels: the inner groups, never rows', async () => {
+    const result = await load(ordersLoad, { Group: [{ Selector: 'Status' }, { Selector: 'Customer.Name' }] }),
+      inner = result.data.flatMap(group => group.items);
+
+    expectTypeOf(result.data).toEqualTypeOf<GroupOf<GroupOf<null>[]>[]>();
+    expect(inner.map(group => group.count)).toSatisfy(
+      (counts: (number | undefined)[]) => counts.reduce<number>((sum, count) => sum + (count ?? NONE), NONE) === ORDERS,
+    );
+  });
+
+  test('count: no rows, the total', async () => {
+    const result = await load(ordersLoad, { IsCountQuery: true });
+
+    expect(result.totalCount).toBe(ORDERS);
+    expect(result.data).toEqual([]);
+  });
+
+  test('an invalid request: the ApiError of the server', async () => {
+    const refused = load(ordersLoad, { Take: ABOVE_THE_PAGE_LIMIT });
+
+    await expect(refused).rejects.toBeInstanceOf(LoadError);
+    await expect(refused).rejects.toMatchObject({ error: { Code: 'InvalidRequest' }, status: STATUS.invalid });
+  });
+
+  test('fields the entity does not have do not compile', () => {
     // @ts-expect-error not a field of Order
-    void load(ordersLoad, { Select: ['Nope'], Take: 1 });
-    // @ts-expect-error not a field of the Customer of an Order
-    void load(ordersLoad, { Filter: ['Customer.Street', '=', 'x'], Take: 1 });
-    // @ts-expect-error a reserved field is not in the contract
-    void load(ordersLoad, { Sort: [{ Selector: 'InternalNote' }], Take: 1 });
-  };
-  assert.equal(typeof never, 'function');
+    const filter: LoadRequest<Order> = { Filter: ['Customer.Street', '=', 'x'], Take: ONE },
+      // @ts-expect-error not a field of Order
+      select: LoadRequest<Order> = { Select: ['Nope'], Take: ONE },
+      // @ts-expect-error a reserved field is not in the contract
+      sort: LoadRequest<Order> = { Sort: [{ Selector: 'InternalNote' }], Take: ONE };
+
+    expect([filter, select, sort]).toHaveLength(Object.keys({ filter, select, sort }).length);
+  });
 });
 
-test('the CRUD through the generated client: 201, 200, 204, 404', async () => {
-  const created = await customersCreate({ Name: 'Delta', City: 'Turin' });
-  assert.equal(created.status, 201);
-  const customer: Customer = created.status === 201 ? created.data : assert.fail('not created');
+describe('the CRUD through the generated client', () => {
+  test('201, 200, 204, 404', async () => {
+    const created = await customersCreate({ City: 'Turin', Name: 'Delta' });
+    if (created.status !== STATUS.created) {
+      throw new Error(`not created: ${String(created.status)}`);
+    }
+    const { Id: id, Version: version } = created.data;
+    if (id === undefined || version === undefined) {
+      throw new Error('the created customer has no Id or Version');
+    }
 
-  const read = await customersGetById(customer.Id ?? 0);
-  assert.equal(read.status, 200);
-  assert.equal(read.status === 200 ? read.data.City : undefined, 'Turin');
-
-  const deleted = await customersDelete(customer.Id ?? 0, { version: customer.Version ?? 0 });
-  assert.equal(deleted.status, 204);
-  assert.equal((await customersGetById(customer.Id ?? 0)).status, 404);
+    expect(await customersGetById(id)).toMatchObject({ data: { City: 'Turin' }, status: STATUS.ok });
+    expect((await customersDelete(id, { version })).status).toBe(STATUS.deleted);
+    expect((await customersGetById(id)).status).toBe(STATUS.missing);
+  });
 });

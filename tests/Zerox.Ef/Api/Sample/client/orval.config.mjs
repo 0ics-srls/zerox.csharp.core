@@ -1,4 +1,5 @@
-// The client of the example application, generated from the document the server test keeps.
+// The client of the example application, generated from the document the server test keeps. The
+// server's address is read at every request from SAMPLE_URL.
 export default {
   sample: {
     input: '../openapi/Sample.json',
@@ -8,7 +9,7 @@ export default {
       client: 'fetch',
       mode: 'tags-split',
       clean: true,
-      override: { mutator: { path: 'src/http.ts', name: 'http' } },
+      baseUrl: { runtime: "process.env['SAMPLE_URL'] ?? ''" },
     },
   },
 };
