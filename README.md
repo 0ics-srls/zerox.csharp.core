@@ -22,21 +22,25 @@ piece. The complete example, tested from the repository to HTTP, is
 [`tests/Zerox.Ef/Api/Sample`](tests/Zerox.Ef/Api/Sample)
 (`Core` the app's own contracts, `Db` entities and context, `Domain` services, `Api` controllers and host).
 
-1. Entities implement `IEntity` (and `IHasOptimisticLock` for the opt-in lock):
+1. Entities implement `IEntity`; the opt-in optimistic lock is EF's `[Timestamp]` on the row version the
+   database generates — `uint` on PostgreSQL (the system column `xmin`), `ulong` on SQL Server
+   (`rowversion`). Nothing of ours writes it: EF reads it back after every save. SQLite has no row
+   version: there the lock is off, and a warning says so at startup.
 
-       public sealed class Customer : IEntity, IHasOptimisticLock
+       public sealed class Customer : IEntity
        {
            public int Id { get; set; }
            public string Name { get; set; } = "";
-           public int Version { get; set; }
+           [Timestamp]
+           public uint Version { get; set; }
        }
 
-2. The context adds `IDbContext` and nothing else; `ApplyOptimisticLock` ends the model:
+2. The context adds `IDbContext` and nothing else; `ApplyOptimisticLock(Database)` ends the model:
 
        public sealed class SampleDbContext(DbContextOptions<SampleDbContext> options) : DbContext(options), IDbContext
        {
            public DbSet<Customer> Customers => Set<Customer>();
-           protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock();
+           protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock(Database);
        }
 
 3. Register it with the session rules and the repositories:

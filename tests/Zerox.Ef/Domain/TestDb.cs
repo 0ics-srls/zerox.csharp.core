@@ -91,7 +91,7 @@ public sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbC
 
     public DbSet<Memo> Memos => Set<Memo>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock();
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock(Database);
 }
 
 // One database per test class (TestDatabase: Sqlite in memory, or PostgreSQL).

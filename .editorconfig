@@ -28,7 +28,7 @@ csharp_style_var_for_built_in_types = true:suggestion
 csharp_style_var_when_type_is_apparent = true:suggestion
 csharp_style_var_elsewhere = true:suggestion
 
-[src/Zerox.Ef/Api/**.cs]
+[src/Zerox.Ef/{Api,Db}/**.cs]
 dotnet_diagnostic.CA1848.severity = none    # plain logging calls, readable by anyone: no source-generated [LoggerMessage]
 
 [tests/**.cs]

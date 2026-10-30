@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -32,29 +31,7 @@ public sealed class HostDbContext(DbContextOptions<HostDbContext> options) : DbC
 
     public DbSet<Plain> Plains => Set<Plain>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock();
-}
-
-// Records the level and message of every log entry.
-public sealed class LogCapture : ILoggerProvider
-{
-    public ConcurrentQueue<(LogLevel Level, string Category, string Message)> Entries { get; } = new();
-
-    public ILogger CreateLogger(string categoryName) => new Logger(this, categoryName);
-
-    public void Dispose()
-    {
-    }
-
-    private sealed class Logger(LogCapture capture, string category) : ILogger
-    {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
-            capture.Entries.Enqueue((logLevel, category, formatter(state, exception)));
-    }
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock(Database);
 }
 
 // A real WebApplication on TestServer with the error handling and the JSON of Zerox.Ef.Api, on the test database (Sqlite in memory, or PostgreSQL).

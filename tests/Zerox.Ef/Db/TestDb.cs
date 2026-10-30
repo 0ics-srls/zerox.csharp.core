@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Zerox.Ef.Core;
@@ -28,13 +29,33 @@ public sealed class Box : IEntity
     public List<Item> Items { get; set; } = [];
 }
 
-public sealed class Locked : IEntity, IHasOptimisticLock
+// The row version is the database's: EF's [Timestamp] on a uint (PostgreSQL: the system column xmin).
+public sealed class Locked : IEntity
 {
     public int Id { get; set; }
 
     public string Name { get; set; } = "";
 
-    public int Version { get; set; }
+    [Timestamp]
+    public uint Version { get; set; }
+}
+
+// A row version of a type PostgreSQL cannot generate: refused there.
+public sealed class Wide : IEntity
+{
+    public int Id { get; set; }
+
+    [Timestamp]
+    public ulong Version { get; set; }
+}
+
+// A row version that is not a number: refused everywhere.
+public sealed class Blob : IEntity
+{
+    public int Id { get; set; }
+
+    [Timestamp]
+    public byte[] Version { get; set; } = [];
 }
 
 public sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options), IDbContext
@@ -48,8 +69,31 @@ public sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbC
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Box>().HasIndex(b => b.Label).IsUnique();   // makes an apply fail on purpose
-        modelBuilder.ApplyOptimisticLock();
+        modelBuilder.ApplyOptimisticLock(Database);
     }
+}
+
+// Model-only contexts: building their model is the test. EF builds a model once per context type, so a
+// test that watches the building has a type of its own (RowVersionDbContext: only the warning tests).
+public sealed class RowVersionDbContext(DbContextOptions<RowVersionDbContext> options) : DbContext(options)
+{
+    public DbSet<Locked> Locked => Set<Locked>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock(Database);
+}
+
+public sealed class WideDbContext(DbContextOptions<WideDbContext> options) : DbContext(options)
+{
+    public DbSet<Wide> Wides => Set<Wide>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock(Database);
+}
+
+public sealed class BlobDbContext(DbContextOptions<BlobDbContext> options) : DbContext(options)
+{
+    public DbSet<Blob> Blobs => Set<Blob>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock(Database);
 }
 
 // One database per test class (TestDatabase: Sqlite in memory, or PostgreSQL).
@@ -61,7 +105,7 @@ public sealed class TestDb : IAsyncDisposable
     private TestDb(TestDatabase database) => _database = database;
 
     // The provider of this database on the options of a context a test builds by hand.
-    public DbContextOptionsBuilder<TestDbContext> Use(DbContextOptionsBuilder<TestDbContext> builder) => _database.Use(builder);
+    public DbContextOptionsBuilder<TContext> Use<TContext>(DbContextOptionsBuilder<TContext> builder) where TContext : DbContext => _database.Use(builder);
 
     public DbContextOptionsBuilder Use(DbContextOptionsBuilder builder) => _database.Use(builder);
 

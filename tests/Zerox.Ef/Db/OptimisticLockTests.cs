@@ -1,11 +1,20 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Zerox.Ef.Core;
+using Zerox.Ef.Tests;
 
 namespace Zerox.Ef.Db.Tests;
 
+// The row version is the database's: EF reads back what it generated, nothing of ours writes it. The lock
+// is proved on PostgreSQL; SQLite has no row version, and says so.
 public sealed class OptimisticLockTests : IAsyncLifetime
 {
+    private const string PostgresOnly = "SQLite has no row version: the lock is proved on PostgreSQL.";
+    private const string SqliteOnly = "SQLite only.";
+    private const string Category = "Zerox.Ef.Db";
+
     private TestDb? _database;
 
     private TestDb Db => _database ?? throw new InvalidOperationException("InitializeAsync has not run.");
@@ -39,113 +48,208 @@ public sealed class OptimisticLockTests : IAsyncLifetime
         await other.SaveChangesAsync(Ct);
     }
 
-    [Fact]
-    public async Task Should_MarkVersionAsConcurrencyToken_WhenTheEntityImplementsTheInterface()
+    // A context whose model is built here, with this logger factory (EF builds a model once per type).
+    private RowVersionDbContext WatchedContext(ILoggerFactory logs) =>
+        new(Db.Use(new DbContextOptionsBuilder<RowVersionDbContext>()).UseLoggerFactory(logs).Options);
+
+    // The tracked row is renamed, another writer saves in between, then the tracked row is saved.
+    private async Task SaveAfterAnotherWriterAsync(int id)
     {
+        await using var scope = Db.NewScope();
+        var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
+        var row = await rows.GetByIdAsync(id, Ct);
+        await RenameElsewhereAsync(id, "other");
+        row!.Name = "mine";
+        await rows.SaveChangesAsync(Ct);
+    }
+
+    [Fact]
+    public async Task Should_MapTheRowVersionToXmin_WhenOnPostgres()
+    {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         await using var context = Db.NewContext();
 
-        context.Model.FindEntityType(typeof(Locked))!.FindProperty(nameof(Locked.Version))!.IsConcurrencyToken.Should().BeTrue();
+        var version = context.Model.FindEntityType(typeof(Locked))!.FindProperty(nameof(Locked.Version))!;
+
+        version.GetColumnName().Should().Be("xmin");
+        version.ValueGenerated.Should().Be(ValueGenerated.OnAddOrUpdate);
+        version.IsConcurrencyToken.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Should_NotMarkAnything_WhenTheEntityDoesNotImplementIt()
+    public async Task Should_ReadBackTheVersionTheDatabaseGave_WhenARowIsAdded()
     {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        await using var context = Db.NewContext();
+        var row = new Locked { Name = "a" };
+        context.Locked.Add(row);
+
+        await context.SaveChangesAsync(Ct);
+
+        row.Version.Should().NotBe(0u);
+        row.Version.Should().Be((await ReadAsync(row.Id)).Version);
+    }
+
+    [Fact]
+    public async Task Should_ChangeTheVersion_WhenAModifiedRowIsSaved()
+    {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        var id = await SeedAsync("a");
+        var before = (await ReadAsync(id)).Version;
+        await using var scope = Db.NewScope();
+        var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
+        var row = await rows.GetByIdAsync(id, Ct);
+        row!.Name = "b";
+
+        await rows.SaveChangesAsync(Ct);
+
+        var stored = (await ReadAsync(id)).Version;
+        stored.Should().NotBe(before);
+        row.Version.Should().Be(stored);
+    }
+
+    [Fact]
+    public async Task Should_ChangeTheVersion_WhenAMassiveUpdateWritesTheRow()
+    {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        var id = await SeedAsync("a");
+        var before = (await ReadAsync(id)).Version;
+        await using var scope = Db.NewScope();
+        var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
+
+        await using (var massive = await rows.OpenMassiveAsync(Ct))
+        {
+            await massive.UpdateWhereAsync(l => l.Id == id, f => f.Set(l => l.Name, "massive"), Ct);
+            await massive.CommitAsync(Ct);
+        }
+
+        (await ReadAsync(id)).Version.Should().NotBe(before);
+    }
+
+    [Fact]
+    public async Task Should_ChangeTheVersion_WhenSqlWritesTheRow()
+    {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        var id = await SeedAsync("a");
+        var before = (await ReadAsync(id)).Version;
         await using var context = Db.NewContext();
 
-        context.Model.FindEntityType(typeof(Item))!.GetProperties().Should().NotContain(p => p.IsConcurrencyToken);
+        await context.Database.ExecuteSqlRawAsync("""UPDATE "Locked" SET "Name" = 'sql' WHERE "Id" = {0}""", [id], Ct);
+
+        (await ReadAsync(id)).Version.Should().NotBe(before);
     }
 
     [Fact]
-    public async Task Should_IncrementVersion_WhenAModifiedEntityIsSaved()
+    public async Task Should_ChangeTheStoredVersionOnlyOnApply_WhenSavedInsideAUnitOfWork()
     {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync("a");
-
-        await using (var scope = Db.NewScope())
-        {
-            var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
-            var row = await rows.GetByIdAsync(id, Ct);
-            row!.Name = "b";
-            await rows.SaveChangesAsync(Ct);
-        }
-
-        (await ReadAsync(id)).Version.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task Should_KeepVersionZero_WhenAnEntityIsAdded()
-    {
-        var id = await SeedAsync("a");
-
-        (await ReadAsync(id)).Version.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task Should_StartAtZero_WhenAnAddedEntityCarriesAVersion()
-    {
-        int id;
-        await using (var context = Db.NewContext())
-        {
-            var row = new Locked { Name = "a", Version = 7 };
-            context.Locked.Add(row);
-            await context.SaveChangesAsync(Ct);
-            id = row.Id;
-            row.Version.Should().Be(0);
-        }
-
-        (await ReadAsync(id)).Version.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task Should_ReachTwo_WhenModifiedTwice()
-    {
-        var id = await SeedAsync("a");
-
-        await using (var scope = Db.NewScope())
-        {
-            var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
-            var row = await rows.GetByIdAsync(id, Ct);
-            row!.Name = "b";
-            await rows.SaveChangesAsync(Ct);
-            row.Name = "c";
-            await rows.SaveChangesAsync(Ct);
-        }
-
-        (await ReadAsync(id)).Version.Should().Be(2);
-    }
-
-    [Fact]
-    public async Task Should_NotIncrement_WhenTheSaveIsSwallowedByABoundary()
-    {
-        var id = await SeedAsync("a");
-
+        var before = (await ReadAsync(id)).Version;
         await using var scope = Db.NewScope();
         var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
         await using var work = rows.OpenUnitOfWork();
         var row = await rows.GetByIdAsync(id, Ct);
         row!.Name = "b";
-
         await rows.SaveChangesAsync(Ct);
-        row.Version.Should().Be(0);
+        (await ReadAsync(id)).Version.Should().Be(before);
 
         await work.ApplyAsync(Ct);
-        (await ReadAsync(id)).Version.Should().Be(1);
+
+        (await ReadAsync(id)).Version.Should().NotBe(before);
     }
 
     [Fact]
-    public async Task Should_ThrowConcurrency_WhenTheClientVersionIsStale()
+    public async Task Should_ThrowConcurrency_WhenAnotherWriterSavedBetweenTheReadAndTheSave()
     {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync("a");
 
-        await using var scope = Db.NewScope();
-        var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
-        await RenameElsewhereAsync(id, "other");   // the row is at Version 1 now
-
-        var row = await rows.GetByIdAsync(id, Ct);
-        rows.PinReadVersion(row!, 0);              // the client read it at 0
-        row!.Name = "mine";
-        var save = () => rows.SaveChangesAsync(Ct);
+        var save = () => SaveAfterAnotherWriterAsync(id);
 
         await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        (await ReadAsync(id)).Name.Should().Be("other");
+    }
+
+    [Fact]
+    public async Task Should_RefuseARowVersionThatIsNotAUint_WhenOnPostgres()
+    {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        await using var context = new WideDbContext(Db.Use(new DbContextOptionsBuilder<WideDbContext>()).Options);
+
+        var build = () => context.Model;
+
+        build.Should().Throw<NotSupportedException>().WithMessage("*Wide.Version*uint*");
+    }
+
+    [Fact]
+    public async Task Should_StoreZeroAndKeepIt_WhenOnSqlite()
+    {
+        Assert.SkipWhen(TestDatabase.OnPostgres, SqliteOnly);
+        var id = await SeedAsync("a");
+        (await ReadAsync(id)).Version.Should().Be(0u);
+
+        await RenameElsewhereAsync(id, "b");
+
+        (await ReadAsync(id)).Version.Should().Be(0u);
+    }
+
+    [Fact]
+    public async Task Should_SaveARowReadBeforeAnotherWrite_WhenOnSqlite()
+    {
+        Assert.SkipWhen(TestDatabase.OnPostgres, SqliteOnly);
+        var id = await SeedAsync("a");
+
+        await SaveAfterAnotherWriterAsync(id);
+
+        (await ReadAsync(id)).Name.Should().Be("mine");
+    }
+
+    [Fact]
+    public async Task Should_WarnOnceThatTheLockIsOff_WhenTheModelHasARowVersionOnSqlite()
+    {
+        Assert.SkipWhen(TestDatabase.OnPostgres, SqliteOnly);
+        var capture = new LogCapture();
+        using var logs = LoggerFactory.Create(b => b.AddProvider(capture));
+
+        await using (var first = WatchedContext(logs))
+            _ = first.Model;
+        await using (var second = WatchedContext(logs))
+            _ = second.Model;
+
+        var warning = capture.Entries.Where(e => e.Category == Category).Should().ContainSingle().Subject;
+        warning.Level.Should().Be(LogLevel.Warning);
+        warning.Message.Should().Contain(nameof(Locked));
+    }
+
+    [Fact]
+    public async Task Should_NotWarn_WhenOnPostgres()
+    {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        var capture = new LogCapture();
+        using var logs = LoggerFactory.Create(b => b.AddProvider(capture));
+        await using var context = WatchedContext(logs);
+
+        _ = context.Model;
+
+        capture.Entries.Should().NotContain(e => e.Category == Category);
+    }
+
+    [Fact]
+    public async Task Should_RefuseARowVersion_WhenItIsNotANumber()
+    {
+        await using var context = new BlobDbContext(Db.Use(new DbContextOptionsBuilder<BlobDbContext>()).Options);
+
+        var build = () => context.Model;
+
+        build.Should().Throw<NotSupportedException>().WithMessage("*Blob.Version*");
+    }
+
+    [Fact]
+    public async Task Should_NotMarkAnything_WhenTheEntityHasNoRowVersion()
+    {
+        await using var context = Db.NewContext();
+
+        context.Model.FindEntityType(typeof(Item))!.GetProperties().Should().NotContain(p => p.IsConcurrencyToken);
     }
 
     [Fact]

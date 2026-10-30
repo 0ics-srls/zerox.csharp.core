@@ -2,6 +2,7 @@
 # The Zerox.Ef tests on a real PostgreSQL, with progress [k/5]: a throwaway server in Docker, the three
 # Ef test projects run against it (TestDatabase reads ZEROX_EF_TEST_POSTGRES and makes one database per
 # test class), the server removed at the end. Without this script the Ef tests run on Sqlite in memory.
+# Arguments go to each dotnet test: tools/test-postgres.sh --filter-class "*X*" runs only those tests.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -24,6 +25,11 @@ export ZEROX_EF_TEST_POSTGRES="Host=127.0.0.1;Port=$PORT;Username=postgres;Passw
 k=3
 for project in Db Domain Api; do
   echo "[$k/5] Zerox.Ef.$project.Tests on PostgreSQL"
-  dotnet test --project "tests/Zerox.Ef/$project/Zerox.Ef.$project.Tests.csproj"
+  if [[ $# -gt 0 ]]; then
+    # a focused run: a project with no test matching the filter is not a failure (exit code 8)
+    dotnet test --project "tests/Zerox.Ef/$project/Zerox.Ef.$project.Tests.csproj" "$@" --ignore-exit-code 8
+  else
+    dotnet test --project "tests/Zerox.Ef/$project/Zerox.Ef.$project.Tests.csproj"
+  fi
   k=$((k + 1))
 done

@@ -8,5 +8,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../TestDatabase.cs" Link="TestDatabase.cs" />
+    <Compile Include="../LogCapture.cs" Link="LogCapture.cs" />
   </ItemGroup>
 </Project>

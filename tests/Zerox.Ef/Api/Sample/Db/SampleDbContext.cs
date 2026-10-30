@@ -16,6 +16,6 @@ public sealed class SampleDbContext(DbContextOptions<SampleDbContext> options) :
         // AggregateOperationNotSupported); a real database keeps decimal.
         if (Database.IsSqlite())
             modelBuilder.Entity<Order>().Property(o => o.Amount).HasConversion<double>();
-        modelBuilder.ApplyOptimisticLock();
+        modelBuilder.ApplyOptimisticLock(Database);
     }
 }
