@@ -3,11 +3,11 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [TASK]
-@state::DEVELOP⚡{/j-cvm-exec-plan,execution:run-20261030-zerox10rowversion}
+@state::DONE✓{run-20261030-zerox10rowversion 5/5,FINAL REVIEW✓}{branch committed,¬pushed}
 @feature::10-db-row-version (the optimistic lock on the database's row version)
 @branch::feature/10-db-row-version (from feature/09-single-load)
 @plan::tasks/10-db-row-version/{notes,index,01-db,02-domain-api}.md{TDDAB#5,parsePlan✓,j-review-plan✓}
-@block::05✓→next::FINAL-REVIEW (tools/verify.sh && tools/test-postgres.sh)
+@block::05✓+FINAL-REVIEW✓{verify.sh[1-3]✓ build,format,698/698;[4/4] lint-run.sh missing in this checkout (.ai-agent not initialized)→ast-grep with the pack rules 0;test-postgres 73/80/82}
 @consumer::CcV3 (the first consumer,submodule externals/zerox.csharp.core) found the defect;adapted by its own plan after this one
 
 [WHY]
