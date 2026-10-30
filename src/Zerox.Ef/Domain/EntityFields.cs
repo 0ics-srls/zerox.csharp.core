@@ -19,11 +19,17 @@ public static class EntityFields
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(target);
-        foreach (var property in Editable<T>.Properties)
+        foreach (var property in Selection<T>.Properties)
             property.SetValue(target, property.GetValue(source));
     }
 
-    private static class Editable<T>
+    /// <summary>
+    /// The names of the fields a client may write on an entity it sends: every public field with a setter,
+    /// except the key, the navigations and the reserved fields — what IRepository.Update marks modified.
+    /// </summary>
+    public static IReadOnlyCollection<string> Editable<T>() where T : class, IEntity => Selection<T>.Names;
+
+    private static class Selection<T>
     {
         internal static readonly PropertyInfo[] Properties = typeof(T)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -31,5 +37,7 @@ public static class EntityFields
             .Where(p => p.Name != nameof(IEntity.Id))
             .Where(p => !EntityPaths.IsNavigation(p.PropertyType) && !EntityPaths.IsReserved(p))
             .ToArray();
+
+        internal static readonly string[] Names = Properties.Select(p => p.Name).ToArray();
     }
 }

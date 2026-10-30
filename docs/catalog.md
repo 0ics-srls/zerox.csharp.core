@@ -133,6 +133,8 @@ The contracts of the database foundation, no EF type in them: what an applicatio
 | A `[JsonIgnore]` field never readable through load options | `Search` (reserved fields check) | `Zerox.Ef/Domain/Search.cs` |
 | The distinct values of a text column for a filter dropdown, in SQL (never a reserved field) | `DistinctTextValues` (`IsTextColumn<T>`, `ValuesAsync`) | `Zerox.Ef/Domain/DistinctTextValues.cs` |
 | Apply an entity sent whole onto the stored row: every editable field, never the key, the navigations or the reserved fields | `EntityFields.CopyEditable` | `Zerox.Ef/Domain/EntityFields.cs` |
+| The names of the fields a client may write on an entity it sends (public setter; never the key, a navigation or a reserved field) — what `IRepository<T>.Update` marks modified | `EntityFields.Editable<T>()` | `Zerox.Ef/Domain/EntityFields.cs` |
+| An action that reads the current row before deciding finds that its version is not the one the client read: the API answers 409 | `StaleVersionException` | `Zerox.Ef/Domain/StaleVersionException.cs` |
 | A single-field action: with the client's Version the optimistic lock (stale = conflict, never retried); without it re-read and re-apply on conflict, the last writer wins | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Ef/Domain/LastWriterWins.cs` |
 
 ## Zerox.Ef.Api
