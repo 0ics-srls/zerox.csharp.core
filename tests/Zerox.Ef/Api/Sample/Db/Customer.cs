@@ -1,9 +1,10 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Api.Tests.Sample.Db;
 
-public sealed class Customer : IEntity, IHasOptimisticLock
+public sealed class Customer : IEntity
 {
     public int Id { get; set; }
 
@@ -11,7 +12,8 @@ public sealed class Customer : IEntity, IHasOptimisticLock
 
     public string City { get; set; } = "";
 
-    public int Version { get; set; }
+    [Timestamp]
+    public uint Version { get; set; }
 
     // Breaks the JSON cycle; still a navigation, so still usable in a Select.
     [JsonIgnore]

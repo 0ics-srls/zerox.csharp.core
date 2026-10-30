@@ -34,6 +34,7 @@ public sealed class ProblemDetailsTests : IAsyncLifetime
         { "GET", "api/Customers/abc", "", 404, "NotFound" },                              // no route
         { "DELETE", "api/Customers/1", "", 400, "InvalidRequest" },                       // a locked row without its version
         { "DELETE", "api/Customers/1?version=7", "", 409, "Conflict" },                   // a stale version
+        { "DELETE", "api/Customers/1?version=18446744073709551615", "", 400, "InvalidRequest" }, // not a version of the row
     };
 
     [Theory]

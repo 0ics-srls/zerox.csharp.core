@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -9,13 +10,14 @@ using Zerox.Ef.Tests;
 
 namespace Zerox.Ef.Api.Tests;
 
-public sealed class Doc : IEntity, IHasOptimisticLock
+public sealed class Doc : IEntity
 {
     public int Id { get; set; }
 
     public string Name { get; set; } = "";
 
-    public int Version { get; set; }
+    [Timestamp]
+    public uint Version { get; set; }
 }
 
 public sealed class Plain : IEntity

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Zerox.Ef.Domain;
+using Zerox.Ef.Tests;
 
 namespace Zerox.Ef.Api.Tests;
 
@@ -43,6 +44,8 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
                 return Results.Ok();
             });
             app.MapGet("/invalid", IResult () => throw new InvalidRequestException("The field 'Nope' does not exist."));
+            // An action that read the row and found another version than the client's.
+            app.MapPost("/stale", IResult () => throw new StaleVersionException("Doc 1 changed since it was read."));
             app.MapGet("/boom", IResult () => throw new InvalidOperationException("secret internals"));
             app.MapGet("/ok", () => Results.Ok(new { Answer = 42 }));
             // Fails after the first bytes went out: no status or body can be written any more.
@@ -76,7 +79,19 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
     [Fact]
     public async Task Should_Answer409_WhenALockedRowWasChanged()
     {
+        Assert.SkipUnless(TestDatabase.OnPostgres, "SQLite has no row version: the lock is proved on PostgreSQL.");
         var response = await Host.Client.PostAsync("/conflict", null, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var body = await BodyAsync(response);
+        body.GetProperty("Code").GetString().Should().Be("Conflict");
+        body.GetProperty("detail").GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Should_Answer409_WhenAStaleVersionIsThrown()
+    {
+        var response = await Host.Client.PostAsync("/stale", null, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var body = await BodyAsync(response);
@@ -87,7 +102,7 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
     [Fact]
     public async Task Should_LogAWarning_WhenAConflictHappens()
     {
-        await Host.Client.PostAsync("/conflict", null, Ct);
+        await Host.Client.PostAsync("/stale", null, Ct);
 
         var middleware = Host.Logs.Entries.Where(e => e.Category.Contains("ErrorHandlingMiddleware", StringComparison.Ordinal)).ToList();
         middleware.Should().Contain(e => e.Level == LogLevel.Warning);

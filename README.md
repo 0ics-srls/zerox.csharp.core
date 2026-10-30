@@ -66,9 +66,10 @@ piece. The complete example, tested from the repository to HTTP, is
    rows, columns or groups),
    `GET api/Customers/values/{column}`, and the CRUD. A service that writes more than one repository
    opens `IUnitOfWork` (`CustomerMerge`); many rows without loading them go through
-   `IMassiveOpHandler<T>` (`OrdersController.CloseBefore`); a single-field action uses `LastWriterWins`
-   (`CustomersController.Rename`: with the Version the client read, a stale one answers 409). A row
-   with `IHasOptimisticLock` is deleted with the Version the client read: `DELETE api/Customers/5?version=3`.
+   `IMassiveOpHandler<T>` (`OrdersController.CloseBefore`); a single-field action writes the client's one
+   field at the version it read, without reading the row (`CustomersController.Rename`:
+   `Repository.Update(new Customer { Id, Name, Version }, [nameof(Customer.Name)])`, a stale one answers 409).
+   A row with a row version is deleted with the version the client read: `DELETE api/Customers/5?version=3`.
 
 6. A TypeScript client is generated from the document with Orval, and its load is typed from the
    request: `tests/Zerox.Ef/Api/Sample/client/` (`src/load.ts`, no type assertion; checked by `tsc`, ESLint with

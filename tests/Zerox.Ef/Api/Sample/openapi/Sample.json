@@ -433,7 +433,7 @@
         "tags": [
           "Customers"
         ],
-        "summary": "A row with the optimistic lock is deleted only at the Version the client read (?version=N): a\nstale one answers 409, a missing one 400 — a delete must not destroy a change the client never saw.",
+        "summary": "Deletes the row at the version the client read (?version=N, required when the entity has a row\nversion): 204; 404 when it is missing; 409 when it changed since — a delete must not destroy a change\nthe client never saw.",
         "operationId": "Customers_Delete",
         "parameters": [
           {
@@ -450,7 +450,7 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "uint64"
             }
           }
         ],
@@ -894,7 +894,7 @@
         "tags": [
           "Orders"
         ],
-        "summary": "A row with the optimistic lock is deleted only at the Version the client read (?version=N): a\nstale one answers 409, a missing one 400 — a delete must not destroy a change the client never saw.",
+        "summary": "Deletes the row at the version the client read (?version=N, required when the entity has a row\nversion): 204; 404 when it is missing; 409 when it changed since — a delete must not destroy a change\nthe client never saw.",
         "operationId": "Orders_Delete",
         "parameters": [
           {
@@ -911,7 +911,7 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "uint64"
             }
           }
         ],
@@ -1049,7 +1049,7 @@
           },
           "Version": {
             "type": "integer",
-            "format": "int32"
+            "format": "uint32"
           }
         }
       },
@@ -1437,7 +1437,7 @@
           },
           "Version": {
             "type": "integer",
-            "format": "int32"
+            "format": "uint32"
           }
         }
       },

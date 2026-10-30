@@ -1,6 +1,7 @@
 using DevExtreme.AspNet.Data;
 using DevExtreme.AspNet.Data.ResponseModel;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Zerox.Ef.Core;
 using Zerox.Ef.Domain;
 
@@ -54,8 +55,8 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
         await Repository.GetByIdAsync(id, ct).ConfigureAwait(false) is { } entity ? Ok(entity) : NotFound();
 
     /// <summary>
-    /// Adds the row: 201 with its place. The Id is the database's (400 when the body carries one); a row
-    /// with the optimistic lock starts at Version 0.
+    /// Adds the row: 201 with its place. The Id is the database's (400 when the body carries one), and so
+    /// is the row version.
     /// </summary>
     [HttpPost]
     public virtual async Task<ActionResult<T>> Create([FromBody] T entity, CancellationToken ct)
@@ -69,9 +70,10 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
     }
 
     /// <summary>
-    /// The stored row takes the editable fields of the body (never the reserved ones, which the client
-    /// never sees, nor the navigations), so only what changed is written. A missing row is a 404. A stale
-    /// Version in the body makes the save fail: the error middleware answers 409.
+    /// The row as the client sent it, at the version it read: only the editable fields are written (never the
+    /// key, the navigations, the reserved fields or what the database generates), without reading the row
+    /// first. 200 with the row as stored; 404 when it is missing; a row changed since the client read it
+    /// answers 409 (the middleware).
     /// </summary>
     [HttpPut("{id:int}")]
     public virtual async Task<ActionResult<T>> Update(int id, [FromBody] T entity, CancellationToken ct)
@@ -79,36 +81,45 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
         ArgumentNullException.ThrowIfNull(entity);
         if (id != entity.Id)
             throw new InvalidRequestException("The id in the route and in the body differ.");
-        var stored = await Repository.GetByIdAsync(id, ct).ConfigureAwait(false);
-        if (stored is null)
+        Repository.Update(entity, EntityFields.Editable<T>());
+        if (!await SaveUnlessMissingAsync(id, ct).ConfigureAwait(false))
             return NotFound();
-        EntityFields.CopyEditable(entity, stored);
-        if (entity is IHasOptimisticLock sent)
-            Repository.PinReadVersion(stored, sent.Version);
-        await Repository.SaveChangesAsync(ct).ConfigureAwait(false);
-        return Ok(stored);
+        return Ok(await Repository.Query().SingleAsync(e => e.Id == id, ct).ConfigureAwait(false));
     }
 
     /// <summary>
-    /// A row with the optimistic lock is deleted only at the Version the client read (?version=N): a
-    /// stale one answers 409, a missing one 400 — a delete must not destroy a change the client never saw.
+    /// Deletes the row at the version the client read (?version=N, required when the entity has a row
+    /// version): 204; 404 when it is missing; 409 when it changed since — a delete must not destroy a change
+    /// the client never saw.
     /// </summary>
     [HttpDelete("{id:int}")]
-    public virtual async Task<IActionResult> Delete(int id, [FromQuery] int? version, CancellationToken ct)
+    public virtual async Task<IActionResult> Delete(int id, [FromQuery] ulong? version, CancellationToken ct)
     {
-        var entity = await Repository.GetByIdAsync(id, ct).ConfigureAwait(false);
-        if (entity is null)
-            return NotFound();
-        if (entity is IHasOptimisticLock)
+        if (Repository.HasRowVersion && version is null)
+            throw new InvalidRequestException($"{typeof(T).Name} has an optimistic lock: give the Version you read, as ?version=N.");
+        if (!Repository.TryDeleteById(id, version))
+            throw new InvalidRequestException($"{version} is not a version of {typeof(T).Name}: give the Version you read.");
+        return await SaveUnlessMissingAsync(id, ct).ConfigureAwait(false) ? NoContent() : NotFound();
+    }
+
+    /// <summary>
+    /// Saves a client's write. An UPDATE or DELETE that hit no row fails the same way whether the row is
+    /// missing or changed since the client read it; only then one read tells them apart: false when the row
+    /// is missing (the caller answers 404), the conflict goes on when it exists (the middleware answers 409).
+    /// </summary>
+    protected async Task<bool> SaveUnlessMissingAsync(int id, CancellationToken ct)
+    {
+        try
         {
-            if (version is not int read)
-                throw new InvalidRequestException(
-                    $"{typeof(T).Name} has an optimistic lock: give the Version you read, as ?version=N.");
-            Repository.PinReadVersion(entity, read);
+            await Repository.SaveChangesAsync(ct).ConfigureAwait(false);
+            return true;
         }
-        Repository.Delete(entity);
-        await Repository.SaveChangesAsync(ct).ConfigureAwait(false);
-        return NoContent();
+        catch (DbUpdateConcurrencyException)
+        {
+            if (await Repository.Query().AnyAsync(e => e.Id == id, ct).ConfigureAwait(false))
+                throw;
+            return false;
+        }
     }
 
     /// <summary>

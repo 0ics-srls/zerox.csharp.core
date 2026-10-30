@@ -4,15 +4,17 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Zerox.Ef.Api.Tests.Sample.Api;
 using Zerox.Ef.Api.Tests.Sample.Db;
+using Zerox.Ef.Tests;
 
 namespace Zerox.Ef.Api.Tests.Sample;
 
 // The example end to end over HTTP: merge (unit of work), close before a date (massive operation),
-// rename (last writer wins) — and the whole lifecycle in one go.
+// rename (one field at the version the client read) — and the whole lifecycle in one go.
 public sealed class SampleApiTests : IAsyncLifetime
 {
     private const int Acme = 1;
     private const int Bolt = 2;
+    private const string PostgresOnly = "SQLite has no row version: the lock is proved on PostgreSQL.";
 
     private SampleApp? _app;
 
@@ -45,6 +47,10 @@ public sealed class SampleApiTests : IAsyncLifetime
         return (response.StatusCode, body, response.Headers.Location);
     }
 
+    // The version a client read: from the API, never a literal.
+    private async Task<uint> VersionOfAsync(int customer) =>
+        (await SendAsync(HttpMethod.Get, $"api/Customers/{customer}")).Body.GetProperty("Version").GetUInt32();
+
     [Fact]
     public async Task Should_Answer204AndMerge_WhenMergeIsCalledOverHttp()
     {
@@ -76,19 +82,33 @@ public sealed class SampleApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Should_RenameOnlyTheName_WhenRenamed()
+    {
+        var read = await VersionOfAsync(Acme);
+
+        var (status, body, _) = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", $$"""{"Name":"Acme Renamed","Version":{{read}}}""");
+
+        status.Should().Be(HttpStatusCode.OK);
+        await using var check = App.NewContext();
+        var saved = await check.Customers.SingleAsync(c => c.Id == Acme, Ct);
+        saved.Name.Should().Be("Acme Renamed");
+        saved.City.Should().Be(body.GetProperty("City").GetString()).And.NotBeEmpty();
+    }
+
+    [Fact]
     public async Task Should_Answer409_WhenARenameCarriesAStaleVersion()
     {
-        // Both clients read Acme at Version 0: the first renames, the second decided on a stale row.
-        var a = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", """{"Name":"Acme by A","Version":0}""");
-        var b = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", """{"Name":"Acme by B","Version":0}""");
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        var read = await VersionOfAsync(Acme);   // both clients read Acme now
+        var a = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", $$"""{"Name":"Acme by A","Version":{{read}}}""");
+
+        var b = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", $$"""{"Name":"Acme by B","Version":{{read}}}""");
 
         a.Status.Should().Be(HttpStatusCode.OK);
         b.Status.Should().Be(HttpStatusCode.Conflict);
         b.Body.GetProperty("Code").GetString().Should().Be("Conflict");
         await using var check = App.NewContext();
-        var saved = await check.Customers.SingleAsync(c => c.Id == Acme, Ct);
-        saved.Name.Should().Be("Acme by A");
-        saved.Version.Should().Be(1);
+        (await check.Customers.SingleAsync(c => c.Id == Acme, Ct)).Name.Should().Be("Acme by A");
     }
 
     [Fact]
@@ -100,10 +120,12 @@ public sealed class SampleApiTests : IAsyncLifetime
     [Fact]
     public async Task Should_Answer409_WhenAFullPutOrARenameIsStale()
     {
-        await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", """{"Name":"Renamed","Version":0}""");   // now at 1
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        var read = await VersionOfAsync(Acme);
+        await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", $$"""{"Name":"Renamed","Version":{{read}}}""");
 
-        var stalePut = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}", $$"""{"Id":{{Acme}},"Name":"Whole","City":"Rome","Version":0}""");
-        var staleRename = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", """{"Name":"Wins","Version":0}""");
+        var stalePut = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}", $$"""{"Id":{{Acme}},"Name":"Whole","City":"Rome","Version":{{read}}}""");
+        var staleRename = await SendAsync(HttpMethod.Put, $"api/Customers/{Acme}/name", $$"""{"Name":"Wins","Version":{{read}}}""");
 
         stalePut.Status.Should().Be(HttpStatusCode.Conflict);   // the whole entity would overwrite somebody's work
         staleRename.Status.Should().Be(HttpStatusCode.Conflict); // one field: still decided on a stale row
@@ -142,7 +164,8 @@ public sealed class SampleApiTests : IAsyncLifetime
         // Merge South into North, close everything before April, rename North, delete an order.
         (await SendAsync(HttpMethod.Post, $"api/Customers/{southId}/merge-into/{northId}")).Status.Should().Be(HttpStatusCode.NoContent);
         (await SendAsync(HttpMethod.Post, "api/Orders/close-before/2026-04-01")).Body.GetProperty("Closed").GetInt32().Should().Be(23);
-        (await SendAsync(HttpMethod.Put, $"api/Customers/{northId}/name", """{"Name":"North & South","Version":0}""")).Status.Should().Be(HttpStatusCode.OK);
+        var northVersion = await VersionOfAsync(northId);
+        (await SendAsync(HttpMethod.Put, $"api/Customers/{northId}/name", $$"""{"Name":"North & South","Version":{{northVersion}}}""")).Status.Should().Be(HttpStatusCode.OK);
         var last = page.Body.GetProperty("data")[0].GetProperty("Id").GetInt32();
         (await SendAsync(HttpMethod.Delete, $"api/Orders/{last}")).Status.Should().Be(HttpStatusCode.NoContent);
 

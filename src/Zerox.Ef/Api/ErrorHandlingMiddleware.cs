@@ -26,6 +26,11 @@ internal sealed class ErrorHandlingMiddleware(RequestDelegate next, IProblemDeta
             logger.LogWarning(e, "Optimistic lock conflict");
             await WriteAsync(context, StatusCodes.Status409Conflict, "The row was changed by another user.").ConfigureAwait(false);
         }
+        catch (StaleVersionException e)
+        {
+            logger.LogWarning(e, "Optimistic lock conflict");
+            await WriteAsync(context, StatusCodes.Status409Conflict, "The row was changed by another user.").ConfigureAwait(false);
+        }
         catch (InvalidRequestException e)
         {
             await WriteAsync(context, StatusCodes.Status400BadRequest, e.Message).ConfigureAwait(false);

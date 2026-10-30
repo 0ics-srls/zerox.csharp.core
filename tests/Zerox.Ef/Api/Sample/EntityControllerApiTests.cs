@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Zerox.Ef.Api.Tests.Sample.Api;
+using Zerox.Ef.Tests;
 
 namespace Zerox.Ef.Api.Tests.Sample;
 
@@ -39,6 +40,12 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     private Task<(HttpStatusCode Status, JsonElement Body)> PostAsync(string url, string json) => SendAsync(HttpMethod.Post, url, json);
 
     private static List<JsonElement> Data(JsonElement body) => body.GetProperty("data").EnumerateArray().ToList();
+
+    private const string PostgresOnly = "SQLite has no row version: the lock is proved on PostgreSQL.";
+
+    // The version a client read: from the API, never a literal.
+    private async Task<uint> VersionOfAsync(string url) =>
+        (await SendAsync(HttpMethod.Get, url)).Body.GetProperty("Version").GetUInt32();
 
     // --- load: the DevExtreme load options, server-side; the options decide rows, columns or groups ---
 
@@ -220,19 +227,29 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_Update_WhenPut()
+    public async Task Should_SaveWithTheVersionRead_WhenPut()
     {
-        var (_, customer) = await SendAsync(HttpMethod.Get, "api/Customers/1");
-        var id = customer.GetProperty("Id").GetInt32();
+        var read = await VersionOfAsync("api/Customers/1");
 
-        var (status, _) = await SendAsync(HttpMethod.Put, $"api/Customers/{id}",
-            $$"""{"Id":{{id}},"Name":"Acme Ltd","City":"Rome","Version":{{customer.GetProperty("Version").GetInt32()}}}""");
+        var (status, body) = await SendAsync(HttpMethod.Put, "api/Customers/1", $$"""{"Id":1,"Name":"Acme Ltd","City":"Rome","Version":{{read}}}""");
 
         status.Should().Be(HttpStatusCode.OK);
         await using var check = App.NewContext();
-        var saved = await check.Customers.SingleAsync(c => c.Id == id, Ct);
+        var saved = await check.Customers.SingleAsync(c => c.Id == 1, Ct);
         saved.Name.Should().Be("Acme Ltd");
-        saved.Version.Should().Be(1);
+        body.GetProperty("Name").GetString().Should().Be("Acme Ltd");
+        body.GetProperty("Version").GetUInt32().Should().Be(saved.Version);
+    }
+
+    [Fact]
+    public async Task Should_ChangeTheVersion_WhenPut()
+    {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        var read = await VersionOfAsync("api/Customers/1");
+
+        var (_, body) = await SendAsync(HttpMethod.Put, "api/Customers/1", $$"""{"Id":1,"Name":"Acme Ltd","City":"Rome","Version":{{read}}}""");
+
+        body.GetProperty("Version").GetUInt32().Should().NotBe(read);
     }
 
     [Fact]
@@ -268,14 +285,15 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_StartAtVersionZero_WhenCreateCarriesAVersion()
+    public async Task Should_IgnoreTheVersionOfACreation()
     {
         var (status, body) = await SendAsync(HttpMethod.Post, "api/Customers", """{"Name":"V","City":"x","Version":99}""");
 
         status.Should().Be(HttpStatusCode.Created);
-        body.GetProperty("Version").GetInt32().Should().Be(0);
         await using var check = App.NewContext();
-        (await check.Customers.SingleAsync(c => c.Name == "V", Ct)).Version.Should().Be(0);
+        var stored = (await check.Customers.SingleAsync(c => c.Name == "V", Ct)).Version;
+        stored.Should().NotBe(99u);
+        body.GetProperty("Version").GetUInt32().Should().Be(stored);
     }
 
     [Fact]
@@ -288,26 +306,26 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_Delete_WhenDeleted()
+    public async Task Should_DeleteAtTheVersionRead_WhenDeleted()
     {
         using var created = await App.Client.PostAsync("api/Customers", Json("""{"Name":"Temp","City":"Bari"}"""), Ct);
         var location = created.Headers.Location!.ToString();
+        var read = await VersionOfAsync(location);
 
-        (await SendAsync(HttpMethod.Delete, $"{location}?version=0")).Status.Should().Be(HttpStatusCode.NoContent);
+        var (status, _) = await SendAsync(HttpMethod.Delete, $"{location}?version={read}");
+
+        status.Should().Be(HttpStatusCode.NoContent);
         (await SendAsync(HttpMethod.Get, location)).Status.Should().Be(HttpStatusCode.NotFound);
     }
 
-    [Fact]
-    public async Task Should_Answer409_WhenDeleteCarriesAStaleVersion()
+    [Theory]
+    [InlineData("api/Customers/999?version=0")]
+    [InlineData("api/Orders/999")]
+    public async Task Should_Answer404_WhenDeletingAMissingRow(string url)
     {
-        await SendAsync(HttpMethod.Put, "api/Customers/2", """{"Id":2,"Name":"Bolt Two","City":"Milan","Version":0}""");   // now at 1
+        var (status, _) = await SendAsync(HttpMethod.Delete, url);
 
-        var (status, body) = await SendAsync(HttpMethod.Delete, "api/Customers/2?version=0");
-
-        status.Should().Be(HttpStatusCode.Conflict);
-        body.GetProperty("Code").GetString().Should().Be("Conflict");
-        await using var check = App.NewContext();
-        (await check.Customers.AnyAsync(c => c.Id == 2, Ct)).Should().BeTrue();
+        status.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -320,16 +338,42 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Should_Answer400_WhenTheVersionDoesNotFitTheRowVersion()
+    {
+        var (status, body) = await SendAsync(HttpMethod.Delete, "api/Customers/1?version=18446744073709551615");
+
+        status.Should().Be(HttpStatusCode.BadRequest);
+        body.GetProperty("Code").GetString().Should().Be("InvalidRequest");
+    }
+
+    [Fact]
     public async Task Should_Answer409_WhenPutCarriesAStaleVersion()
     {
-        // Both clients read the customer at Version 0; the first saves, the second is stale.
-        var first = await SendAsync(HttpMethod.Put, "api/Customers/2", """{"Id":2,"Name":"Bolt One","City":"Milan","Version":0}""");
-        var second = await SendAsync(HttpMethod.Put, "api/Customers/2", """{"Id":2,"Name":"Bolt Two","City":"Milan","Version":0}""");
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        var read = await VersionOfAsync("api/Customers/2");   // both clients read it now
+        var first = await SendAsync(HttpMethod.Put, "api/Customers/2", $$"""{"Id":2,"Name":"Bolt One","City":"Milan","Version":{{read}}}""");
+
+        var second = await SendAsync(HttpMethod.Put, "api/Customers/2", $$"""{"Id":2,"Name":"Bolt Two","City":"Milan","Version":{{read}}}""");
 
         first.Status.Should().Be(HttpStatusCode.OK);
         second.Status.Should().Be(HttpStatusCode.Conflict);
         second.Body.GetProperty("Code").GetString().Should().Be("Conflict");
         await using var check = App.NewContext();
         (await check.Customers.SingleAsync(c => c.Id == 2, Ct)).Name.Should().Be("Bolt One");
+    }
+
+    [Fact]
+    public async Task Should_Answer409_WhenDeleteCarriesAStaleVersion()
+    {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
+        var read = await VersionOfAsync("api/Customers/2");
+        await SendAsync(HttpMethod.Put, "api/Customers/2", $$"""{"Id":2,"Name":"Bolt Two","City":"Milan","Version":{{read}}}""");
+
+        var (status, body) = await SendAsync(HttpMethod.Delete, $"api/Customers/2?version={read}");
+
+        status.Should().Be(HttpStatusCode.Conflict);
+        body.GetProperty("Code").GetString().Should().Be("Conflict");
+        await using var check = App.NewContext();
+        (await check.Customers.AnyAsync(c => c.Id == 2, Ct)).Should().BeTrue();
     }
 }
