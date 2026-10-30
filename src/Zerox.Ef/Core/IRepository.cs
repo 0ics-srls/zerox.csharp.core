@@ -19,10 +19,33 @@ public interface IRepository<T> where T : class, IEntity
     IEnumerable<T> Local();
 
     /// <summary>
-    /// Tracked: "give me that row, I may change it" — the change is saved by SaveChangesAsync. There is no
-    /// Update of a whole detached entity: it would write every column, the fields the client never saw too.
+    /// Tracked: "give me that row, I may change it" — the change is saved by SaveChangesAsync.
     /// </summary>
     Task<T?> GetByIdAsync(int id, CancellationToken ct = default);
+
+    /// <summary>
+    /// The entity as the client sent it, not tracked: attached, written by the next save, only the named
+    /// fields (the key and what the database generates — the row version — are never written). Its row
+    /// version is the one the client read: a row changed since, or missing, fails the save with
+    /// DbUpdateConcurrencyException. A name the entity does not have is an ArgumentException.
+    /// </summary>
+    void Update(T entity, IReadOnlyCollection<string> fields);
+
+    /// <summary>
+    /// Marks the row with that Id to delete, without reading it, at the row version the client read: true.
+    /// False, nothing marked, when that version does not fit the row version's type — it was never a version
+    /// of this row (the client's mistake). The version is required when the entity has a row version
+    /// (ArgumentException without it) and ignored when it has none. The stub is built with the entity's
+    /// parameterless constructor. A row changed since, or missing, fails the next save with
+    /// DbUpdateConcurrencyException.
+    /// </summary>
+    bool TryDeleteById(int id, ulong? versionReadByClient);
+
+    /// <summary>
+    /// Whether the entity has a row version ([Timestamp] / IsRowVersion: a concurrency token the database
+    /// generates), so a client must send the version it read.
+    /// </summary>
+    bool HasRowVersion { get; }
 
     /// <summary>
     /// Adds a new row, written by the next save; its Id is given by the database.

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Db;
@@ -25,6 +26,39 @@ internal sealed class Repository<T> : IRepository<T> where T : class, IEntity
 
     public async Task<T?> GetByIdAsync(int id, CancellationToken ct = default) =>
         await _db.Set<T>().FindAsync([id], ct).ConfigureAwait(false);
+
+    public void Update(T entity, IReadOnlyCollection<string> fields)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        ArgumentNullException.ThrowIfNull(fields);
+        var entry = _db.Set<T>().Attach(entity);
+        foreach (var name in fields)
+        {
+            var property = entry.Metadata.FindProperty(name)
+                ?? throw new ArgumentException($"{typeof(T).Name} has no property '{name}'.", nameof(fields));
+            // The key identifies the row; what the database generates is the database's.
+            if (!property.IsKey() && property.ValueGenerated == ValueGenerated.Never)
+                entry.Property(name).IsModified = true;
+        }
+    }
+
+    public bool TryDeleteById(int id, ulong? versionReadByClient)
+    {
+        var stub = Activator.CreateInstance<T>();
+        stub.Id = id;
+        if (RowVersion() is { } rowVersion)
+        {
+            if (versionReadByClient is not ulong version)
+                throw new ArgumentException($"{typeof(T).Name} has a row version: give the version the client read.", nameof(versionReadByClient));
+            if (!TryRowVersion(version, rowVersion.ClrType, out var value))
+                return false;
+            rowVersion.PropertyInfo!.SetValue(stub, value);
+        }
+        _db.Set<T>().Remove(stub);
+        return true;
+    }
+
+    public bool HasRowVersion => RowVersion() is not null;
 
     public async Task AddAsync(T entity, CancellationToken ct = default) =>
         await _db.Set<T>().AddAsync(entity, ct).ConfigureAwait(false);
@@ -54,5 +88,31 @@ internal sealed class Repository<T> : IRepository<T> where T : class, IEntity
     {
         foreach (var entry in _db.ChangeTracker.Entries<T>().ToList())
             entry.State = EntityState.Detached;
+    }
+
+    // A row version as EF defines it (IsRowVersion, [Timestamp]); IDbContext exposes no Model: the entity
+    // type comes from the set.
+    private IProperty? RowVersion() =>
+        _db.Set<T>().EntityType.GetProperties()
+            .SingleOrDefault(p => p.IsConcurrencyToken && p.ValueGenerated == ValueGenerated.OnAddOrUpdate);
+
+    // A number from the client in the row version's own type (uint, ulong or long: ApplyOptimisticLock refuses
+    // any other); one that does not fit was never a version of this row.
+    private static bool TryRowVersion(ulong version, Type type, out object value)
+    {
+        value = version;
+        if (type == typeof(uint))
+        {
+            if (version > uint.MaxValue)
+                return false;
+            value = (uint)version;
+        }
+        else if (type == typeof(long))
+        {
+            if (version > long.MaxValue)
+                return false;
+            value = (long)version;
+        }
+        return true;
     }
 }

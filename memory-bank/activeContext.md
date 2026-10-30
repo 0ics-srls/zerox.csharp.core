@@ -7,7 +7,7 @@
 @feature::10-db-row-version (the optimistic lock on the database's row version)
 @branch::feature/10-db-row-version (from feature/09-single-load)
 @plan::tasks/10-db-row-version/{notes,index,01-db,02-domain-api}.md{TDDAB#5,parsePlan✓,j-review-plan✓}
-@block::01✓→next::02-db-client-row-writes
+@block::02✓→next::03-domain-editable-stale
 @consumer::CcV3 (the first consumer,submodule externals/zerox.csharp.core) found the defect;adapted by its own plan after this one
 
 [WHY]
