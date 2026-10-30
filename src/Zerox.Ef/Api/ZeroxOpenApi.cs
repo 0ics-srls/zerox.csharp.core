@@ -10,7 +10,7 @@ namespace Zerox.Ef.Api;
 
 /// <summary>
 /// The OpenAPI document a client is generated from: every operation named, the load of every entity
-/// documented with the entity it lists, a day typed as the day it is.
+/// documented with the entity it lists, a day typed as the day it is, the same text on every platform.
 /// </summary>
 public static class ZeroxOpenApi
 {
@@ -32,6 +32,7 @@ public static class ZeroxOpenApi
             options.AddOperationTransformer<LoadResults>();
             options.AddSchemaTransformer<Days>();
             options.AddDocumentTransformer<UnusedLoadResult>();
+            options.AddDocumentTransformer<LineBreaks>();
         });
     }
 
@@ -222,6 +223,66 @@ public static class ZeroxOpenApi
             if (!used)
                 document.Components?.Schemas?.Remove(nameof(LoadResult));
             return Task.CompletedTask;
+        }
+    }
+
+    // The texts of the document break lines with LF, whatever machine built it: the compiler writes the XML
+    // documentation the summaries come from with that machine's line endings, and a contract that changes
+    // with the build machine regenerates every client for nothing. Last, after every other transformer.
+    private sealed class LineBreaks : IOpenApiDocumentTransformer
+    {
+        public Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
+        {
+            new OpenApiWalker(new Texts()).Walk(document);
+            return Task.CompletedTask;
+        }
+
+        private sealed class Texts : OpenApiVisitorBase
+        {
+            public override void Visit(OpenApiInfo info) => info.Description = Lf(info.Description);
+
+            public override void Visit(OpenApiTag tag) => tag.Description = Lf(tag.Description);
+
+            public override void Visit(OpenApiOperation operation)
+            {
+                operation.Summary = Lf(operation.Summary);
+                operation.Description = Lf(operation.Description);
+            }
+
+            public override void Visit(IOpenApiParameter parameter)
+            {
+                if (parameter is OpenApiParameter own)
+                    own.Description = Lf(own.Description);
+            }
+
+            public override void Visit(IOpenApiRequestBody requestBody)
+            {
+                if (requestBody is OpenApiRequestBody own)
+                    own.Description = Lf(own.Description);
+            }
+
+            public override void Visit(IOpenApiResponse response)
+            {
+                if (response is OpenApiResponse own)
+                    own.Description = Lf(own.Description);
+            }
+
+            public override void Visit(IOpenApiHeader header)
+            {
+                if (header is OpenApiHeader own)
+                    own.Description = Lf(own.Description);
+            }
+
+            public override void Visit(IOpenApiSchema schema)
+            {
+                if (schema is OpenApiSchema own)
+                {
+                    own.Title = Lf(own.Title);
+                    own.Description = Lf(own.Description);
+                }
+            }
+
+            private static string? Lf(string? text) => text?.ReplaceLineEndings("\n");
         }
     }
 }

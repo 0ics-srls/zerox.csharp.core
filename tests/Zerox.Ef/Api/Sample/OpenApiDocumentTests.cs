@@ -49,6 +49,27 @@ public sealed class OpenApiDocumentTests : IAsyncLifetime
         kept.Should().Be(served, "the contract changed: openapi/Sample.json has been rewritten, read the diff and run the tests again");
     }
 
+    // The compiler writes the XML documentation with the line endings of the machine that builds it; the
+    // contract a client is generated from is the same on every machine: its texts break lines with \n only.
+    [Fact]
+    public async Task Should_BreakEveryTextWithLf_WhateverThePlatformThatBuiltTheDocumentation()
+    {
+        using var document = JsonDocument.Parse(await ServedAsync());
+
+        var texts = Strings(document.RootElement).ToList();
+
+        texts.Should().Contain(t => t.Contains('\n', StringComparison.Ordinal));   // multi-line summaries are there
+        texts.Should().NotContain(t => t.Contains('\r', StringComparison.Ordinal));
+    }
+
+    private static IEnumerable<string> Strings(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.String => [element.GetString()!],
+        JsonValueKind.Object => element.EnumerateObject().SelectMany(p => Strings(p.Value)),
+        JsonValueKind.Array => element.EnumerateArray().SelectMany(Strings),
+        _ => [],
+    };
+
     [Fact]
     public async Task Should_NameEveryOperation_ByControllerAndAction()
     {
