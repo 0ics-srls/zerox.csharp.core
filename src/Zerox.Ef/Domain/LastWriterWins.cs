@@ -5,13 +5,10 @@ using Zerox.Ef.Core;
 namespace Zerox.Ef.Domain;
 
 /// <summary>
-/// For an action that changes ONE field. Two ways, chosen by the caller:
-/// - with the Version the client read: the optimistic lock. The save goes through only if the row is
-///   still at that Version; otherwise the client decided on a row that is no longer there, and the
-///   conflict reaches it (the API answers 409) — never retried, never overwritten;
-/// - without it (a change the server decides alone): on a conflict the row is read again and the change
-///   applied again, so the last writer wins.
-/// No lock is ever taken, no explicit transaction: only saves.
+/// For a change the SERVER decides alone on ONE row (no client version): on a conflict the row is read
+/// again and the change applied again, so the last writer wins; after MaxAttempts the conflict reaches the
+/// caller. A client's change at the version it read is not this: it is IRepository.Update with that
+/// version, refused when stale. No lock is ever taken, no explicit transaction: only saves.
 /// </summary>
 public sealed class LastWriterWins(IRepositoryFactory repositories)
 {
@@ -28,7 +25,6 @@ public sealed class LastWriterWins(IRepositoryFactory repositories)
         int id,
         Expression<Func<T, bool>> scope,
         Func<T, CancellationToken, Task> apply,
-        int? versionReadByClient = null,
         CancellationToken ct = default) where T : class, IEntity
     {
         ArgumentNullException.ThrowIfNull(scope);
@@ -42,21 +38,16 @@ public sealed class LastWriterWins(IRepositoryFactory repositories)
             if (entity is null)
                 return null;
 
-            // The update compares against the Version the client read, not the one just read here.
-            if (versionReadByClient is int read && entity is IHasOptimisticLock)
-                repository.PinReadVersion(entity, read);
-
             await apply(entity, ct).ConfigureAwait(false);
             try
             {
                 await repository.SaveChangesAsync(ct).ConfigureAwait(false);
                 return entity;
             }
-            catch (DbUpdateConcurrencyException) when (versionReadByClient is null && attempt < MaxAttempts - 1)
+            catch (DbUpdateConcurrencyException) when (attempt < MaxAttempts - 1)
             {
-                // The one catch that goes on, and only without a client Version: retrying IS the
-                // purpose. The stale copy is thrown away so the next attempt reads the database, not the
-                // instance in memory.
+                // The one catch that goes on: retrying IS the purpose. The stale copy is thrown away so the
+                // next attempt reads the database, not the instance in memory.
                 repository.DetachAll();
             }
         }

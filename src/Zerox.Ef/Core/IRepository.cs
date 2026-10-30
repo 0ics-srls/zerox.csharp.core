@@ -89,13 +89,6 @@ public interface IRepository<T> where T : class, IEntity
     Task<IMassiveOpHandler<T>> OpenMassiveAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Sets the ORIGINAL Version to the one the client read, so the update compares against it and a
-    /// stale client is caught. Assigning the property is not enough on a tracked entity: its original
-    /// is the fresh value just read. For entities implementing IHasOptimisticLock.
-    /// </summary>
-    void PinReadVersion(T entity, int version);
-
-    /// <summary>
     /// Detaches EVERY tracked row of this type, so the next read goes to the database. Not only the
     /// current one: a stale tracked copy would make the re-read return the instance in memory.
     /// </summary>

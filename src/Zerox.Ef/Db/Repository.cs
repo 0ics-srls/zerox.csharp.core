@@ -77,13 +77,6 @@ internal sealed class Repository<T> : IRepository<T> where T : class, IEntity
     public Task<IMassiveOpHandler<T>> OpenMassiveAsync(CancellationToken ct = default) =>
         DbSession.Of(_db).OpenMassiveAsync<T>(_db, ct);
 
-    public void PinReadVersion(T entity, int version)
-    {
-        if (entity is not IHasOptimisticLock)
-            throw new ArgumentException($"{typeof(T).Name} does not implement IHasOptimisticLock.", nameof(entity));
-        _db.Entry(entity).Property(nameof(IHasOptimisticLock.Version)).OriginalValue = version;
-    }
-
     public void DetachAll()
     {
         foreach (var entry in _db.ChangeTracker.Entries<T>().ToList())

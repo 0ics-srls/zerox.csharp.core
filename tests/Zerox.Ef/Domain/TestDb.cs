@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
@@ -70,7 +71,7 @@ public sealed class Sample
     public long Counter { get; set; }
 }
 
-public sealed class Memo : IEntity, IHasOptimisticLock
+public sealed class Memo : IEntity
 {
     public int Id { get; set; }
 
@@ -80,7 +81,8 @@ public sealed class Memo : IEntity, IHasOptimisticLock
 
     public string Note { get; set; } = "";
 
-    public int Version { get; set; }
+    [Timestamp]
+    public uint Version { get; set; }
 }
 
 public sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options), IDbContext

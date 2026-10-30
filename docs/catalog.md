@@ -105,7 +105,7 @@ The contracts of the database foundation, no EF type in them: what an applicatio
 | Need | Type | File |
 |---|---|---|
 | An entity with its own int key | `IEntity` | `Zerox.Ef/Core/IEntity.cs` |
-| An opt-in optimistic lock: `Version` as concurrency token, 0 for an added row, incremented on every save of a modified row | `IHasOptimisticLock` (+ `IRepository<T>.PinReadVersion`, `DetachAll`) | `Zerox.Ef/Core/IHasOptimisticLock.cs` |
+| An opt-in optimistic lock on the database's row version: EF's `[Timestamp]` on the type the provider generates (`uint` = `xmin` on PostgreSQL, `ulong`/`long` on SQL Server), never written by the library; a client's row is saved or deleted at the version it read (`IRepository<T>.Update`, `TryDeleteById`, `HasRowVersion`), stale = 409; SQLite has none (a warning says so) | `[Timestamp]` + `ModelBuilderExtensions.ApplyOptimisticLock(ModelBuilder, DatabaseFacade)` (+ `IRepository<T>.DetachAll`) | `Zerox.Ef/Db/ModelBuilderExtensions.cs`, `Zerox.Ef/Core/IRepository.cs` |
 | The port to a table: read (not tracked by default), unsaved rows, get (tracked: change it and save), add, delete, save | `IRepository<T>` | `Zerox.Ef/Core/IRepository.cs` |
 | Save or delete a client's row at the row version it read, without reading it first: `Update(entity, fields)` writes only the named fields (never the key or the row version), `TryDeleteById(id, version)` deletes a stub (false when the version does not fit the row version); a row changed since, or missing, fails the save (`DbUpdateConcurrencyException`); `HasRowVersion` says whether the client must send a version | `IRepository<T>.Update`, `IRepository<T>.TryDeleteById`, `IRepository<T>.HasRowVersion` | `Zerox.Ef/Core/IRepository.cs`, `Zerox.Ef/Db/Repository.cs` |
 | The repository of a type decided at run time, on the same context | `IRepositoryFactory` (`For<T>`) | `Zerox.Ef/Core/IRepositoryFactory.cs` |
@@ -134,7 +134,7 @@ The contracts of the database foundation, no EF type in them: what an applicatio
 | The distinct values of a text column for a filter dropdown, in SQL (never a reserved field) | `DistinctTextValues` (`IsTextColumn<T>`, `ValuesAsync`) | `Zerox.Ef/Domain/DistinctTextValues.cs` |
 | The names of the fields a client may write on an entity it sends (public setter; never the key, a navigation or a reserved field) — what `IRepository<T>.Update` marks modified | `EntityFields.Editable<T>()` | `Zerox.Ef/Domain/EntityFields.cs` |
 | An action that reads the current row before deciding finds that its version is not the one the client read: the API answers 409 | `StaleVersionException` | `Zerox.Ef/Domain/StaleVersionException.cs` |
-| A single-field action: with the client's Version the optimistic lock (stale = conflict, never retried); without it re-read and re-apply on conflict, the last writer wins | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Ef/Domain/LastWriterWins.cs` |
+| A single-row change the server decides alone: re-read and re-apply on conflict, the last writer wins (`MaxAttempts`); a client's change at the version it read is `IRepository<T>.Update` instead | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Ef/Domain/LastWriterWins.cs` |
 
 ## Zerox.Ef.Api
 

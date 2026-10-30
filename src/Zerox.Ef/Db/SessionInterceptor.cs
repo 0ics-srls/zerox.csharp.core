@@ -1,7 +1,5 @@
 using System.Data.Common;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Db;
 
@@ -67,17 +65,6 @@ internal sealed class SessionInterceptor : SaveChangesInterceptor, IDbCommandInt
         // Inside a unit of work the save is swallowed: the unit of work writes, once.
         if (session.Boundary is not null)
             return ValueTask.FromResult(InterceptionResult<int>.SuppressWithResult(0));
-
-        // The save goes through: an added row with the lock starts at 0 (the Version is the library's,
-        // never the client's), every modified one counts one more. EF detects the changes after this,
-        // so the new Version is written.
-        foreach (var entry in eventData.Context!.ChangeTracker.Entries<IHasOptimisticLock>())
-        {
-            if (entry.State == EntityState.Added)
-                entry.Entity.Version = 0;
-            else if (entry.State == EntityState.Modified)
-                entry.Entity.Version++;
-        }
 
         return ValueTask.FromResult(result);
     }

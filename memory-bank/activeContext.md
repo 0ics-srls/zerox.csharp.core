@@ -7,7 +7,7 @@
 @feature::10-db-row-version (the optimistic lock on the database's row version)
 @branch::feature/10-db-row-version (from feature/09-single-load)
 @plan::tasks/10-db-row-version/{notes,index,01-db,02-domain-api}.md{TDDAB#5,parsePlan✓,j-review-plan✓}
-@block::04✓→next::05-remove-app-managed-lock
+@block::05✓→next::FINAL-REVIEW (tools/verify.sh && tools/test-postgres.sh)
 @consumer::CcV3 (the first consumer,submodule externals/zerox.csharp.core) found the defect;adapted by its own plan after this one
 
 [WHY]

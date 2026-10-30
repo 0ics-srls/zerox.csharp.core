@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
-using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Db;
 
@@ -26,11 +25,6 @@ public static class ModelBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
         ArgumentNullException.ThrowIfNull(database);
-
-        // The application-managed lock of IHasOptimisticLock, until its entities move to a row version.
-        foreach (var type in modelBuilder.Model.GetEntityTypes()
-                     .Where(t => typeof(IHasOptimisticLock).IsAssignableFrom(t.ClrType)))
-            modelBuilder.Entity(type.ClrType).Property(nameof(IHasOptimisticLock.Version)).IsConcurrencyToken();
 
         var rowVersions = RowVersions(modelBuilder.Model).ToList();
         foreach (var property in rowVersions)

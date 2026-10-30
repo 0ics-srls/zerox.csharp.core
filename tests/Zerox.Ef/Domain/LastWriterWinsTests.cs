@@ -1,11 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Zerox.Ef.Core;
+using Zerox.Ef.Tests;
 
 namespace Zerox.Ef.Domain.Tests;
 
+// A change the server decides alone: on a conflict the row is read again and the change applied again,
+// the last writer wins. A conflict needs a row version, so those tests run on PostgreSQL.
 public sealed class LastWriterWinsTests : IAsyncLifetime
 {
+    private const string PostgresOnly = "SQLite has no row version: a conflict happens on PostgreSQL only.";
+
     private TestDb? _database;
 
     private TestDb Db => _database ?? throw new InvalidOperationException("InitializeAsync has not run.");
@@ -59,12 +64,13 @@ public sealed class LastWriterWinsTests : IAsyncLifetime
 
         calls.Should().Be(1);
         saved!.Text.Should().Be("mine");
-        (await ReadAsync(id)).Version.Should().Be(1);
+        (await ReadAsync(id)).Text.Should().Be("mine");
     }
 
     [Fact]
     public async Task Should_ReReadAndSave_WhenAConflictHappens()
     {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync();
         await using var scope = Db.NewScope();
         var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
@@ -84,6 +90,7 @@ public sealed class LastWriterWinsTests : IAsyncLifetime
     [Fact]
     public async Task Should_KeepTheLastWritersValues_AfterTheRetry()
     {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync();
         await using var scope = Db.NewScope();
         var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
@@ -102,26 +109,32 @@ public sealed class LastWriterWinsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_HaveTheVersionIncrementedByBothWriters_AfterTheRetry()
+    public async Task Should_StoreANewVersion_WhenTheRetrySaves()
     {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync();
         await using var scope = Db.NewScope();
         var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
         var calls = 0;
+        uint theirs = 0;
 
         await wins.SaveAsync<Memo>(id, _ => true, async (m, ct) =>
         {
             if (++calls == 1)
+            {
                 await OtherWriterAsync(id, other => other.Note = "theirs");
+                theirs = (await ReadAsync(id)).Version;
+            }
             m.Text = "mine";
         }, ct: Ct);
 
-        (await ReadAsync(id)).Version.Should().Be(2);
+        (await ReadAsync(id)).Version.Should().NotBe(theirs);
     }
 
     [Fact]
     public async Task Should_Throw_WhenAttemptsAreExhausted()
     {
+        Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync();
         await using var scope = Db.NewScope();
         var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
@@ -155,58 +168,6 @@ public sealed class LastWriterWinsTests : IAsyncLifetime
 
         saved.Should().BeNull();
         calls.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task Should_ThrowWithoutRetry_WhenTheClientVersionIsStale()
-    {
-        var id = await SeedAsync();
-        await OtherWriterAsync(id, other => other.Note = "theirs");   // the row is at Version 1
-        await using var scope = Db.NewScope();
-        var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
-        var calls = 0;
-
-        var save = () => wins.SaveAsync<Memo>(id, _ => true,
-            (m, _) => { calls++; m.Text = "mine"; return Task.CompletedTask; }, versionReadByClient: 0, ct: Ct);
-
-        await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
-        calls.Should().Be(1);   // the client decided on a row that is no longer there: it must read again
-        var stored = await ReadAsync(id);
-        stored.Text.Should().Be("first");
-        stored.Version.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task Should_ThrowWithoutRetry_WhenAnotherWriterSavesAfterTheClientRead()
-    {
-        var id = await SeedAsync();
-        await using var scope = Db.NewScope();
-        var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
-        var calls = 0;
-
-        // The client read Version 0 and it is still 0 when the row is read here; another writer saves
-        // between this read and this save.
-        var save = () => wins.SaveAsync<Memo>(id, _ => true,
-            async (m, _) => { calls++; await OtherWriterAsync(id, other => other.Note = "theirs"); m.Text = "mine"; },
-            versionReadByClient: 0, ct: Ct);
-
-        await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
-        calls.Should().Be(1);
-        (await ReadAsync(id)).Text.Should().Be("first");
-    }
-
-    [Fact]
-    public async Task Should_Save_WhenTheClientVersionIsCurrent()
-    {
-        var id = await SeedAsync();
-        await using var scope = Db.NewScope();
-        var wins = new LastWriterWins(scope.ServiceProvider.GetRequiredService<IRepositoryFactory>());
-
-        var saved = await wins.SaveAsync<Memo>(id, _ => true,
-            (m, _) => { m.Text = "mine"; return Task.CompletedTask; }, versionReadByClient: 0, ct: Ct);
-
-        saved!.Text.Should().Be("mine");
-        (await ReadAsync(id)).Version.Should().Be(1);
     }
 
     [Fact]
