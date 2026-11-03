@@ -9,6 +9,7 @@ using Zerox.Ef.Api.Tests.Sample.Core;
 using Zerox.Ef.Api.Tests.Sample.Db;
 using Zerox.Ef.Api.Tests.Sample.Domain;
 using Zerox.Ef.Db;
+using Zerox.Ef.Domain;
 using Zerox.Ef.Tests;
 
 namespace Zerox.Ef.Api.Tests.Sample.Api;
@@ -47,7 +48,9 @@ public sealed class SampleApp : IAsyncDisposable
         else
             builder.WebHost.UseTestServer();
         builder.Services.AddZeroxDb<SampleDbContext>(o => database.Use(o));
-        builder.Services.AddScoped<ICustomerMerge, CustomerMerge>();
+        builder.Services.AddZeroxDomain()
+            .AddEntityService<Customer, ICustomerService, CustomerService>()
+            .AddEntityService<Order, IOrderService, OrderService>();
         builder.Services.AddControllers().AddApplicationPart(typeof(SampleApp).Assembly).AddZeroxJson();
         builder.Services.AddZeroxProblemDetails();
         builder.Services.AddZeroxOpenApi();

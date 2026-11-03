@@ -1,5 +1,8 @@
+using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using DevExtreme.AspNet.Data;
 using DevExtreme.AspNet.Data.ResponseModel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Zerox.Ef.Core;
@@ -126,4 +129,33 @@ public abstract class EntityController<T>(IRepository<T> repository) : Controlle
     /// The rows the load works on. A controller with its own view of the rows overrides it.
     /// </summary>
     protected virtual IQueryable<T> SearchSource() => Repository.Query();
+
+    /// <summary>
+    /// The one translation of an outcome into HTTP: Ok 200 with the value, Created 201 with the value, Deleted
+    /// 204, NotFound 404, Conflict 409, Invalid and Failed 400 — each failure a ProblemDetails with the reason and
+    /// the code of its status; Faulted rethrows the exception it carries to the error middleware (logged, 500).
+    /// </summary>
+    protected ActionResult Answer<TValue>(OpResult<TValue> result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result.Status switch
+        {
+            OpStatus.Ok => Ok(result.Value),
+            OpStatus.Created => StatusCode(StatusCodes.Status201Created, result.Value),
+            OpStatus.Deleted => NoContent(),
+            OpStatus.NotFound => NotFound(),
+            OpStatus.Conflict => Problem(detail: result.Reason, statusCode: StatusCodes.Status409Conflict),
+            OpStatus.Invalid or OpStatus.Failed => Problem(detail: result.Reason, statusCode: StatusCodes.Status400BadRequest),
+            OpStatus.Faulted => Rethrow(result.Exception ?? new InvalidOperationException(result.Reason)),
+            _ => throw new UnreachableException($"OpStatus {result.Status} has no answer."),
+        };
+    }
+
+    // The middleware is the one place that logs an unexpected exception and answers 500: a Faulted outcome goes
+    // there, with the stack of the place that threw it.
+    private static ActionResult Rethrow(Exception exception)
+    {
+        ExceptionDispatchInfo.Throw(exception);
+        throw new UnreachableException();
+    }
 }

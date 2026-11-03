@@ -1,31 +1,28 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Zerox.Ef.Api.Tests.Sample.Core;
 using Zerox.Ef.Api.Tests.Sample.Db;
 using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Api.Tests.Sample.Api;
 
-public sealed class CustomersController(IRepository<Customer> repository, ICustomerMerge merge)
+public sealed class CustomersController(IRepository<Customer> repository, ICustomerService customers)
     : EntityController<Customer>(repository)
 {
-    // A unit of work behind an action: 204, or 404 when a customer does not exist. A project's own action
-    // declares its answers; the errors of the middleware are in the document already.
+    // A unit of work behind an action: 204, 404 when a customer does not exist, 400 when both are the same.
+    // A project's own action declares its answers; the 400 and the errors of the middleware are in the document
+    // already (ZeroxOpenApi documents them on every operation).
     [HttpPost("{id:int}/merge-into/{intoId:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MergeInto(int id, int intoId, CancellationToken ct) =>
-        await merge.MergeAsync(id, intoId, ct) ? NoContent() : NotFound();
+        Answer(await customers.MergeIntoAsync(id, intoId, ct));
 
     // One field, at the version the client read, without reading the row: a stale one answers 409, like a full PUT.
     [HttpPut("{id:int}/name")]
     public async Task<ActionResult<Customer>> Rename(int id, [FromBody] RenameRequest body, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(body);
-        Repository.Update(new Customer { Id = id, Name = body.Name, Version = body.Version }, [nameof(Customer.Name)]);
-        if (!await SaveUnlessMissingAsync(id, ct))
-            return NotFound();
-        return Ok(await Repository.Query().SingleAsync(c => c.Id == id, ct));
+        return Answer(await customers.RenameAsync(id, body.Name, body.Version, ct));
     }
 }

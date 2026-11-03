@@ -71,11 +71,13 @@ piece. The complete example, tested from the repository to HTTP, is
 
    It answers `POST api/Customers/load` (DevExtreme load options, server-side: the options decide
    rows, columns or groups),
-   `GET api/Customers/values/{column}`, and the CRUD. A service that writes more than one repository
-   opens `IUnitOfWork` (`CustomerMerge`); many rows without loading them go through
-   `IMassiveOpHandler<T>` (`OrdersController.CloseBefore`); a single-field action writes the client's one
-   field at the version it read, without reading the row (`CustomersController.Rename`:
-   `Repository.Update(new Customer { Id, Name, Version }, [nameof(Customer.Name)])`, a stale one answers 409).
+   `GET api/Customers/values/{column}`, and the CRUD. An entity's own operations live in its service, each
+   run through `RunAsync` and answered by the controller with `Answer(...)`: one that writes more than one
+   repository opens `IUnitOfWork` (`CustomerService.MergeIntoAsync`); many rows without loading them go
+   through `IMassiveOpHandler<T>` (`OrderService.CloseBeforeAsync`); a single-field change writes the client's
+   one field at the version it read, without reading the row (`CustomerService.RenameAsync`:
+   `Repository.Update(new Customer { Id, Name, Version }, [nameof(Customer.Name)])`, a stale one is a Conflict,
+   409).
    A row with a row version is deleted with the version the client read: `DELETE api/Customers/5?version=3`.
 
 6. A TypeScript client is generated from the document with Orval, and its load is typed from the

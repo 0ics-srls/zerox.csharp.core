@@ -69,6 +69,16 @@ public sealed class SampleApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Should_Answer400_WhenMergingACustomerIntoItselfOverHttp()
+    {
+        var (status, body, _) = await SendAsync(HttpMethod.Post, $"api/Customers/{Acme}/merge-into/{Acme}");
+
+        status.Should().Be(HttpStatusCode.BadRequest);
+        body.GetProperty("Code").GetString().Should().Be("InvalidRequest");
+        body.GetProperty("detail").GetString().Should().Be("A customer cannot be merged into itself.");
+    }
+
+    [Fact]
     public async Task Should_CloseOnlyOpenOrdersBeforeTheDate_WhenCloseBeforeIsCalled()
     {
         // Orders 1..10 are dated 2026-01-02..2026-01-11; 5 and 10 are already closed.

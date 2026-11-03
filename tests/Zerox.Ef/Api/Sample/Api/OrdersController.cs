@@ -1,21 +1,17 @@
 using Microsoft.AspNetCore.Mvc;
+using Zerox.Ef.Api.Tests.Sample.Core;
 using Zerox.Ef.Api.Tests.Sample.Db;
 using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Api.Tests.Sample.Api;
 
-public sealed class OrdersController(IRepository<Order> repository) : EntityController<Order>(repository)
+public sealed class OrdersController(IRepository<Order> repository, IOrderService orders) : EntityController<Order>(repository)
 {
     // A massive operation behind an action: many rows updated without loading them.
     [HttpPost("close-before/{date}")]
     public async Task<IActionResult> CloseBefore(DateOnly date, CancellationToken ct)
     {
-        await using var massive = await Repository.OpenMassiveAsync(ct);
-        var closed = await massive.UpdateWhereAsync(
-            o => o.Status == OrderStatus.Open && o.Date < date,
-            fields => fields.Set(o => o.Status, OrderStatus.Closed),
-            ct);
-        await massive.CommitAsync(ct);
-        return Ok(new { Closed = closed });
+        var closed = await orders.CloseBeforeAsync(date, ct);
+        return closed.IsSuccess ? Ok(new { Closed = closed.Value }) : Answer(closed);
     }
 }
