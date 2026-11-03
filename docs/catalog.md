@@ -138,6 +138,8 @@ The contracts of the database foundation, no EF type in them: what an applicatio
 | The names of the fields a client may write on an entity it sends (public setter; never the key, a navigation or a reserved field) — what `IRepository<T>.Update` marks modified | `EntityFields.Editable<T>()` | `Zerox.Ef/Domain/EntityFields.cs` |
 | An action that reads the current row before deciding finds that its version is not the one the client read: the API answers 409 | `StaleVersionException` | `Zerox.Ef/Domain/StaleVersionException.cs` |
 | A single-row change the server decides alone: re-read and re-apply on conflict, the last writer wins (`MaxAttempts`); a client's change at the version it read is `IRepository<T>.Update` instead | `LastWriterWins` (`SaveAsync<T>`, `MaxAttempts`) | `Zerox.Ef/Domain/LastWriterWins.cs` |
+| The operations of an entity as results, for the API and an in-process UI: the search (`Search.LoadAsync` on `LoadOptions`, `MaxTake`, `SearchSource()` to override), distinct values, get, create, update and delete at the version read; derive it for an entity's own operations, each run through `RunAsync` — the one place where an exception becomes a status (InvalidRequest → Invalid, stale version or lock conflict → Conflict, anything else → Faulted) — and `SaveUnlessMissingAsync` (404 vs 409 after a failed save) | `EntityService<T>` (`RunAsync`, `SaveUnlessMissingAsync`, `Repository`, `MaxTake`, `SearchSource`) | `Zerox.Ef/Domain/EntityService.cs` |
+| A failed save that is the optimistic lock's conflict (a concurrency token on the failed entry), not a missing row | `OptimisticLockConflict.Is` | `Zerox.Ef/Domain/OptimisticLockConflict.cs` |
 
 ## Zerox.Ef.Api
 
