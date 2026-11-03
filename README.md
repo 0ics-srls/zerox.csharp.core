@@ -43,9 +43,16 @@ piece. The complete example, tested from the repository to HTTP, is
            protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyOptimisticLock(Database);
        }
 
-3. Register it with the session rules and the repositories:
+3. Register it with the session rules and the repositories, then an entity service for every entity
+   (`EntityService<T>`: the search and the CRUD as results, for the API and an in-process UI alike):
 
-       builder.Services.AddZeroxDb<SampleDbContext>(o => o.UseSqlite(connection));
+       builder.Services.AddZeroxDb<SampleDbContext>(o => o.UseSqlite(connection)).AddZeroxDomain();
+
+   An entity with operations of its own derives the service and registers it under its own contract
+   and `IEntityService<T>`:
+
+       public sealed class CustomerService(IRepository<Customer> customers) : EntityService<Customer>(customers), ICustomerService { … }
+       builder.Services.AddEntityService<Customer, ICustomerService, CustomerService>();
 
 4. Controllers with the JSON as is, the OpenAPI document clients are generated from, and the error
    middleware first; in Development the document and the Scalar UI (the project's package

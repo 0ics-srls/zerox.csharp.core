@@ -7,7 +7,7 @@
 @feature::11-entity-service (the service layer:EntityService<T>,OpResult<T>,contracts in Core)
 @branch::feature/11-entity-service (from feature/10-db-row-version;local,¬pushed)
 @plan::tasks/11-entity-service/{notes,index,01-core-domain,02-sample-api}.md{TDDAB#6,parsePlan✓,review✓ (LSAI+xmp4),plan commit 23c18e6}
-@block::01✓,02✓,03✓
+@block::01✓,02✓,03✓,04✓
 @consumer::CcV3 (submodule externals/zerox.csharp.core) adapts by its own plan after this one (TaskItemService:EntityService<TaskItem>,TS client machine,ITaskItemTriggers removed)
 
 [WHY]
@@ -21,4 +21,4 @@
 !env::ast-grep in this checkout → scratch sgconfig with CcV3's .claude/lint-rules (_shared+csharp),same rules (.claude links missing here)
 
 [NEXT]
-?04-domain-registration → 05-sample-services → 06-api-over-service → FINAL REVIEW (tools/verify.sh && tools/test-postgres.sh)
+?05-sample-services → 06-api-over-service → FINAL REVIEW (tools/verify.sh && tools/test-postgres.sh)
