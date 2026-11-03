@@ -1,0 +1,58 @@
+using System.Text.Json;
+using Zerox.Ef.Core;
+
+namespace Zerox.Ef.Domain.Tests;
+
+// The load types of Zerox.Ef.Core travel exactly as DevExtreme's: the options a client sends today bind, the
+// result is written with DevExtreme's names (measured on 5.1.0).
+public sealed class LoadTypesTests
+{
+    // The JSON settings of the API: names as declared.
+    private static readonly JsonSerializerOptions AsIs = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = null };
+
+    [Fact]
+    public void Should_BindTheOptionsAClientSendsToday()
+    {
+        const string json = """
+            {"Skip":10,"Take":5,"RequireTotalCount":true,"Filter":["Kind","=","Large"],
+             "Sort":[{"Selector":"Quantity","Desc":true}],
+             "Group":[{"Selector":"At","GroupInterval":"month","IsExpanded":false}],
+             "TotalSummary":[{"Selector":"Quantity","SummaryType":"sum"}],"Select":["Name"]}
+            """;
+
+        var options = JsonSerializer.Deserialize<LoadOptions>(json, AsIs)!;
+
+        options.Skip.Should().Be(10);
+        options.Take.Should().Be(5);
+        options.RequireTotalCount.Should().BeTrue();
+        options.Filter.Should().HaveCount(3);
+        options.Sort!.Single().Selector.Should().Be("Quantity");
+        options.Sort!.Single().Desc.Should().BeTrue();
+        options.Group!.Single().Selector.Should().Be("At");
+        options.Group!.Single().GroupInterval.Should().Be("month");
+        options.Group!.Single().IsExpanded.Should().BeFalse();
+        options.TotalSummary!.Single().SummaryType.Should().Be("sum");
+        options.Select.Should().Equal("Name");
+    }
+
+    [Fact]
+    public void Should_WriteTheResultWithDevExtremeNames()
+    {
+        var loaded = new Loaded { Data = [1, 2], TotalCount = 2, GroupCount = -1 };
+
+        var json = JsonSerializer.Serialize(loaded, AsIs);
+
+        json.Should().Be("""{"data":[1,2],"totalCount":2,"groupCount":-1}""");
+    }
+
+    [Fact]
+    public void Should_WriteAGroupWithDevExtremeNames()
+    {
+        var full = new LoadGroup { Key = "a", Items = null, Count = 3, Summary = [6] };
+        var bare = new LoadGroup { Key = "a", Items = null };
+
+        var json = (JsonSerializer.Serialize(full, AsIs), JsonSerializer.Serialize(bare, AsIs));
+
+        json.Should().Be(("""{"key":"a","items":null,"count":3,"summary":[6]}""", """{"key":"a","items":null}"""));
+    }
+}

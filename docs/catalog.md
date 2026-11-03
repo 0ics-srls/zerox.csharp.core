@@ -111,6 +111,9 @@ The contracts of the database foundation, no EF type in them: what an applicatio
 | The repository of a type decided at run time, on the same context | `IRepositoryFactory` (`For<T>`) | `Zerox.Ef/Core/IRepositoryFactory.cs` |
 | One write for an operation over several repositories: saves inside are swallowed, `ApplyAsync` writes once (nested = slave) | `IUnitOfWork` (from `IRepository<T>.OpenUnitOfWork()`) | `Zerox.Ef/Core/IUnitOfWork.cs` |
 | Update or delete many rows without loading them, exclusive, in its own transaction (no commit = rollback) | `IMassiveOpHandler<T>` (from `IRepository<T>.OpenMassiveAsync()`), `IFieldsToSet<T>` | `Zerox.Ef/Core/IMassiveOpHandler.cs`, `Zerox.Ef/Core/IFieldsToSet.cs` |
+| The outcome of an operation as a value, never an exception: Ok, Created, Deleted, NotFound, Conflict, Invalid, Failed (the domain refused it), Faulted (the exception inside); no transport meaning | `OpResult<T>`, `OpStatus`, `OpResult` (`Ok`, `Created`, `Deleted`, `NotFound`, `Conflict`, `Invalid`, `Failed`, `Faulted`) | `Zerox.Ef/Core/OpResult.cs` |
+| A load's options and answer without DevExtreme: every member of `DataSourceLoadOptionsBase` by name (the wire unchanged), the result and its groups written with DevExtreme's JSON names | `LoadOptions`, `SortingInfo`, `GroupingInfo`, `SummaryInfo`, `Loaded`, `LoadGroup` | `Zerox.Ef/Core/LoadOptions.cs`, `Zerox.Ef/Core/Loaded.cs` |
+| The operations every entity has, for the API and an in-process UI alike: load, distinct values, get, create, update and delete at the version read — each an `OpResult` | `IEntityService<T>` | `Zerox.Ef/Core/IEntityService.cs` |
 
 ## Zerox.Ef.Db
 

@@ -142,3 +142,6 @@
 ✓XML docs:/// on the whole Zerox.Ef public surface (380 lines),CS1591 error in the four Ef projects;commit e4b68f9
 ✓PostgreSQL:tests/Zerox.Ef/TestDatabase.cs linked into the 3 Ef test projects (Sqlite in memory,or a fresh PostgreSQL database per class when ZEROX_EF_TEST_POSTGRES is set,dropped WITH (FORCE));tools/test-postgres.sh (postgres:16-alpine in Docker,[k/5]);192 Ef cases green on PostgreSQL 16 (Npgsql.EntityFrameworkCore.PostgreSQL 10.0.3) and Sqlite;negative check:a dead server makes them fail;sample keeps decimal on a real database (double conversion only on Sqlite)
 !found::Npgsql EnsureCreatedAsync and every library road stay async under the guard
+
+[2026-10-30 10-db-row-version]
+✓plan tasks/10-db-row-version TDDAB#5 executed (run-20261030-zerox10rowversion,FINAL REVIEW✓);branch feature/10-db-row-version pushed (16b7d91);row version = EF [Timestamp] on the provider's type (uint→xmin),client row saved as sent at the version read,404|409 split after a failed save,SQLite default 0 + warning,LastWriterWins server-only;IHasOptimisticLock+PinReadVersion+CopyEditable removed

@@ -3,26 +3,21 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [TASK]
-@state::DONE✓{run-20261030-zerox10rowversion 5/5,FINAL REVIEW✓}{branch committed,¬pushed}
-@feature::10-db-row-version (the optimistic lock on the database's row version)
-@branch::feature/10-db-row-version (from feature/09-single-load)
-@plan::tasks/10-db-row-version/{notes,index,01-db,02-domain-api}.md{TDDAB#5,parsePlan✓,j-review-plan✓}
-@block::05✓+FINAL-REVIEW✓{verify.sh[1-3]✓ build,format,698/698;[4/4] lint-run.sh missing in this checkout (.ai-agent not initialized)→ast-grep with the pack rules 0;test-postgres 73/80/82}
-@consumer::CcV3 (the first consumer,submodule externals/zerox.csharp.core) found the defect;adapted by its own plan after this one
+@state::DEVELOP⚡{/j-cvm-exec-plan,execution:run-20261103-zerox11}
+@feature::11-entity-service (the service layer:EntityService<T>,OpResult<T>,contracts in Core)
+@branch::feature/11-entity-service (from feature/10-db-row-version;local,¬pushed)
+@plan::tasks/11-entity-service/{notes,index,01-core-domain,02-sample-api}.md{TDDAB#6,parsePlan✓,review✓ (LSAI+xmp4),plan commit 23c18e6}
+@block::01✓
+@consumer::CcV3 (submodule externals/zerox.csharp.core) adapts by its own plan after this one (TaskItemService:EntityService<TaskItem>,TS client machine,ITaskItemTriggers removed)
 
 [WHY]
-!found::©User 2026-10-30 "lo hai fatto male":Version incremented by SessionInterceptor (app-managed) → ExecuteUpdate|raw SQL|another process leave it unchanged → a later PUT with the old Version answered 200 and overwrote (lost update proven on PostgreSQL);PUT reloaded the row + CopyEditable + PinReadVersion = a patch on a design error
-!decision::©User "è compito della EF gestirlo","nessun trigger","con sqlite l'utente sarà avvisato che non avrà optimistic lock","carico record con rowVersion=100,nel save EF vede che in db non c'è quel valore → rifiuta,nessun pin"
-@design::[Timestamp] (IsRowVersion) on the type the provider generates (uint→xmin on PostgreSQL,ulong|long on SQL Server);save the client's row as sent (attach,editable fields modified);404|409 told apart only after a failed save;SQLite → default 0 + one warning;?version=N a ulong,TryDeleteById false when it does not fit;StaleVersionException → 409 for actions that read the row first;LastWriterWins only for the server's own change
+©User 2026-10-31 (CcV3 redesign interview)::Zerox.Ef has no service layer (EntityController<T> talks to IRepository<T>:search,CRUD,404/409);an Avalonia UI reuses nothing;entity logic has no place
+!decisions::OpResult<T>{Ok,Created,Deleted,NotFound,Conflict,Invalid,Failed,Faulted};Faulted carries ALL exceptions (cancellation too);Failed = domain refused,no HTTP meaning,controller→400;contracts in Zerox.Ef.Core with own load types (Core zero deps);EntityService<T> derivable,registered for every entity,derived services registered too;¬generic SM API (server firing = a case's own service)
+!decisions-PROPOSE 2026-11-03::Faulted rethrown by the controller to ErrorHandlingMiddleware (one place logs/500);problem Code stays from the status (Failed→InvalidRequest);LoadOptions copies EVERY DevExtreme member (wire unchanged,schema renamed DataSourceLoadOptionsBase→LoadOptions)
+@measured::DevExtreme 5.1.0 LoadResult writes totalCount/groupCount always (-1 default),summary JsonIgnore WhenWritingDefault;Group count/summary same → Loaded/LoadGroup mirror it
 
 [DECISIONS DURING EXECUTION]
->fixed::OpenAPI contract depended on the build machine's line endings (compiler writes XML docs with CRLF on Windows → summaries "\r\n")→ZeroxOpenApi.LineBreaks document transformer (OpenApiWalker+OpenApiVisitorBase,every text ReplaceLineEndings("\n"),last transformer)+OpenApiDocumentTests.Should_BreakEveryTextWithLf_WhateverThePlatformThatBuiltTheDocumentation{©User:"non deve dipendere da line endings,non azzardarti a girarlo"}
->fixed::Sample client lockfile named a registry (nexus.0ics.ai) → npm 12 EALLOWREMOTE elsewhere→client/.npmrc omit-lockfile-registry-resolved=true + lockfile without "resolved" (integrity kept){©User:"usi valori assoluti!!! non puoi!!!"}
->fixed::Vitest found no test under a folder with "#" (Vite cuts module ids at #)→client/vitest.config.mjs test.experimental.viteModuleRunner=false (Node imports the tests;tsconfig erasableSyntaxOnly)
->found::EF builds a model once per context type and shares it → a test watching the model building needs a context type of its own (RowVersionDbContext);TestDb.NewContext takes no logger
->removed::EntityFieldsTests.Should_NameTheFieldsCopyEditableWrites_WhenAsked with CopyEditable (one selection left,nothing to compare){plan:block 04 removes CopyEditable}
-!env::zerox checkout inside CcV3 has no .claude/lint-rules links → ast-grep run with the pack's rules of CcV3 through a scratch sgconfig (same rules)
+!env::ast-grep in this checkout → scratch sgconfig with CcV3's .claude/lint-rules (_shared+csharp),same rules (.claude links missing here)
 
 [NEXT]
-?02-db-client-row-writes → 03 → 04 → 05 → FINAL REVIEW (tools/verify.sh && tools/test-postgres.sh)
-?then CcV3 plan:TaskItem.Version→[Timestamp] uint (xmin)+migration dropping the column,trigger action compares the version first (StaleVersionException),FakeRepository new members,client regenerated
+?02-domain-load-conversion → 03-domain-entity-service → 04-domain-registration → 05-sample-services → 06-api-over-service → FINAL REVIEW (tools/verify.sh && tools/test-postgres.sh)

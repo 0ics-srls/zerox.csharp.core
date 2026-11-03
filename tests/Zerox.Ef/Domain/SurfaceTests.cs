@@ -13,6 +13,12 @@ public sealed class SurfaceTests
     public void Should_ExposeNoPin_WhenTheRepositoryIsInspected() =>
         typeof(IRepository<>).GetMethod("PinReadVersion").Should().BeNull();
 
+    // The contracts depend on nothing: no package, no project, only the runtime.
+    [Fact]
+    public void Should_ReferenceOnlyTheRuntime_WhenTheCoreIsInspected() =>
+        typeof(IEntity).Assembly.GetReferencedAssemblies().Select(a => a.Name!)
+            .Should().OnlyContain(name => name.StartsWith("System", StringComparison.Ordinal) || name == "netstandard" || name == "mscorlib");
+
     [Fact]
     public void Should_TakeNoClientVersion_WhenLastWriterWinsIsInspected() =>
         typeof(LastWriterWins).GetMethod(nameof(LastWriterWins.SaveAsync))!.GetParameters()
