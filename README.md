@@ -65,12 +65,14 @@ piece. The complete example, tested from the repository to HTTP, is
        app.MapControllers();
        if (app.Environment.IsDevelopment()) { app.MapOpenApi(); app.MapScalarApiReference(); }
 
-5. One line per entity — the project adds its own `[Authorize]`:
+5. One line per entity, over its service — the controller never touches the storage, and the project adds
+   its own `[Authorize]`:
 
-       public sealed class CustomersController(IRepository<Customer> repository) : EntityController<Customer>(repository);
+       public sealed class OrdersController(IEntityService<Order> service) : EntityController<Order>(service);
+       public sealed class CustomersController(ICustomerService customers) : EntityController<Customer>(customers) { … }
 
-   It answers `POST api/Customers/load` (DevExtreme load options, server-side: the options decide
-   rows, columns or groups),
+   It answers `POST api/Customers/load` (`LoadOptions`, DevExtreme's load options member by member,
+   server-side: the options decide rows, columns or groups),
    `GET api/Customers/values/{column}`, and the CRUD. An entity's own operations live in its service, each
    run through `RunAsync` and answered by the controller with `Answer(...)`: one that writes more than one
    repository opens `IUnitOfWork` (`CustomerService.MergeIntoAsync`); many rows without loading them go
@@ -79,6 +81,12 @@ piece. The complete example, tested from the repository to HTTP, is
    `Repository.Update(new Customer { Id, Name, Version }, [nameof(Customer.Name)])`, a stale one is a Conflict,
    409).
    A row with a row version is deleted with the version the client read: `DELETE api/Customers/5?version=3`.
+
+   **Breaking (feature/11-entity-service)** for a project on an earlier version: `EntityController<T>` takes
+   `IEntityService<T>` (call `AddZeroxDomain()` after `AddZeroxDb`), not `IRepository<T>`; a derived action
+   calls its service and answers with `Answer(...)` instead of `Repository` / `SaveUnlessMissingAsync` (both
+   live in `EntityService<T>` now); the load body is `LoadOptions`, so a generated client renames
+   `DataSourceLoadOptionsBase` (the JSON is the same).
 
 6. A TypeScript client is generated from the document with Orval, and its load is typed from the
    request: `tests/Zerox.Ef/Api/Sample/client/` (`src/load.ts`, no type assertion; checked by `tsc`, ESLint with

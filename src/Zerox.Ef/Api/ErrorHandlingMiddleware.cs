@@ -21,7 +21,7 @@ internal sealed class ErrorHandlingMiddleware(RequestDelegate next, IProblemDeta
         {
             await next(context).ConfigureAwait(false);
         }
-        catch (DbUpdateConcurrencyException e) when (IsOptimisticLockConflict(e))
+        catch (DbUpdateConcurrencyException e) when (OptimisticLockConflict.Is(e))
         {
             logger.LogWarning(e, "Optimistic lock conflict");
             await WriteAsync(context, StatusCodes.Status409Conflict, "The row was changed by another user.").ConfigureAwait(false);
@@ -45,11 +45,6 @@ internal sealed class ErrorHandlingMiddleware(RequestDelegate next, IProblemDeta
             await WriteAsync(context, StatusCodes.Status500InternalServerError, "An unexpected error occurred.").ConfigureAwait(false);
         }
     }
-
-    // EF throws DbUpdateConcurrencyException on every UPDATE/DELETE that hits 0 rows, even without a
-    // token (updating a row that does not exist): the 409 belongs only to the opt-in lock.
-    private static bool IsOptimisticLockConflict(DbUpdateConcurrencyException e) =>
-        e.Entries.Any(entry => entry.Metadata.GetProperties().Any(p => p.IsConcurrencyToken));
 
     // Written by the platform's ProblemDetails service with the HTTP JSON options (AddZeroxJson). After
     // the start of the response the status cannot change: the client gets a cut response, never a wrong one.

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Zerox.Ef.Core;
+using Zerox.Ef.Domain;
 
 namespace Zerox.Ef.Api.Tests;
 
@@ -31,12 +32,12 @@ public sealed class AnswerTests : IAsyncLifetime
     public static TheoryData<OpStatus> RefusedStatuses => [OpStatus.Invalid, OpStatus.Failed];
 
     // A controller of the base, its Answer open to the tests, on the services of the application.
-    private sealed class ProbeController(IRepository<Plain> repository) : EntityController<Plain>(repository)
+    private sealed class ProbeController(IEntityService<Plain> service) : EntityController<Plain>(service)
     {
         public ActionResult Translate<TValue>(OpResult<TValue> result) => Answer(result);
     }
 
-    private ProbeController Probe() => new(_scope.ServiceProvider.GetRequiredService<IRepository<Plain>>())
+    private ProbeController Probe() => new(new EntityService<Plain>(_scope.ServiceProvider.GetRequiredService<IRepository<Plain>>()))
     {
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { RequestServices = _scope.ServiceProvider } },
     };

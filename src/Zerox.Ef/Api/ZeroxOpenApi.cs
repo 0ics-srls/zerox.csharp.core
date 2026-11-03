@@ -1,10 +1,10 @@
-using DevExtreme.AspNet.Data.ResponseModel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
+using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Api;
 
@@ -138,7 +138,7 @@ public static class ZeroxOpenApi
         };
     }
 
-    // The load of EntityController<T> answers DevExtreme's LoadResult, whose data the platform cannot
+    // The load of EntityController<T> answers Loaded, whose data the platform cannot
     // type: the response is documented as LoadResultOf<T>, data being the rows of T (whole, or the fields
     // Select asks) or the groups, which carry keys, counts and sums and never rows.
     private sealed class LoadResults : IOpenApiOperationTransformer
@@ -209,7 +209,7 @@ public static class ZeroxOpenApi
         }
     }
 
-    // DevExtreme's LoadResult, the declared type of every load, stays in the document only while a response
+    // Loaded, the declared type of every load, stays in the document only while a response
     // still uses it: its data has no type, and a generated client would carry it as unknown.
     private sealed class UnusedLoadResult : IOpenApiDocumentTransformer
     {
@@ -219,9 +219,9 @@ public static class ZeroxOpenApi
                 .SelectMany(p => p.Operations?.Values.AsEnumerable() ?? [])
                 .SelectMany(o => o.Responses?.Values.AsEnumerable() ?? [])
                 .SelectMany(r => r.Content?.Values.AsEnumerable() ?? [])
-                .Any(m => m.Schema is OpenApiSchemaReference { Reference.Id: nameof(LoadResult) }) ?? false;
+                .Any(m => m.Schema is OpenApiSchemaReference { Reference.Id: nameof(Loaded) }) ?? false;
             if (!used)
-                document.Components?.Schemas?.Remove(nameof(LoadResult));
+                document.Components?.Schemas?.Remove(nameof(Loaded));
             return Task.CompletedTask;
         }
     }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Zerox.Ef.Core;
 
 /// <summary>
@@ -152,8 +154,10 @@ public sealed class GroupingInfo
     public bool Desc { get; set; }
 
     /// <summary>
-    /// A date part ("year", "quarter", "month", "day", "dayOfWeek", "hour", "minute", "second") or a number's width.
+    /// A date part ("year", "quarter", "month", "day", "dayOfWeek", "hour", "minute", "second") or a number's width
+    /// (in JSON a text or a number, as DevExtreme reads it).
     /// </summary>
+    [JsonConverter(typeof(NumberOrStringJsonConverter))]
     public string? GroupInterval { get; set; }
 
     /// <summary>

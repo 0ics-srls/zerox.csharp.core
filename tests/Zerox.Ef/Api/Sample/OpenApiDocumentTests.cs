@@ -98,6 +98,24 @@ public sealed class OpenApiDocumentTests : IAsyncLifetime
         data.Should().Equal("#/components/schemas/Order", "#/components/schemas/LoadGroup");
     }
 
+    // The load's body is the service's own type: the members a client sends are the same, DevExtreme leaves the
+    // contract.
+    [Fact]
+    public async Task Should_DocumentTheLoadOptions_WhenTheDocumentIsServed()
+    {
+        using var document = JsonDocument.Parse(await ServedAsync());
+        var root = document.RootElement;
+
+        var body = root.GetProperty("paths").GetProperty("/api/Customers/load").GetProperty("post")
+            .GetProperty("requestBody").GetProperty("content").GetProperty("application/json").GetProperty("schema");
+        var schemas = root.GetProperty("components").GetProperty("schemas").EnumerateObject().Select(s => s.Name).ToList();
+        // The body may be left out (null): the schema is null or the options.
+        body.GetProperty("oneOf").EnumerateArray().Where(s => s.TryGetProperty("$ref", out _)).Select(s => s.GetProperty("$ref").GetString())
+            .Should().Equal("#/components/schemas/LoadOptions");
+        schemas.Should().NotContain(["DataSourceLoadOptionsBase", "Loaded", "LoadResult"]);
+        schemas.Should().Contain(["LoadOptions", "LoadResultOfCustomer", "LoadGroup"]);
+    }
+
     [Fact]
     public async Task Should_ServeTheScalarUiOnTheDocument()
     {

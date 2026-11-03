@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Text.Json;
 using DevExtreme.AspNet.Data;
 using DevExtreme.AspNet.Data.ResponseModel;
 using Zerox.Ef.Core;
@@ -29,7 +31,7 @@ internal static class LoadConversion
             GroupInterval = g.GroupInterval,
             IsExpanded = g.IsExpanded,
         }).ToArray(),
-        Filter = options.Filter?.ToList(),
+        Filter = FilterOf(options.Filter),
         TotalSummary = options.TotalSummary?.Select(Summary).ToArray(),
         GroupSummary = options.GroupSummary?.Select(Summary).ToArray(),
         Select = options.Select?.ToArray(),
@@ -54,6 +56,18 @@ internal static class LoadConversion
         GroupCount = result.groupCount,
         Summary = result.summary,
     };
+
+    // A filter that came from JSON holds JsonElements; DevExtreme reads its filter with its own converter (internal),
+    // so such a filter goes through DevExtreme's own deserialization — the values it gets are the ones it always got.
+    // A filter built in the process is copied as it is.
+    private static IList? FilterOf(IReadOnlyList<object?>? filter) =>
+        filter switch
+        {
+            null => null,
+            _ when filter.Any(element => element is JsonElement) =>
+                JsonSerializer.Deserialize<DataSourceLoadOptionsBase>(JsonSerializer.SerializeToUtf8Bytes(new { Filter = filter }))!.Filter,
+            _ => filter.ToList(),
+        };
 
     private static DxSummary Summary(CoreSummary summary) => new() { Selector = summary.Selector, SummaryType = summary.SummaryType };
 

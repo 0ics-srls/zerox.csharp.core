@@ -2,12 +2,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Zerox.Ef.Api.Tests.Sample.Core;
 using Zerox.Ef.Api.Tests.Sample.Db;
-using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Api.Tests.Sample.Api;
 
-public sealed class CustomersController(IRepository<Customer> repository, ICustomerService customers)
-    : EntityController<Customer>(repository)
+public sealed class CustomersController(ICustomerService customers) : EntityController<Customer>(customers)
 {
     // A unit of work behind an action: 204, 404 when a customer does not exist, 400 when both are the same.
     // A project's own action declares its answers; the 400 and the errors of the middleware are in the document

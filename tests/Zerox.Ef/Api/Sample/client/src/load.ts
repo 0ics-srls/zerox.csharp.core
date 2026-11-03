@@ -1,10 +1,6 @@
 // The load of an entity, typed from the request: the request says what comes back — rows, only the
 // asked columns, or groups — and the compiler computes that shape from the entity of the generated call.
-import type {
-  DataSourceLoadOptionsBase,
-  LoadGroup,
-  ProblemDetails,
-} from "./api/model";
+import type { LoadGroup, LoadOptions, ProblemDetails } from "./api/model";
 
 // Four levels of nesting, counted by the length of a tuple.
 type Limit = [unknown, unknown, unknown, unknown];
@@ -135,7 +131,7 @@ export interface Loaded<D> {
 }
 
 /** A generated load call — Customers_Load, Orders_Load — with its answers: the result, or the ProblemDetails. */
-export type LoadCall = (options?: DataSourceLoadOptionsBase | null) => Promise<{
+export type LoadCall = (options?: LoadOptions | null) => Promise<{
   status: number;
   data: { data: readonly unknown[] } | ProblemDetails;
 }>;
@@ -165,7 +161,7 @@ export class LoadError extends Error {
 }
 
 // The request as the generated body: the same names, the arrays copied out of their readonly form.
-const body = <T>(request: LoadRequest<T>): DataSourceLoadOptionsBase => {
+const body = <T>(request: LoadRequest<T>): LoadOptions => {
   const {
     Filter: filter,
     GroupSummary: groupSummary,

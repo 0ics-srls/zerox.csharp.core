@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Zerox.Ef.Api.Tests.Sample.Core;
 using Zerox.Ef.Api.Tests.Sample.Db;
-using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Api.Tests.Sample.Api;
 
-public sealed class OrdersController(IRepository<Order> repository, IOrderService orders) : EntityController<Order>(repository)
+public sealed class OrdersController(IOrderService orders) : EntityController<Order>(orders)
 {
     // A massive operation behind an action: many rows updated without loading them.
     [HttpPost("close-before/{date}")]

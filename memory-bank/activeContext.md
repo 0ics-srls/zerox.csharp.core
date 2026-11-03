@@ -7,7 +7,7 @@
 @feature::11-entity-service (the service layer:EntityService<T>,OpResult<T>,contracts in Core)
 @branch::feature/11-entity-service (from feature/10-db-row-version;local,¬pushed)
 @plan::tasks/11-entity-service/{notes,index,01-core-domain,02-sample-api}.md{TDDAB#6,parsePlan✓,review✓ (LSAI+xmp4),plan commit 23c18e6}
-@block::01✓,02✓,03✓,04✓,05✓
+@block::01✓,02✓,03✓,04✓,05✓,06✓
 @consumer::CcV3 (submodule externals/zerox.csharp.core) adapts by its own plan after this one (TaskItemService:EntityService<TaskItem>,TS client machine,ITaskItemTriggers removed)
 
 [WHY]
@@ -19,8 +19,9 @@
 [DECISIONS DURING EXECUTION]
 !doc::EntityService doc names AddZeroxDomain/AddEntityService as text (a cref to a type not yet written breaks the build)
 >deviation-05::MergeInto declares 204+404 only (plan:also 400) ← ZeroxOpenApi documents the 400 on every operation with "The request is invalid: the detail says why."; an explicit 400 replaced it with "Bad Request" → Sample.json unchanged
+>fixed-06::wire kept as DevExtreme reads it ← DevExtreme binds Filter with its internal ListConverter and GroupInterval with its internal NumericAndStringConverter (JsonConverter attributes,measured by reflection on 5.1.0):Core GroupingInfo.GroupInterval [JsonConverter(NumberOrStringJsonConverter)] (internal,BCL;schema untyped as before),Domain LoadConversion.FilterOf passes a JSON filter (JsonElements) through DevExtreme's own deserialization of DataSourceLoadOptionsBase (reuse,¬rewrite);tests LoadTypesTests.Should_BindANumericGroupInterval,LoadConversionTests.Should_ReadAJsonFilterAsDevExtremeDoes
 !lsai::index keeps deleted files (CustomerMerge.cs) until reopened → absence proved by ls+git
 !env::ast-grep in this checkout → scratch sgconfig with CcV3's .claude/lint-rules (_shared+csharp),same rules (.claude links missing here)
 
 [NEXT]
-?06-api-over-service → FINAL REVIEW (tools/verify.sh && tools/test-postgres.sh)
+?FINAL REVIEW (tools/verify.sh && tools/test-postgres.sh)

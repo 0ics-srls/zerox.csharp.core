@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Globalization;
 using System.Reflection;
+using System.Text.Json;
 using DevExtreme.AspNet.Data;
 using DevExtreme.AspNet.Data.ResponseModel;
 using Microsoft.EntityFrameworkCore;
@@ -143,6 +144,18 @@ public sealed class LoadConversionTests : IAsyncLifetime
             converted.Sort, converted.Group, converted.Filter, converted.TotalSummary, converted.GroupSummary,
             converted.Select, converted.PreSelect, converted.PrimaryKey,
         }.Should().AllSatisfy(collection => collection.Should().BeNull());
+    }
+
+    // A filter that came from JSON holds JsonElements: DevExtreme reads it with its own converter, as it always did.
+    [Fact]
+    public async Task Should_ReadAJsonFilterAsDevExtremeDoes()
+    {
+        var options = JsonSerializer.Deserialize<LoadOptions>(
+            """{"Take":10,"Filter":[["Kind","=","Large"],"and",["Quantity","<",7]],"Sort":[{"Selector":"Quantity"}]}""")!;
+
+        var (_, converted) = await LoadAsync(options);
+
+        converted.Data.Cast<Item>().Select(i => i.Quantity).Should().Equal(2, 4, 6);
     }
 
     [Fact]

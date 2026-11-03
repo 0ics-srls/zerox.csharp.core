@@ -160,7 +160,7 @@
                     "type": "null"
                   },
                   {
-                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                    "$ref": "#/components/schemas/LoadOptions"
                   }
                 ]
               }
@@ -172,7 +172,7 @@
                     "type": "null"
                   },
                   {
-                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                    "$ref": "#/components/schemas/LoadOptions"
                   }
                 ]
               }
@@ -184,7 +184,7 @@
                     "type": "null"
                   },
                   {
-                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                    "$ref": "#/components/schemas/LoadOptions"
                   }
                 ]
               }
@@ -230,7 +230,7 @@
         "tags": [
           "Customers"
         ],
-        "summary": "The column name comes from the URL: it is checked against the real properties before any query.",
+        "summary": "The distinct values of a text column; the column name comes from the URL and is checked against the real\nproperties before any query.",
         "operationId": "Customers_Values",
         "parameters": [
           {
@@ -621,7 +621,7 @@
                     "type": "null"
                   },
                   {
-                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                    "$ref": "#/components/schemas/LoadOptions"
                   }
                 ]
               }
@@ -633,7 +633,7 @@
                     "type": "null"
                   },
                   {
-                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                    "$ref": "#/components/schemas/LoadOptions"
                   }
                 ]
               }
@@ -645,7 +645,7 @@
                     "type": "null"
                   },
                   {
-                    "$ref": "#/components/schemas/DataSourceLoadOptionsBase"
+                    "$ref": "#/components/schemas/LoadOptions"
                   }
                 ]
               }
@@ -691,7 +691,7 @@
         "tags": [
           "Orders"
         ],
-        "summary": "The column name comes from the URL: it is checked against the real properties before any query.",
+        "summary": "The distinct values of a text column; the column name comes from the URL and is checked against the real\nproperties before any query.",
         "operationId": "Orders_Values",
         "parameters": [
           {
@@ -1053,165 +1053,32 @@
           }
         }
       },
-      "DataSourceLoadOptionsBase": {
-        "type": "object",
-        "properties": {
-          "RequireTotalCount": {
-            "type": "boolean"
-          },
-          "RequireGroupCount": {
-            "type": "boolean"
-          },
-          "IsCountQuery": {
-            "type": "boolean"
-          },
-          "IsSummaryQuery": {
-            "type": "boolean"
-          },
-          "Skip": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "Take": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "Sort": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/SortingInfo"
-            }
-          },
-          "Group": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/GroupingInfo"
-            }
-          },
-          "Filter": {
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "TotalSummary": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/SummaryInfo"
-            }
-          },
-          "GroupSummary": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/SummaryInfo"
-            }
-          },
-          "Select": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string"
-            }
-          },
-          "PreSelect": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string"
-            }
-          },
-          "RemoteSelect": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          },
-          "RemoteGrouping": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          },
-          "ExpandLinqSumType": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          },
-          "PrimaryKey": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string"
-            }
-          },
-          "DefaultSort": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "StringToLower": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          },
-          "PaginateViaPrimaryKey": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          },
-          "SortByPrimaryKey": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          },
-          "AllowAsyncOverSync": {
-            "type": "boolean"
-          }
-        }
-      },
       "GroupingInfo": {
         "type": "object",
         "properties": {
-          "GroupInterval": { },
-          "IsExpanded": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          },
           "Selector": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "The field (a navigation's with a dot)."
           },
           "Desc": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Descending keys."
+          },
+          "GroupInterval": {
+            "description": "A date part (\"year\", \"quarter\", \"month\", \"day\", \"dayOfWeek\", \"hour\", \"minute\", \"second\") or a number's width\n(in JSON a text or a number, as DevExtreme reads it)."
+          },
+          "IsExpanded": {
+            "type": [
+              "null",
+              "boolean"
+            ],
+            "description": "Whether the group carries its inner level (the server never lets it carry rows)."
           }
-        }
+        },
+        "description": "One grouping level."
       },
       "LoadGroup": {
         "required": [
@@ -1254,6 +1121,168 @@
             }
           }
         }
+      },
+      "LoadOptions": {
+        "type": "object",
+        "properties": {
+          "RequireTotalCount": {
+            "type": "boolean",
+            "description": "Count the rows that match the filter (totalCount)."
+          },
+          "RequireGroupCount": {
+            "type": "boolean",
+            "description": "Count the top-level groups (groupCount)."
+          },
+          "IsCountQuery": {
+            "type": "boolean",
+            "description": "Only the count: no rows."
+          },
+          "IsSummaryQuery": {
+            "type": "boolean",
+            "description": "Only the summary: no rows."
+          },
+          "Skip": {
+            "type": "integer",
+            "description": "The rows to skip.",
+            "format": "int32"
+          },
+          "Take": {
+            "type": "integer",
+            "description": "The rows to read.",
+            "format": "int32"
+          },
+          "Sort": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SortingInfo"
+            },
+            "description": "The order of the rows."
+          },
+          "Group": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/GroupingInfo"
+            },
+            "description": "The grouping levels: keys, counts and sums per group, never rows."
+          },
+          "Filter": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "description": "DevExtreme's filter in its array form: `[\"Field\", \"op\", value]`, `[\"!\", filter]`, filters joined by\n\"and\" / \"or\", nested arrays inside."
+          },
+          "TotalSummary": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SummaryInfo"
+            },
+            "description": "The sums over every row that matches the filter."
+          },
+          "GroupSummary": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SummaryInfo"
+            },
+            "description": "The sums of each group."
+          },
+          "Select": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Only these fields of each row (names through navigations with a dot)."
+          },
+          "PreSelect": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "The fields projected before the rest of the load runs."
+          },
+          "RemoteSelect": {
+            "type": [
+              "null",
+              "boolean"
+            ],
+            "description": "Project in the query (the server forces its own choice)."
+          },
+          "RemoteGrouping": {
+            "type": [
+              "null",
+              "boolean"
+            ],
+            "description": "Group in the query (the server forces its own choice)."
+          },
+          "ExpandLinqSumType": {
+            "type": [
+              "null",
+              "boolean"
+            ],
+            "description": "Widen the type of a sum to avoid an overflow."
+          },
+          "PrimaryKey": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "The key fields, for a stable order of the pages."
+          },
+          "DefaultSort": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "The field that orders the rows when no sort is given."
+          },
+          "StringToLower": {
+            "type": [
+              "null",
+              "boolean"
+            ],
+            "description": "Compare strings in lower case."
+          },
+          "PaginateViaPrimaryKey": {
+            "type": [
+              "null",
+              "boolean"
+            ],
+            "description": "Page through the key instead of skipping rows."
+          },
+          "SortByPrimaryKey": {
+            "type": [
+              "null",
+              "boolean"
+            ],
+            "description": "Add the key to the order of the rows."
+          },
+          "AllowAsyncOverSync": {
+            "type": "boolean",
+            "description": "Allow a synchronous road inside the load (the server always refuses it)."
+          }
+        },
+        "description": "The options of one load, member by member those of DevExtreme's DataSourceLoadOptionsBase (5.1.0), with the\nsame names and meaning: the JSON a client sends binds unchanged, and the contracts name no DevExtreme type.\nThe server still decides what a client does not (no synchronous road, grouping and projection by the\nprovider, the page limit): the members it forces are overridden before the load runs."
       },
       "LoadResultOfCustomer": {
         "required": [
@@ -1448,12 +1477,15 @@
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "The field (a navigation's with a dot)."
           },
           "Desc": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Descending."
           }
-        }
+        },
+        "description": "One level of the order of the rows."
       },
       "SummaryInfo": {
         "type": "object",
@@ -1462,15 +1494,18 @@
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "The field."
           },
           "SummaryType": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "\"sum\", \"min\", \"max\", \"avg\" or \"count\"."
           }
-        }
+        },
+        "description": "One sum, total or per group."
       }
     }
   },

@@ -35,6 +35,17 @@ public sealed class LoadTypesTests
         options.Select.Should().Equal("Name");
     }
 
+    // A client may send a number's group width as a JSON number, as DevExtreme reads it.
+    [Fact]
+    public void Should_BindANumericGroupInterval()
+    {
+        const string json = """{"Group":[{"Selector":"Quantity","GroupInterval":10},{"Selector":"At","GroupInterval":"month"}]}""";
+
+        var options = JsonSerializer.Deserialize<LoadOptions>(json, AsIs)!;
+
+        options.Group!.Select(g => g.GroupInterval).Should().Equal("10", "month");
+    }
+
     [Fact]
     public void Should_WriteTheResultWithDevExtremeNames()
     {
