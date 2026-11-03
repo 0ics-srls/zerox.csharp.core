@@ -3,11 +3,11 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [TASK]
-@state::DEVELOP⚡{/j-cvm-exec-plan,execution:run-20261103-zerox11}
+@state::DONE✓{run-20261103-zerox11 6/6,FINAL REVIEW✓}{branch committed,¬pushed}
 @feature::11-entity-service (the service layer:EntityService<T>,OpResult<T>,contracts in Core)
 @branch::feature/11-entity-service (from feature/10-db-row-version;local,¬pushed)
 @plan::tasks/11-entity-service/{notes,index,01-core-domain,02-sample-api}.md{TDDAB#6,parsePlan✓,review✓ (LSAI+xmp4),plan commit 23c18e6}
-@block::01✓,02✓,03✓,04✓,05✓,06✓
+@block::06✓+FINAL-REVIEW✓{verify.sh[1-3]✓ build,format,781/781;[4/4] lint-run.sh missing here→ast-grep pack rules 0;test-postgres 73/145/100 on port 53714}
 @consumer::CcV3 (submodule externals/zerox.csharp.core) adapts by its own plan after this one (TaskItemService:EntityService<TaskItem>,TS client machine,ITaskItemTriggers removed)
 
 [WHY]
@@ -20,8 +20,9 @@
 !doc::EntityService doc names AddZeroxDomain/AddEntityService as text (a cref to a type not yet written breaks the build)
 >deviation-05::MergeInto declares 204+404 only (plan:also 400) ← ZeroxOpenApi documents the 400 on every operation with "The request is invalid: the detail says why."; an explicit 400 replaced it with "Bad Request" → Sample.json unchanged
 >fixed-06::wire kept as DevExtreme reads it ← DevExtreme binds Filter with its internal ListConverter and GroupInterval with its internal NumericAndStringConverter (JsonConverter attributes,measured by reflection on 5.1.0):Core GroupingInfo.GroupInterval [JsonConverter(NumberOrStringJsonConverter)] (internal,BCL;schema untyped as before),Domain LoadConversion.FilterOf passes a JSON filter (JsonElements) through DevExtreme's own deserialization of DataSourceLoadOptionsBase (reuse,¬rewrite);tests LoadTypesTests.Should_BindANumericGroupInterval,LoadConversionTests.Should_ReadAJsonFilterAsDevExtremeDoes
+!env::tools/test-postgres.sh default port 55432 lies in the Windows dynamic port range → taken by an outbound connection (netstat TIME_WAIT) → every PostgreSQL test "connection refused" (2 runs);ZEROX_EF_POSTGRES_PORT=53714 → green;script unchanged (report to ©User)
 !lsai::index keeps deleted files (CustomerMerge.cs) until reopened → absence proved by ls+git
 !env::ast-grep in this checkout → scratch sgconfig with CcV3's .claude/lint-rules (_shared+csharp),same rules (.claude links missing here)
 
 [NEXT]
-?FINAL REVIEW (tools/verify.sh && tools/test-postgres.sh)
+?CcV3 plan:TaskItemService:EntityService<TaskItem> (server fire example),TS client machine (generated compact),ITaskItemTriggers removed,frontend body() LoadOptions,zerox pointer→feature/11-entity-service (push zerox first,©User)
