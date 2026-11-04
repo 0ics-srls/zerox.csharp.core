@@ -74,8 +74,30 @@ internal sealed class Repository<T> : IRepository<T> where T : class, IEntity
 
     public IUnitOfWork OpenUnitOfWork() => DbSession.Of(_db).OpenBoundary(_db);
 
-    public Task<IMassiveOpHandler<T>> OpenMassiveAsync(CancellationToken ct = default) =>
-        DbSession.Of(_db).OpenMassiveAsync<T>(_db, ct);
+    public async Task<IMassiveOpHandler<T>> OpenMassiveAsync(CancellationToken ct = default)
+    {
+        // A retrying provider refuses the first write inside a transaction opened outside its strategy: said here, at once.
+        if (_db.Database.CreateExecutionStrategy().RetriesOnFailure)
+            throw new InvalidOperationException("The provider retries failed commands, and refuses a transaction opened outside its execution strategy: use RunMassiveAsync.");
+        return await DbSession.Of(_db).OpenMassiveAsync<T>(_db, ct).ConfigureAwait(false);
+    }
+
+    public Task<TResult> RunMassiveAsync<TResult>(Func<IMassiveOpHandler<T>, CancellationToken, Task<TResult>> work, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        return _db.Database.CreateExecutionStrategy().ExecuteAsync(
+            async attempt =>
+            {
+                var massive = await DbSession.Of(_db).OpenMassiveAsync<T>(_db, attempt).ConfigureAwait(false);
+                await using (massive.ConfigureAwait(false))
+                {
+                    var result = await work(massive, attempt).ConfigureAwait(false);
+                    await massive.CommitAsync(attempt).ConfigureAwait(false);
+                    return result;
+                }
+            },
+            ct);
+    }
 
     public void DetachAll()
     {

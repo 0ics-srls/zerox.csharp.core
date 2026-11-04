@@ -82,11 +82,22 @@ public interface IRepository<T> where T : class, IEntity
 
     /// <summary>
     /// Opens the exclusive mode to update or delete many rows without loading them. Refused with
-    /// pending changes, inside a unit of work, or while another one is open. Always
+    /// pending changes, inside a unit of work, or while another one is open; refused when the provider
+    /// retries failed commands (it does not accept a transaction opened outside its execution strategy):
+    /// use <see cref="RunMassiveAsync{TResult}"/>, which works either way. Always
     /// <c>await using var massive = await repository.OpenMassiveAsync();</c>: one left open is rolled back
     /// at the end of the scope, which then throws.
     /// </summary>
     Task<IMassiveOpHandler<T>> OpenMassiveAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Runs <paramref name="work"/> in the exclusive mode, inside the provider's execution strategy: committed when
+    /// it returns (it does not call CommitAsync), rolled back when it throws. Refused as OpenMassiveAsync is. When
+    /// the provider retries, a transient failure rolls back and runs the work again from the start, with a new
+    /// handler: what the work does outside the database must bear being done twice.
+    /// </summary>
+    /// <typeparam name="TResult">What the work answers, usually how many rows it wrote.</typeparam>
+    Task<TResult> RunMassiveAsync<TResult>(Func<IMassiveOpHandler<T>, CancellationToken, Task<TResult>> work, CancellationToken ct = default);
 
     /// <summary>
     /// Detaches EVERY tracked row of this type, so the next read goes to the database. Not only the

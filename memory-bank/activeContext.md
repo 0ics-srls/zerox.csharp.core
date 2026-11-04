@@ -26,3 +26,9 @@
 
 [NEXT]
 ?CcV3 plan:TaskItemService:EntityService<TaskItem> (server fire example),TS client machine (generated compact),ITaskItemTriggers removed,frontend body() LoadOptions,zerox pointer→feature/11-entity-service (push zerox first,©User)
+
+[12-MASSIVE-WITH-RETRY]
+@state::DONE✓{branch feature/12-massive-with-retry from feature/11-entity-service,¬pushed until ©User says}
+@why::CcV3 05 found OpenMassiveAsync broken on a context with EnableRetryOnFailure:transaction opened outside the execution strategy→first ExecuteUpdate throws "does not support user-initiated transactions";no zerox test ever used a retrying strategy
+>added::IRepository<T>.RunMassiveAsync(work,ct){CreateExecutionStrategy().ExecuteAsync:open,work,commit;throw=rollback;transient=rolled back+run again with a new handler};OpenMassiveAsync refused at once when RetriesOnFailure,naming RunMassiveAsync;MassiveRunTests#8 (RetryingStrategy via ReplaceService<IExecutionStrategyFactory>);catalog row
+@verified::verify.sh [1-3] build 0/0,format,789/789;[4/4] lint-run.sh missing here→ast-grep with CcV3's pack rules 0;test-postgres port 53714:81/145/100
