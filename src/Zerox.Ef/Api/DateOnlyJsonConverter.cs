@@ -5,13 +5,15 @@ using System.Text.Json.Serialization;
 namespace Zerox.Ef.Api;
 
 /// <summary>
-/// A day travels as yyyy-MM-dd.
+/// A day travels as yyyy-MM-dd. A day that must be there cannot be null: null is "not set", refused as a malformed day is.
 /// </summary>
 public sealed class DateOnlyJsonConverter : JsonConverter<DateOnly>
 {
     /// <inheritdoc/>
     public override DateOnly Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-        DateOnly.Parse(reader.GetString()!, CultureInfo.InvariantCulture);
+        reader.GetString() is { } day
+            ? DateOnly.Parse(day, CultureInfo.InvariantCulture)
+            : throw new JsonException("A day is required here: null is no day.");
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, DateOnly value, JsonSerializerOptions options)

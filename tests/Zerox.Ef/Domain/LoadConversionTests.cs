@@ -146,6 +146,24 @@ public sealed class LoadConversionTests : IAsyncLifetime
         }.Should().AllSatisfy(collection => collection.Should().BeNull());
     }
 
+    // Null is "not set": a null entry of a list says nothing, and the search runs without it.
+    [Theory]
+    [InlineData("Sort")]
+    [InlineData("Group")]
+    [InlineData("TotalSummary")]
+    [InlineData("GroupSummary")]
+    [InlineData("Select")]
+    [InlineData("PreSelect")]
+    [InlineData("PrimaryKey")]
+    public async Task Should_LeaveANullEntryOut_WhenAListHasOne(string list)
+    {
+        var options = JsonSerializer.Deserialize<LoadOptions>($$"""{"Take":1,"{{list}}":[null]}""")!;
+
+        var (_, converted) = await LoadAsync(options);
+
+        converted.Data.Should().ContainSingle();
+    }
+
     // A filter that came from JSON holds JsonElements: DevExtreme reads it with its own converter, as it always did.
     [Fact]
     public async Task Should_ReadAJsonFilterAsDevExtremeDoes()

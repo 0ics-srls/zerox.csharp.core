@@ -68,6 +68,16 @@ public sealed class JsonTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Should_RefuseANullDay_WhenTheDayMustBeThere()
+    {
+        var sent = """{"Id":2,"CreatedOn":null,"ClosedOn":null,"Shade":"Light"}""";
+
+        var response = await Host.Client.PostAsync("/echo", new StringContent(sent, System.Text.Encoding.UTF8, "application/json"), Ct);
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public void Should_ApplyTheSameOptions_ToHttpJsonOptions()
     {
         var options = Host.Services.GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;

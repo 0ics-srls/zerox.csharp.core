@@ -3,6 +3,8 @@ using System.Text.Json;
 using DevExtreme.AspNet.Data;
 using DevExtreme.AspNet.Data.ResponseModel;
 using Zerox.Ef.Core;
+using CoreGrouping = Zerox.Ef.Core.GroupingInfo;
+using CoreSorting = Zerox.Ef.Core.SortingInfo;
 using CoreSummary = Zerox.Ef.Core.SummaryInfo;
 using DxGroup = DevExtreme.AspNet.Data.ResponseModel.Group;
 using DxGrouping = DevExtreme.AspNet.Data.GroupingInfo;
@@ -15,6 +17,7 @@ namespace Zerox.Ef.Domain;
 // it. Every member crosses by name; what the server decides is still overridden by Search.MakeSafe.
 internal static class LoadConversion
 {
+    // A null entry of a list says nothing: null is "not set", so it is left out.
     public static DataSourceLoadOptionsBase ToDevExtreme(LoadOptions options) => new()
     {
         RequireTotalCount = options.RequireTotalCount,
@@ -23,8 +26,8 @@ internal static class LoadConversion
         IsSummaryQuery = options.IsSummaryQuery,
         Skip = options.Skip,
         Take = options.Take,
-        Sort = options.Sort?.Select(s => new DxSorting { Selector = s.Selector, Desc = s.Desc }).ToArray(),
-        Group = options.Group?.Select(g => new DxGrouping
+        Sort = options.Sort?.OfType<CoreSorting>().Select(s => new DxSorting { Selector = s.Selector, Desc = s.Desc }).ToArray(),
+        Group = options.Group?.OfType<CoreGrouping>().Select(g => new DxGrouping
         {
             Selector = g.Selector,
             Desc = g.Desc,
@@ -32,14 +35,14 @@ internal static class LoadConversion
             IsExpanded = g.IsExpanded,
         }).ToArray(),
         Filter = FilterOf(options.Filter),
-        TotalSummary = options.TotalSummary?.Select(Summary).ToArray(),
-        GroupSummary = options.GroupSummary?.Select(Summary).ToArray(),
-        Select = options.Select?.ToArray(),
-        PreSelect = options.PreSelect?.ToArray(),
+        TotalSummary = options.TotalSummary?.OfType<CoreSummary>().Select(Summary).ToArray(),
+        GroupSummary = options.GroupSummary?.OfType<CoreSummary>().Select(Summary).ToArray(),
+        Select = options.Select?.OfType<string>().ToArray(),
+        PreSelect = options.PreSelect?.OfType<string>().ToArray(),
         RemoteSelect = options.RemoteSelect,
         RemoteGrouping = options.RemoteGrouping,
         ExpandLinqSumType = options.ExpandLinqSumType,
-        PrimaryKey = options.PrimaryKey?.ToArray(),
+        PrimaryKey = options.PrimaryKey?.OfType<string>().ToArray(),
         DefaultSort = options.DefaultSort,
         StringToLower = options.StringToLower,
         PaginateViaPrimaryKey = options.PaginateViaPrimaryKey,
