@@ -49,7 +49,8 @@ public static class ZeroxJson
     {
         ArgumentNullException.ThrowIfNull(options);
         options.NumberHandling = JsonNumberHandling.Strict;
-        options.Converters.Add(new JsonStringEnumConverter());
+        // Only a name: a number would write into the row a value the enum may not even have.
+        options.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
         options.Converters.Add(new DateOnlyJsonConverter());
         options.Converters.Add(new NullableDateOnlyJsonConverter());
     }

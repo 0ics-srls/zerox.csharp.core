@@ -259,6 +259,18 @@ public sealed class LoadOptionsValidatorTests
         Passes<Item>(new() { TotalSummary = [new SummaryInfo { Selector = "At", SummaryType = "min" }, new SummaryInfo { Selector = "At", SummaryType = "max" }] });
     }
 
+    [Theory]
+    [InlineData("12.5")]
+    [InlineData("0")]
+    [InlineData("-5")]
+    [InlineData("3000000000")]
+    public void Should_RefuseANumericInterval_WhenItIsNoWholeNumberAboveZero(string width)
+    {
+        var message = Refusal<Item>(new() { Group = [new GroupingInfo { Selector = "Quantity", GroupInterval = width }] });
+
+        message.Should().Contain("whole number above zero");
+    }
+
     [Fact]
     public void Should_AllowGroupIntervalsOnlyOnTheRightType()
     {

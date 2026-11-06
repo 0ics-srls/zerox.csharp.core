@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Zerox.Ef.Db;
 using Zerox.Ef.Domain;
 
 namespace Zerox.Ef.Api;
@@ -20,6 +21,8 @@ internal sealed class ErrorHandlingMiddleware(RequestDelegate next, IProblemDeta
         try
         {
             await next(context).ConfigureAwait(false);
+            // A boundary forgotten open swallowed its saves: said now, while the client can still be told, not at the end of the scope.
+            await ZeroxSessionScope.ThrowIfOpenAsync(context.RequestServices).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException e) when (OptimisticLockConflict.Is(e))
         {

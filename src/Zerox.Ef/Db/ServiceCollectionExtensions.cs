@@ -25,11 +25,12 @@ public static class ServiceCollectionExtensions
             configure(options);
             options.UseZeroxSession();
         });
-        services.AddScoped(sp => new SessionScopeCheck(sp.GetRequiredService<TContext>()));
+        services.AddScoped<SessionScopeCheck>();
         services.AddScoped<IDbContext>(sp =>
         {
-            sp.GetRequiredService<SessionScopeCheck>();
-            return sp.GetRequiredService<TContext>();
+            var context = sp.GetRequiredService<TContext>();
+            sp.GetRequiredService<SessionScopeCheck>().Watch(context);   // created after the context: disposed before it
+            return context;
         });
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IRepositoryFactory, RepositoryFactory>();

@@ -48,6 +48,12 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
             app.MapPost("/stale", IResult () => throw new StaleVersionException("Doc 1 changed since it was read."));
             app.MapGet("/boom", IResult () => throw new InvalidOperationException("secret internals"));
             app.MapGet("/ok", () => Results.Ok(new { Answer = 42 }));
+            // An await using forgotten: what it saved was swallowed, and the answer must not say it was done.
+            app.MapPost("/left-open", (Zerox.Ef.Core.IRepository<Doc> docs) =>
+            {
+                _ = docs.OpenUnitOfWork();
+                return Results.NoContent();
+            });
             // Fails after the first bytes went out: no status or body can be written any more.
             app.MapGet("/started", async (HttpContext context) =>
             {
@@ -74,6 +80,15 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
     {
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return document.RootElement.Clone();
+    }
+
+    [Fact]
+    public async Task Should_Answer500_WhenAnActionLeavesAUnitOfWorkOpen()
+    {
+        var response = await Host.Client.PostAsync("/left-open", null, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        Host.Logs.Entries.Should().Contain(e => e.Level == LogLevel.Error && e.Category.Contains("ErrorHandlingMiddleware", StringComparison.Ordinal));
     }
 
     [Fact]

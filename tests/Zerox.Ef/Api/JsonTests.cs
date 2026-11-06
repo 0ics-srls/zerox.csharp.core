@@ -67,6 +67,18 @@ public sealed class JsonTests : IAsyncLifetime
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
 
+    [Theory]
+    [InlineData("1")]
+    [InlineData("99")]
+    public async Task Should_RefuseAnEnumWrittenAsANumber(string shade)
+    {
+        var sent = $$"""{"Id":2,"CreatedOn":"2026-01-31","ClosedOn":null,"Shade":{{shade}}}""";
+
+        var response = await Host.Client.PostAsync("/echo", new StringContent(sent, System.Text.Encoding.UTF8, "application/json"), Ct);
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+    }
+
     [Fact]
     public async Task Should_RefuseANullDay_WhenTheDayMustBeThere()
     {

@@ -252,11 +252,14 @@ public static class LoadOptionsValidator
             return;
 
         var fieldType = Underlying(property.PropertyType);
-        if (decimal.TryParse(interval, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+        if (decimal.TryParse(interval, NumberStyles.Float, CultureInfo.InvariantCulture, out var width))
         {
             if (!IsNumericType(fieldType))
                 throw new InvalidRequestException(
                     $"A numeric interval ({interval}) works on numbers: '{property.Name}' is {Describe(property.PropertyType)}.");
+            // DevExtreme reads the width as a whole number: 12.5 would bucket by 12, a wrong answer taken as good; 0 divides by zero.
+            if (width != decimal.Truncate(width) || width <= 0 || width > int.MaxValue)
+                throw new InvalidRequestException($"A numeric interval is a whole number above zero: {interval} is not.");
             return;
         }
 
