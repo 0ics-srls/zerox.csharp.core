@@ -30,6 +30,9 @@ public abstract class JobBase : IJob
     {
         lock (_lock)
         {
+            // Decided here, under the lock: a suspend can arrive from another thread after the caller looked at the state.
+            if (_state == JobState.Suspended)
+                return false;
             if (_state != JobState.Ready)
                 throw new InvalidOperationException($"The job {Name} is {_state}, not Ready");
             _state = JobState.Running;

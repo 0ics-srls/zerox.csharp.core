@@ -2,6 +2,13 @@
 
 # CURRENT TASK ONLY — overwrite, do not append
 
+[13-STANDS-ALONE]
+@why::©User 2026-11-06 "sto aspettando per partire con progetto nuovo con smgen e zerox":fresh clone+new project with real submodules
+>fixed::suspend from another thread between the ring's look and the run reported a false job failure,and TickAsync threw "MainQueue is Suspended" (seen once in 804 tests under a profiler):JobBase.ExecuteAsync decides under its lock,suspended→false (no exception,as a delayed job before its time);Running still throws
+>added::README "Use it from a project"
+@verified::fresh clone:build,format,807 (779+28 PostgreSQL only),test-postgres on port 53714,pack;new project:build,test,format;merged by fast-forward into main (©User)
+!note::tools/verify.sh step 4+ast-grep need .ai-agent setup,¬on a fresh clone;tools/test-postgres.sh default port 55432 lies in the Windows dynamic range
+
 [TASK]
 @state::DONE✓{run-20261103-zerox11 6/6,FINAL REVIEW✓}{branch committed,¬pushed}
 @feature::11-entity-service (the service layer:EntityService<T>,OpResult<T>,contracts in Core)

@@ -9,7 +9,7 @@ public interface IJob
 
     JobState State { get; }
 
-    // False when it had nothing to do yet (a delayed job before its time).
+    // False when it had nothing to do: a delayed job before its time, a job suspended (it does not run, and that is no failure).
     Task<bool> ExecuteAsync(CancellationToken cancellationToken);
 
     void Suspend();

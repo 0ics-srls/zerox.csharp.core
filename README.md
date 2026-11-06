@@ -94,6 +94,21 @@ piece. The complete example, tested from the repository to HTTP, is
    The document is a file of the repository, `openapi/Sample.json`, kept equal to the served one by
    `OpenApiDocumentTests`.
 
+## Use it from a project
+
+The library is consumed as a git submodule, by project references:
+
+    git submodule add https://github.com/0ics-srls/zerox.csharp.core.git externals/zerox.csharp.core
+
+```xml
+<ProjectReference Include="../../externals/zerox.csharp.core/src/Zerox.Ef/Api/Zerox.Ef.Api.csproj" />
+```
+
+Reference the projects of the table above that you need: each brings the ones it depends on. Add nothing around the
+submodule: its own `global.json`, `Directory.Build.props`, `Directory.Packages.props` and `.editorconfig` keep your
+project's settings out of it, whichever they are. It requires the .NET 10 SDK. What it offers, by need, is in
+`docs/catalog.md`; how a service is put together is in the steps above.
+
 ## Build and test
 
     dotnet build zerox.csharp.core.slnx -warnaserror

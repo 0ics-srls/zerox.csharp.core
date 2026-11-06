@@ -215,6 +215,57 @@ public sealed class JobQueueTests
         once.State.Should().Be(JobState.Suspended);
     }
 
+    // Another thread suspends the job right after the ring looked at its state: the worst moment of that race, made certain.
+    private sealed class SuspendedAfterTheLook(IJob inner) : IJob
+    {
+        public string Name => inner.Name;
+
+        public JobKind Kind => inner.Kind;
+
+        public JobState State
+        {
+            get
+            {
+                var state = inner.State;
+                inner.Suspend();
+                return state;
+            }
+        }
+
+        public Task<bool> ExecuteAsync(CancellationToken cancellationToken) => inner.ExecuteAsync(cancellationToken);
+
+        public void Suspend() => inner.Suspend();
+
+        public void Resume() => inner.Resume();
+    }
+
+    [Fact]
+    public async Task Should_ReportNothing_WhenTheJobIsSuspendedAfterTheRingLookedAtIt()
+    {
+        var reported = new List<string>();
+        var q = new JobQueue("Main", (job, error) => reported.Add($"{job.Name}: {error.Message}"));
+        q.Resume();
+        var runs = 0;
+        q.Add(new SuspendedAfterTheLook(Job.Cyclic("job", Work.Of(() => runs++))));
+
+        await q.ExecuteAsync(Ct);
+
+        reported.Should().BeEmpty();
+        runs.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Should_NotThrow_WhenTheJobIsSuspendedAfterTheRingLookedAtIt_AndThereIsNoErrorHandler()
+    {
+        var q = NewMain();
+        var runs = 0;
+        q.Add(new SuspendedAfterTheLook(Job.Cyclic("job", Work.Of(() => runs++))));
+
+        await FluentActions.Awaiting(() => q.ExecuteAsync(Ct)).Should().NotThrowAsync();
+
+        runs.Should().Be(0);
+    }
+
     [Fact]
     public async Task Should_SkipAJob_WhenItWasSuspendedInTheRing()
     {

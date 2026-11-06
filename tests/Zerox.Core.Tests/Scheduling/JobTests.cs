@@ -34,7 +34,7 @@ public sealed class JobTests
         var job = Job.Cyclic("J", Work.Of(() => ran = true));
 
         job.State.Should().Be(JobState.Suspended);
-        await FluentActions.Awaiting(() => job.ExecuteAsync(Ct)).Should().ThrowAsync<InvalidOperationException>();
+        (await job.ExecuteAsync(Ct)).Should().BeFalse();
         ran.Should().BeFalse();
     }
 

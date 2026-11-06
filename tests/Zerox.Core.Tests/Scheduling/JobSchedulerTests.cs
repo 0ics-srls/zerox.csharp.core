@@ -229,6 +229,41 @@ public sealed class JobSchedulerTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
+    public async Task Should_NeitherThrowNorReport_WhenTheWholeSchedulerIsSuspendedWhileTicking()
+    {
+        var w = new Worker();
+        var sch = WithOldJobs(w);
+        var ct = TestContext.Current.CancellationToken;
+        var ticking = true;
+
+        var toggler = Task.Run(() =>
+        {
+            while (Volatile.Read(ref ticking))
+            {
+                sch.Suspend();
+                sch.Resume();
+            }
+        }, ct);
+        var ticker = Task.Run(async () =>
+        {
+            try
+            {
+                for (var i = 0; i < 300_000; i++)
+                    await sch.TickAsync(Ct);
+            }
+            finally
+            {
+                Volatile.Write(ref ticking, false);
+            }
+        }, ct);
+
+        await Task.WhenAll(toggler, ticker);
+
+        sch.Errors.TryRead(out var error).Should().BeFalse(error?.ToString());
+    }
+
+    [Fact]
     public async Task Should_KeepCustomJobsRunning_WhenThePriorityGroupIsSuspended()
     {
         var w = new Worker();
