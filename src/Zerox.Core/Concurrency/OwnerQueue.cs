@@ -5,12 +5,13 @@ namespace Zerox.Core.Concurrency;
 // One job at a time, each to its end with its awaits; the caller gets its own job's result.
 // The consumer starts when a job arrives and ends when the queue is empty (no thread of its own).
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "The name of the mechanism in assetforge specification §3.7")]
-public sealed class OwnerQueue : IDisposable
+public sealed class OwnerQueue : IDisposable, IAsyncDisposable
 {
     private static readonly AsyncLocal<OwnerQueue?> Running = new();
 
     private readonly Channel<Job> _jobs = Channel.CreateUnbounded<Job>(new UnboundedChannelOptions { SingleReader = true });
     private readonly CancellationTokenSource _lifetime = new();
+    private readonly TaskCompletionSource _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _pending;
     private int _consuming;    // 1 while a consumer runs
     private volatile bool _disposed;
@@ -39,7 +40,7 @@ public sealed class OwnerQueue : IDisposable
         Interlocked.Increment(ref _pending);
         if (!_jobs.Writer.TryWrite(item))
         {
-            Interlocked.Decrement(ref _pending);
+            Ended();
             throw new ObjectDisposedException(nameof(OwnerQueue));
         }
         StartConsumerWhenIdle();
@@ -63,6 +64,26 @@ public sealed class OwnerQueue : IDisposable
         _jobs.Writer.TryComplete();
         _lifetime.Cancel();
         StartConsumerWhenIdle();   // drains: every queued job is canceled
+    }
+
+    // Disposes, then waits for the job in flight to end (its token is canceled): when it returns, no job of this queue
+    // runs any more, so what the jobs used may go at once.
+    public async ValueTask DisposeAsync()
+    {
+        if (Running.Value == this)
+            throw new InvalidOperationException("A job awaited the disposal of its own queue: it would wait for itself.");
+
+        Dispose();
+        if (Volatile.Read(ref _pending) == 0)
+            _stopped.TrySetResult();
+        await _stopped.Task.ConfigureAwait(false);
+    }
+
+    // A job left the queue (run, canceled or refused): the last one after the disposal tells that the queue stopped.
+    private void Ended()
+    {
+        if (Interlocked.Decrement(ref _pending) == 0 && _disposed)
+            _stopped.TrySetResult();
     }
 
     // The consumer is an async void work item: it never throws, and if a bug made it throw, the process would stop.
@@ -91,7 +112,7 @@ public sealed class OwnerQueue : IDisposable
                 finally
                 {
                     Running.Value = null;
-                    Interlocked.Decrement(ref _pending);
+                    Ended();
                 }
             }
             Volatile.Write(ref _consuming, 0);

@@ -161,14 +161,50 @@ public sealed class OwnerQueueTests
         });
         var token = await started.Task.WaitAsync(Limit, Ct);
 
-        queue.Dispose();
+        await queue.DisposeAsync().AsTask().WaitAsync(Limit, Ct);
 
         token.IsCancellationRequested.Should().BeTrue();
-        await FluentActions.Awaiting(() => running.WaitAsync(Limit, Ct)).Should().ThrowAsync<OperationCanceledException>();
+        running.IsCanceled.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Should_CancelQueuedJobs_WhenDisposed()
+    public void Should_ThrowObjectDisposed_WhenRunAfterDispose()
+    {
+        var queue = new OwnerQueue();
+        queue.Dispose();
+
+        // RunAsync refuses synchronously: no task is returned
+        Action run = () => _ = queue.RunAsync(_ => Task.CompletedTask);
+
+        run.Should().Throw<ObjectDisposedException>();
+    }
+    [Fact]
+    public async Task Should_EndDisposeAsyncOnlyAfterTheRunningJobEnded_WhenAJobRuns()
+    {
+        var queue = new OwnerQueue();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var ended = false;
+        var held = queue.RunAsync(async _ =>
+        {
+            started.SetResult();
+            await release.Task;
+            ended = true;
+        });
+        await started.Task.WaitAsync(Limit, Ct);
+
+        var disposing = queue.DisposeAsync().AsTask();
+        var endedBeforeTheJob = disposing.IsCompleted;
+        release.SetResult();
+        await disposing.WaitAsync(Limit, Ct);
+
+        endedBeforeTheJob.Should().BeFalse();
+        ended.Should().BeTrue();
+        held.IsCompleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Should_CancelQueuedJobs_WhenDisposedAsync()
     {
         var queue = new OwnerQueue();
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -186,23 +222,35 @@ public sealed class OwnerQueueTests
         });
         await started.Task.WaitAsync(Limit, Ct);
 
-        queue.Dispose();
+        var disposing = queue.DisposeAsync().AsTask();
         release.SetResult();
-        await held.WaitAsync(Limit, Ct);
+        await disposing.WaitAsync(Limit, Ct);
 
-        await FluentActions.Awaiting(() => queued.WaitAsync(Limit, Ct)).Should().ThrowAsync<OperationCanceledException>();
+        queued.IsCanceled.Should().BeTrue();
         queuedRan.Should().BeFalse();
+        held.IsCompletedSuccessfully.Should().BeTrue();
     }
 
     [Fact]
-    public void Should_ThrowObjectDisposed_WhenRunAfterDispose()
+    public async Task Should_EndDisposeAsync_WhenTheQueueIsIdleOrDisposedAlready()
     {
         var queue = new OwnerQueue();
-        queue.Dispose();
+        await queue.RunAsync(_ => Task.CompletedTask).WaitAsync(Limit, Ct);
 
-        // RunAsync refuses synchronously: no task is returned
-        Action run = () => _ = queue.RunAsync(_ => Task.CompletedTask);
+        await queue.DisposeAsync().AsTask().WaitAsync(Limit, Ct);
+        await queue.DisposeAsync().AsTask().WaitAsync(Limit, Ct);
 
-        run.Should().Throw<ObjectDisposedException>();
+        queue.PendingCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Should_FailFast_WhenAJobDisposesItsOwnQueueAsync()
+    {
+        var queue = new OwnerQueue();
+
+        var job = queue.RunAsync(async _ => await queue.DisposeAsync());
+
+        await FluentActions.Awaiting(() => job.WaitAsync(Limit, Ct)).Should().ThrowAsync<InvalidOperationException>();
+        await queue.DisposeAsync().AsTask().WaitAsync(Limit, Ct);
     }
 }

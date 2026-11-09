@@ -10,7 +10,7 @@ Paths are relative to `src/`.
 
 | Need | Type | File |
 |---|---|---|
-| Run jobs one at a time, each to its end, the caller gets its own job's result (owner's queue) | `OwnerQueue` (`RunAsync`, `StartDetached`) | `Zerox.Core/Concurrency/OwnerQueue.cs` |
+| Run jobs one at a time, each to its end, the caller gets its own job's result (owner's queue); `DisposeAsync` returns once the job in flight has ended | `OwnerQueue` (`RunAsync`, `StartDetached`, `DisposeAsync`) | `Zerox.Core/Concurrency/OwnerQueue.cs` |
 | Start work outside the caller's flow; an escaping exception stops the process | `OwnerQueue.StartDetached` | `Zerox.Core/Concurrency/OwnerQueue.cs` |
 | An async lock with timeout, released by `using` (acquired only with await: `LockAsync`, `TryLockAsync`) | `CriticalSection`, `CriticalSectionLock` | `Zerox.Core/Concurrency/CriticalSection.cs` |
 | A boolean switched atomically (false→true once) | `AtomicBoolean` (`FalseToTrue`, `TrueToFalse`, `SetWhen`) | `Zerox.Core/Concurrency/AtomicBoolean.cs` |
