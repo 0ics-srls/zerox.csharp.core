@@ -84,6 +84,7 @@ Paths are relative to `src/`.
 | Need | Type | File |
 |---|---|---|
 | A view model base: `PropertyChanged` on the UI thread, optional throttle and debounce, `MemberChanged` at once | `PropertyContainer` | `Zerox.Core.Avalonia/ComponentModel/PropertyContainer.cs` |
+| Work run on the UI thread: at once there, posted from any other thread (inline where no application runs) | `UiThread` | `Zerox.Core.Avalonia/Threading/UiThread.cs` |
 | An async command: one run at a time, cancellable, timeout, progress on the UI thread | `AsyncCommand<T>`, `AsyncCommand.Create`, `AsyncCommand.WithProgress` | `Zerox.Core.Avalonia/Commands/AsyncCommand.cs` |
 | What menus and toolbars see of a command | `ICommandWithInfo` | `Zerox.Core.Avalonia/Commands/ICommandWithInfo.cs` |
 | A task the bindings can follow (running, failed, done) | `ObservableTask` | `Zerox.Core.Avalonia/Commands/ObservableTask.cs` |
