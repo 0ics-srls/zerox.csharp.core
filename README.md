@@ -81,6 +81,16 @@ piece. The complete example, tested from the repository to HTTP, is
    `Repository.Update(new Customer { Id, Name, Version }, [nameof(Customer.Name)])`, a stale one is a Conflict,
    409).
    A row with a row version is deleted with the version the client read: `DELETE api/Customers/5?version=3`.
+   A controller that is not the controller of an entity — an operation of its own, a composite answer —
+   derives `ResultController`: it gets the same `Answer(...)` and nothing else (no action, no route), and
+   writes its own:
+
+       [Route("api/Reports")]
+       public sealed class ReportsController(IReports reports) : ResultController
+       {
+           [HttpGet("{year:int}")]
+           public async Task<ActionResult<YearReport>> Year(int year, CancellationToken ct) => Answer(await reports.YearAsync(year, ct));
+       }
 
    **Breaking (feature/11-entity-service)** for a project on an earlier version: `EntityController<T>` takes
    `IEntityService<T>` (call `AddZeroxDomain()` after `AddZeroxDb`), not `IRepository<T>`; a derived action
