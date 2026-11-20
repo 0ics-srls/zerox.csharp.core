@@ -66,6 +66,25 @@ public sealed class WorkingProcessTests
     }
 
     [Fact]
+    public async Task Should_EndTheLoop_WhenTheStopCancelsTheCycleInFlight()
+    {
+        var running = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var process = Counting(TimeSpan.FromMilliseconds(100), async ct =>
+        {
+            running.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, ct);   // honours the token: throws when the stop cancels it
+        });
+        process.Start();
+        await running.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await process.StopAsync();   // before the fix the cancellation escaped the loop and took the test host down
+
+        process.IsActive.Should().BeFalse();
+        process.CyclesDone.Should().Be(0);
+        _cycles.Reader.TryRead(out _).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Should_MeasureTheCycles_WhenTheyRun()
     {
         await using var process = Counting(TimeSpan.FromSeconds(1), Work.Of(() => _clock.Advance(TimeSpan.FromMilliseconds(30))));

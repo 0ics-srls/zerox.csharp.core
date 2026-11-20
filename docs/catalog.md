@@ -26,7 +26,7 @@ Paths are relative to `src/`.
 | A failing job reported without stopping the others | `JobScheduler.Errors` (channel of `JobError`) | `Zerox.Core/Scheduling/JobError.cs` |
 | A ring of jobs, one per call, itself a job | `JobQueue` | `Zerox.Core/Scheduling/JobQueue.cs` |
 | Your own job | `IJob`, `JobBase`, `JobKind`, `JobState` | `Zerox.Core/Scheduling/` |
-| A periodic loop on a `TimeProvider` running an async cycle (first cycle at once, each cycle awaited, stop awaited, cycle statistics) | `WorkingProcess` | `Zerox.Core/Scheduling/WorkingProcess.cs` |
+| A periodic loop on a `TimeProvider` running an async cycle (first cycle at once, each cycle awaited, stop awaited — a cycle the stop cancels ends the loop, cycle statistics) | `WorkingProcess` | `Zerox.Core/Scheduling/WorkingProcess.cs` |
 
 ### Collections and search
 

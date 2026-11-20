@@ -3,7 +3,8 @@ using Zerox.Core.Concurrency;
 namespace Zerox.Core.Scheduling;
 
 // Runs an async cycle at once and then once per period (a cycle is awaited to its end before the next
-// wait); an exception escaping the cycle stops the process.
+// wait); an exception escaping the cycle stops the process — except the cancellation the stop itself
+// asked for, which ends the loop.
 public sealed class WorkingProcess : IAsyncDisposable
 {
     private readonly Func<CancellationToken, Task> _cycle;
@@ -105,7 +106,14 @@ public sealed class WorkingProcess : IAsyncDisposable
                 if (stop.IsCancellationRequested)
                     break;
                 var start = _time.GetTimestamp();
-                await _cycle(stop).ConfigureAwait(false);
+                try
+                {
+                    await _cycle(stop).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (stop.IsCancellationRequested)
+                {
+                    break;   // the stop cancelled the cycle in flight: the end it asked for, not a failure
+                }
                 var elapsed = _time.GetElapsedTime(start);
                 Interlocked.Exchange(ref _lastTicks, elapsed.Ticks);
                 Interlocked.Add(ref _totalTicks, elapsed.Ticks);
