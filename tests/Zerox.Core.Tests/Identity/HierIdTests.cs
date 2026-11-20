@@ -248,4 +248,29 @@ public sealed class HierIdTests
         first.GetHashCode().Should().Be(second.GetHashCode());
         map[second].Should().Be(1);
     }
+
+    [Fact]
+    public void Name_AnIdOfThreeParts_IsItsLastPart()
+        => HierId.Parse("a/b/c").Name.Should().Be("c");
+
+    [Fact]
+    public void Name_AnEmptyId_IsEmpty()
+        => HierId.Empty().Name.Should().BeEmpty();
+
+    [Fact]
+    public void Parent_AnIdOfThreeParts_IsItsFirstTwo()
+        => HierId.Parse("a/b/c").Parent.Should().Be(HierId.Parse("a/b"));
+
+    [Fact]
+    public void Parent_AnIdOfOnePart_IsTheEmptyIdWithItsSeparator()
+    {
+        var parent = HierId.Parse("a", '$').Parent;
+
+        parent.Count.Should().Be(0);
+        parent.Separator.Should().Be('$');
+    }
+
+    [Fact]
+    public void Parent_AnEmptyId_IsEmpty()
+        => HierId.Empty().Parent.Count.Should().Be(0);
 }

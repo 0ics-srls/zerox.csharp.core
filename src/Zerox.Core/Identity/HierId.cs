@@ -22,6 +22,12 @@ public sealed class HierId : IEquatable<HierId>
 
     public int Count => _parts.Length;
 
+    // The last part: what the id names inside its parent; "" for an empty id.
+    public string Name => Count == 0 ? string.Empty : _parts[^1];
+
+    // The id without its last part; an id of one part, and an empty one, has the empty id as its parent.
+    public HierId Parent => Count <= 1 ? Empty(Separator) : new(_parts.Take(Count - 1), Separator);
+
     public static HierId Empty(char separator = DefaultSeparator) => new([], separator);
 
     public static HierId From(params string[] parts) => new(parts, DefaultSeparator);

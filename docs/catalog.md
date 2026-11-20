@@ -66,7 +66,7 @@ Paths are relative to `src/`.
 | Need | Type | File |
 |---|---|---|
 | One message between a source and a destination held weakly | `MessageChannel<TKind>`, `Message<TKind>`, `IMessageSource<TKind>`, `IMessageDestination<TKind>` | `Zerox.Core/Messaging/` |
-| A hierarchical id (`a.b.c`): prefix, common root, pattern match | `HierId` | `Zerox.Core/Identity/HierId.cs` |
+| A hierarchical id (`a/b/c`, any separator): its name and its parent, prefix, common root, pattern match | `HierId` | `Zerox.Core/Identity/HierId.cs` |
 
 ### Numbers, text, reflection
 
