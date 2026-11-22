@@ -2,6 +2,10 @@ using System.Globalization;
 using DevExtreme.AspNet.Data;
 using DevExtreme.AspNet.Data.ResponseModel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using IRepositoryOfItem = Zerox.Ef.Core.IRepository<Zerox.Ef.Domain.Tests.Item>;
+using LoadOptions = Zerox.Ef.Core.LoadOptions;
+using OpStatus = Zerox.Ef.Core.OpStatus;
 
 namespace Zerox.Ef.Domain.Tests;
 
@@ -246,5 +250,66 @@ public sealed class SearchTests : IAsyncLifetime
         var row = result.data.Cast<IDictionary<string, object?>>().Single();
         row.Should().ContainKey("Name").WhoseValue.Should().Be("item01");
         row.Should().ContainKey("Box");
+    }
+
+    // --- the library's own options, on any query ---
+
+    // A row of a projection: what a service shows instead of an entity.
+    public sealed class ItemLine
+    {
+        public string Name { get; init; } = string.Empty;
+
+        public int Quantity { get; init; }
+
+        public string BoxLabel { get; init; } = string.Empty;
+    }
+
+    private static IQueryable<ItemLine> Lines(TestDbContext context) =>
+        context.Items.AsNoTracking().Select(i => new ItemLine { Name = i.Name, Quantity = i.Quantity, BoxLabel = i.Box!.Label });
+
+    [Fact]
+    public async Task Should_AnswerTheLoadedRowsAndTotal_WhenAProjectionIsLoadedWithLoadOptions()
+    {
+        await using var context = Db.NewContext();
+        var options = new LoadOptions
+        {
+            Filter = L("BoxLabel", "=", "blue"),
+            Sort = [new() { Selector = "Quantity", Desc = true }],
+            Skip = 1,
+            Take = 3,
+            RequireTotalCount = true,
+        };
+
+        var result = await Search.LoadAsync(Lines(context), options, Search.DefaultMaxTake, Ct);
+
+        result.Status.Should().Be(OpStatus.Ok);
+        result.Value!.Data.Cast<ItemLine>().Select(l => l.Quantity).Should().Equal(29, 28, 27);
+        result.Value.TotalCount.Should().Be(15);
+    }
+
+    [Fact]
+    public async Task Should_AnswerInvalid_WhenTheFilterNamesAnUnknownField()
+    {
+        await using var context = Db.NewContext();
+
+        var result = await Search.LoadAsync(Lines(context), new LoadOptions { Filter = L("Nope", "=", 1), Take = 5 }, Search.DefaultMaxTake, Ct);
+
+        result.Status.Should().Be(OpStatus.Invalid);
+        result.Reason.Should().Contain("Nope");
+    }
+
+    [Fact]
+    public async Task Should_AnswerAsEntityServiceDoes_WhenTheSourceIsTheEntities()
+    {
+        var options = new LoadOptions { Filter = L("Kind", "=", "Large"), Take = 4, RequireTotalCount = true, Sort = [new() { Selector = "Quantity" }] };
+        await using var scope = Db.NewScope();
+        await using var context = Db.NewContext();
+
+        var viaService = await new EntityService<Item>(scope.ServiceProvider.GetRequiredService<IRepositoryOfItem>()).LoadAsync(options, Ct);
+        var viaSearch = await Search.LoadAsync(Items(context), options, Search.DefaultMaxTake, Ct);
+
+        viaSearch.Status.Should().Be(viaService.Status);
+        viaSearch.Value!.Data.Cast<Item>().Select(i => i.Quantity).Should().Equal(viaService.Value!.Data.Cast<Item>().Select(i => i.Quantity));
+        viaSearch.Value.TotalCount.Should().Be(viaService.Value.TotalCount);
     }
 }

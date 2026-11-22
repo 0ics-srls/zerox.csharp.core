@@ -1,6 +1,7 @@
 using System.Collections;
 using DevExtreme.AspNet.Data;
 using DevExtreme.AspNet.Data.ResponseModel;
+using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Domain;
 
@@ -68,6 +69,28 @@ public static class Search
         // the client always reads a list.
         loaded.data ??= Array.Empty<object>();
         return loaded;
+    }
+
+    /// <summary>
+    /// The one search on any query, from the library's own load options: the rows, groups or total as
+    /// <see cref="Loaded"/> in a result. An option the query cannot answer (unknown field, operator, value type,
+    /// a page above <paramref name="maxTake"/>) is <see cref="OpStatus.Invalid"/> with the reason, never an
+    /// exception; any other failure is left to the caller.
+    /// </summary>
+    public static async Task<OpResult<Loaded>> LoadAsync<T>(
+        IQueryable<T> source, LoadOptions options, int maxTake = DefaultMaxTake, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(options);
+        try
+        {
+            return OpResult.Ok(LoadConversion.ToLoaded(
+                await LoadAsync(source, LoadConversion.ToDevExtreme(options), maxTake, ct).ConfigureAwait(false)));
+        }
+        catch (InvalidRequestException invalid)
+        {
+            return OpResult.Invalid<Loaded>(invalid.Message);
+        }
     }
 
     // The one place where an exception becomes another: a request DevExtreme or the database cannot

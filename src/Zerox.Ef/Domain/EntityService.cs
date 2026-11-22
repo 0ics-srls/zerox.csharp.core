@@ -35,8 +35,7 @@ public class EntityService<T>(IRepository<T> repository) : IEntityService<T> whe
     public virtual Task<OpResult<Loaded>> LoadAsync(LoadOptions options, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(options);
-        return RunAsync(async c => OpResult.Ok(LoadConversion.ToLoaded(
-            await Search.LoadAsync(SearchSource(), LoadConversion.ToDevExtreme(options), MaxTake, c).ConfigureAwait(false))), ct);
+        return RunAsync(c => Search.LoadAsync(SearchSource(), options, MaxTake, c), ct);
     }
 
     /// <inheritdoc />
