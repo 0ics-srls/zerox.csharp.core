@@ -226,11 +226,11 @@
       }
     },
     "/api/Customers/values/{column}": {
-      "get": {
+      "post": {
         "tags": [
           "Customers"
         ],
-        "summary": "The distinct values of a text column, each with the number of rows that have it; the column name comes from\nthe URL and is checked against the real properties before any query. (Its route and verb change with the\noptions in the body: the next block.)",
+        "summary": "The distinct values of a text column, for the dropdown of its filter. POST because the options travel in\nthe body, as in the load; the meaning is a read. Of the options only the Filter is read — a client sends\nthe options of its grid as they are — and the body may be left out. The column name comes from the URL and\nis checked against the real properties before any query.",
         "operationId": "Customers_Values",
         "parameters": [
           {
@@ -242,6 +242,46 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LoadOptions"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LoadOptions"
+                  }
+                ]
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LoadOptions"
+                  }
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -687,11 +727,11 @@
       }
     },
     "/api/Orders/values/{column}": {
-      "get": {
+      "post": {
         "tags": [
           "Orders"
         ],
-        "summary": "The distinct values of a text column, each with the number of rows that have it; the column name comes from\nthe URL and is checked against the real properties before any query. (Its route and verb change with the\noptions in the body: the next block.)",
+        "summary": "The distinct values of a text column, for the dropdown of its filter. POST because the options travel in\nthe body, as in the load; the meaning is a read. Of the options only the Filter is read — a client sends\nthe options of its grid as they are — and the body may be left out. The column name comes from the URL and\nis checked against the real properties before any query.",
         "operationId": "Orders_Values",
         "parameters": [
           {
@@ -703,6 +743,46 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LoadOptions"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LoadOptions"
+                  }
+                ]
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LoadOptions"
+                  }
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",

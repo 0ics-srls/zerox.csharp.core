@@ -7,6 +7,7 @@ import {
   customersDelete,
   customersGetById,
   customersLoad,
+  customersValues,
 } from "./api/customers/customers.ts";
 import { describe, expect, expectTypeOf, test } from "vitest";
 import { ordersLoad } from "./api/orders/orders.ts";
@@ -149,6 +150,16 @@ describe("the load of customers", () => {
 
     expectTypeOf(result.data).toEqualTypeOf<Pick<Customer, "Name">[]>();
     expect(result.data).toEqual([{ Name: "Acme" }]);
+  });
+});
+
+describe("the values of a customer column", () => {
+  test("the cities of the customers named Acme, the filter in the body", async () => {
+    const result = await customersValues("City", {
+      Filter: ["Name", "=", "Acme"],
+    });
+
+    expect(result.data).toEqual([{ Value: "Rome", Count: 1 }]);
   });
 });
 

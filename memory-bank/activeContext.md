@@ -3,7 +3,7 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [16-VALUES-ON-LOAD-OPTIONS]
-@state::EXEC{run-202611261451,blocks 01,02/3 done✓;block 03 pending}
+@state::EXEC{run-202611261451,blocks 01,02,03/3 done✓;FINAL REVIEW pending}
 @feature::16-values-on-load-options
 @branch::feature/16-values-on-load-options (from feature/15-hierid-parent-name)
 @plan::tasks/16-values-on-load-options/{notes,plan}.md{TDDAB#3}
@@ -14,6 +14,9 @@
 [DECISIONS DURING EXECUTION-01]
 >fixed-01::empties excluded BY THE FILTER,not after the take ← DevExtreme's Take bounds the GROUPS and null/"" come first in key order (measured:Take=2 returned only the null+"" groups;sketch's Take=maxTake+in-memory filter answered an EMPTY list);DistinctTextValues.ValuesAsync adds [column,"<>",""] and [column,"<>",null] to the client's filter (AND,binary form) so Take in SQL bounds the values themselves;counts unchanged (a null/empty row has no value)
 !env-01::ast-grep rules were missing in this checkout (.ai-agent submodule uninitialized,.claude links absent)→git submodule update --init .ai-agent + junction .claude/lint-rules→.ai-agent/.claude/lint-rules;ast-grep scan 0
+[DECISIONS DURING EXECUTION-03]
+>fixed-03::HTTP filter of values answered 400 (validator's ConditionForm) ← FilterOf's JsonElement check was TOP-LEVEL only:the client's filter arrives as JsonElements,DistinctTextValues nests it inside its own conditions → the mixed list skipped the DevExtreme deserialization road;fix in LoadConversion:HasJsonElement recursive + internal BoundFilter(IReadOnlyList<object?>?)→IReadOnlyList<object?>? (the one binding road,DRY),DistinctTextValues passes its combined filter through it
+!doc-03::README step 5 POST values/{column}+Breaking (feature/16) paragraph beside the feature/11 one;catalog row EntityController<T> updated
 
 [13-STANDS-ALONE]
 @why::©User 2026-11-06 "sto aspettando per partire con progetto nuovo con smgen e zerox":fresh clone+new project with real submodules

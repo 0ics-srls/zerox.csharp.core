@@ -98,8 +98,30 @@ public sealed class OpenApiDocumentTests : IAsyncLifetime
         data.Should().Equal("#/components/schemas/Order", "#/components/schemas/LoadGroup");
     }
 
-    // The load's body is the service's own type: the members a client sends are the same, DevExtreme leaves the
-    // contract.
+    // The values' operation keeps its name (Customers_Values): a generated client keeps its method and gains the
+    // body. The load's body is the service's own type: the members a client sends are the same, DevExtreme leaves
+    // the contract.
+    [Fact]
+    public async Task Should_DocumentTheValuesWithTheLoadOptionsAsItsBody_WhenTheDocumentIsServed()
+    {
+        using var document = JsonDocument.Parse(await ServedAsync());
+        var root = document.RootElement;
+
+        var values = root.GetProperty("paths").GetProperty("/api/Customers/values/{column}");
+        values.TryGetProperty("get", out _).Should().BeFalse();
+        var post = values.GetProperty("post");
+        post.GetProperty("operationId").GetString().Should().Be("Customers_Values");
+        var body = post.GetProperty("requestBody").GetProperty("content").GetProperty("application/json").GetProperty("schema");
+        body.GetProperty("oneOf").EnumerateArray().Where(s => s.TryGetProperty("$ref", out _)).Select(s => s.GetProperty("$ref").GetString())
+            .Should().Equal("#/components/schemas/LoadOptions");
+        var item = post.GetProperty("responses").GetProperty("200").GetProperty("content").GetProperty("application/json")
+            .GetProperty("schema").GetProperty("items");
+        item.GetProperty("$ref").GetString().Should().Be("#/components/schemas/TextValue");
+        var textValue = root.GetProperty("components").GetProperty("schemas").GetProperty("TextValue").GetProperty("properties");
+        textValue.GetProperty("Value").GetProperty("type").GetString().Should().Be("string");
+        textValue.GetProperty("Count").GetProperty("type").GetString().Should().Be("integer");
+    }
+
     [Fact]
     public async Task Should_DocumentTheLoadOptions_WhenTheDocumentIsServed()
     {

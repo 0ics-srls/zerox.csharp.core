@@ -47,14 +47,21 @@ public static class DistinctTextValues
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxTake);
 
         // The empty choices are excluded by the filter, not after the take: the take must bound the values —
-        // all of them non-empty — not the groups, whose first in key order are null and "".
+        // all of them non-empty — not the groups, whose first in key order are null and "". The combination
+        // (the client's filter, which may hold JsonElements, with conditions of our own) is bound as the load
+        // binds a filter: the one road, DevExtreme's own deserialization.
         object[] keepValue = new object[] { column, "<>", "" };
         object?[] keepRow = new object?[] { column, "<>", null };
         IReadOnlyList<object?> onlyValues = filter is null
             ? [keepValue, "and", keepRow]
             : [filter, "and", new object[] { keepValue, "and", keepRow }];
 
-        var options = new LoadOptions { Filter = onlyValues, Group = [new GroupingInfo { Selector = column, IsExpanded = false }], Take = maxTake };
+        var options = new LoadOptions
+        {
+            Filter = LoadConversion.BoundFilter(onlyValues),
+            Group = [new GroupingInfo { Selector = column, IsExpanded = false }],
+            Take = maxTake,
+        };
 
         var loaded = await Search.LoadAsync(source, options, maxTake, ct).ConfigureAwait(false);
         if (loaded.Status != OpStatus.Ok || loaded.Value is null)

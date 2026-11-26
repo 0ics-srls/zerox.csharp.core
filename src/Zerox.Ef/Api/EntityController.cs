@@ -30,13 +30,14 @@ public abstract class EntityController<T>(IEntityService<T> service) : ResultCon
         Answer(await Service.LoadAsync(options ?? new LoadOptions(), ct).ConfigureAwait(false));
 
     /// <summary>
-    /// The distinct values of a text column, each with the number of rows that have it; the column name comes from
-    /// the URL and is checked against the real properties before any query. (Its route and verb change with the
-    /// options in the body: the next block.)
+    /// The distinct values of a text column, for the dropdown of its filter. POST because the options travel in
+    /// the body, as in the load; the meaning is a read. Of the options only the Filter is read — a client sends
+    /// the options of its grid as they are — and the body may be left out. The column name comes from the URL and
+    /// is checked against the real properties before any query.
     /// </summary>
-    [HttpGet("values/{column}")]
-    public virtual async Task<ActionResult<IReadOnlyList<TextValue>>> Values(string column, CancellationToken ct) =>
-        Answer(await Service.ValuesAsync(column, new LoadOptions(), ct).ConfigureAwait(false));
+    [HttpPost("values/{column}")]
+    public virtual async Task<ActionResult<IReadOnlyList<TextValue>>> Values(string column, [FromBody] LoadOptions? options, CancellationToken ct) =>
+        Answer(await Service.ValuesAsync(column, options ?? new LoadOptions(), ct).ConfigureAwait(false));
 
     /// <summary>
     /// The row with that Id, or 404.

@@ -173,13 +173,33 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_ReturnDistinctCitiesWithTheirCounts_WhenValuesIsCalled()
+    public async Task Should_ReturnDistinctCities_WhenValuesIsCalledWithoutABody()
     {
-        var (status, body) = await SendAsync(HttpMethod.Get, "api/Customers/values/City");
+        var (status, body) = await SendAsync(HttpMethod.Post, "api/Customers/values/City");
 
         status.Should().Be(HttpStatusCode.OK);
         body.EnumerateArray().Select(v => (v.GetProperty("Value").GetString(), v.GetProperty("Count").GetInt32()))
             .Should().Equal(("Milan", 1), ("Rome", 1));
+    }
+
+    [Fact]
+    public async Task Should_ReturnOnlyTheCitiesOfTheFilteredCustomers_WhenValuesIsCalledWithAFilter()
+    {
+        var (status, body) = await PostAsync("api/Customers/values/City", """{"Filter":["Name","=","Acme"]}""");
+
+        status.Should().Be(HttpStatusCode.OK);
+        body.EnumerateArray().Select(v => (v.GetProperty("Value").GetString(), v.GetProperty("Count").GetInt32()))
+            .Should().Equal(("Rome", 1));
+    }
+
+    [Fact]
+    public async Task Should_ReturnDistinctCities_WhenValuesIsCalledWithTheOptionsOfAGrid()
+    {
+        var (status, body) = await PostAsync("api/Customers/values/City",
+            """{"Take":1,"Skip":1,"Sort":[{"Selector":"Name","Desc":true}],"Select":["Name"]}""");
+
+        status.Should().Be(HttpStatusCode.OK);
+        body.EnumerateArray().Select(v => v.GetProperty("Value").GetString()).Should().Equal("Milan", "Rome");
     }
 
     [Theory]
@@ -187,7 +207,7 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     [InlineData("Nope")]
     public async Task Should_Answer400_WhenValuesNamesAColumnThatIsNotText(string column)
     {
-        var (status, body) = await SendAsync(HttpMethod.Get, $"api/Customers/values/{column}");
+        var (status, body) = await PostAsync($"api/Customers/values/{column}", "{}");
 
         status.Should().Be(HttpStatusCode.BadRequest);
         body.GetProperty("Code").GetString().Should().Be("InvalidRequest");
@@ -196,10 +216,28 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     [Fact]
     public async Task Should_Answer400_WhenValuesNamesAReservedField()
     {
-        var (status, body) = await SendAsync(HttpMethod.Get, "api/Orders/values/InternalNote");
+        var (status, body) = await PostAsync("api/Orders/values/InternalNote", "{}");
 
         status.Should().Be(HttpStatusCode.BadRequest);
         body.GetProperty("detail").GetString().Should().NotContain("internal\"");
+    }
+
+    [Fact]
+    public async Task Should_Answer400WithTheReason_WhenTheFilterOfValuesNamesAnUnknownField()
+    {
+        var (status, body) = await PostAsync("api/Customers/values/City", """{"Filter":["Nope","=",1]}""");
+
+        status.Should().Be(HttpStatusCode.BadRequest);
+        body.GetProperty("Code").GetString().Should().Be("InvalidRequest");
+        body.GetProperty("detail").GetString().Should().Contain("Nope");
+    }
+
+    [Fact]
+    public async Task Should_Answer405_WhenValuesIsAskedWithGet()
+    {
+        var (status, _) = await SendAsync(HttpMethod.Get, "api/Customers/values/City");
+
+        status.Should().Be(HttpStatusCode.MethodNotAllowed);
     }
 
     // --- CRUD ---

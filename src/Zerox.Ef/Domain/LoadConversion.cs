@@ -62,15 +62,24 @@ internal static class LoadConversion
 
     // A filter that came from JSON holds JsonElements; DevExtreme reads its filter with its own converter (internal),
     // so such a filter goes through DevExtreme's own deserialization — the values it gets are the ones it always got.
-    // A filter built in the process is copied as it is.
+    // A filter built in the process is copied as it is. A JSON part may sit at any depth (a caller combines the
+    // client's filter with conditions of its own), so the walk is recursive.
     private static IList? FilterOf(IReadOnlyList<object?>? filter) =>
         filter switch
         {
             null => null,
-            _ when filter.Any(element => element is JsonElement) =>
+            _ when HasJsonElement(filter) =>
                 JsonSerializer.Deserialize<DataSourceLoadOptionsBase>(JsonSerializer.SerializeToUtf8Bytes(new { Filter = filter }))!.Filter,
             _ => filter.ToList(),
         };
+
+    // The filter of the values (a caller combined the client's with conditions of its own) as the load binds it.
+    internal static IReadOnlyList<object?>? BoundFilter(IReadOnlyList<object?>? filter) =>
+        FilterOf(filter) is IList list ? [.. list.Cast<object?>()] : null;
+
+    private static bool HasJsonElement(IReadOnlyList<object?> filter) =>
+        filter.Any(element => element is JsonElement
+            || (element is IReadOnlyList<object?> nested && HasJsonElement(nested)));
 
     private static DxSummary Summary(CoreSummary summary) => new() { Selector = summary.Selector, SummaryType = summary.SummaryType };
 

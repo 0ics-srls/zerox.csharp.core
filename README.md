@@ -73,7 +73,9 @@ piece. The complete example, tested from the repository to HTTP, is
 
    It answers `POST api/Customers/load` (`LoadOptions`, DevExtreme's load options member by member,
    server-side: the options decide rows, columns or groups),
-   `GET api/Customers/values/{column}`, and the CRUD. An entity's own operations live in its service, each
+   `POST api/Customers/values/{column}` (the load options in the body, as the load: only their `Filter`
+   is read — a dropdown shows each value with the number of rows that have it; the body may be left
+   out), and the CRUD. An entity's own operations live in its service, each
    run through `RunAsync` and answered by the controller with `Answer(...)`: one that writes more than one
    repository opens `IUnitOfWork` (`CustomerService.MergeIntoAsync`); many rows without loading them go
    through `IMassiveOpHandler<T>` (`OrderService.CloseBeforeAsync`); a single-field change writes the client's
@@ -91,6 +93,13 @@ piece. The complete example, tested from the repository to HTTP, is
            [HttpGet("{year:int}")]
            public async Task<ActionResult<YearReport>> Year(int year, CancellationToken ct) => Answer(await reports.YearAsync(year, ct));
        }
+
+   **Breaking (feature/16-values-on-load-options)** for a project on an earlier version: the values
+   endpoint is `POST api/<Entity>/values/{column}` with the load options in the body (the `GET` is
+   gone), `IEntityService<T>.ValuesAsync` takes `(column, LoadOptions, ct)` and answers
+   `TextValue` (`Value`, `Count`) instead of a string — the values follow the service's `SearchSource()`
+   and the options' filter, so a derived service that overrode `ValuesAsync` only to narrow its rows can
+   drop the override.
 
    **Breaking (feature/11-entity-service)** for a project on an earlier version: `EntityController<T>` takes
    `IEntityService<T>` (call `AddZeroxDomain()` after `AddZeroxDb`), not `IRepository<T>`; a derived action
