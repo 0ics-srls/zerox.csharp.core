@@ -2,6 +2,11 @@
 
 # Active task progress only
 
+[16-values-on-load-options]
+@plan::tasks/16-values-on-load-options/plan.md{TDDAB#3}
+@execution::run-202611261451
+01-values-under-a-filter✓{Core:TextValue(Value,Count) record with ///+catalog row (Core section);Domain:DistinctTextValues.ValuesAsync(source,column,filter,maxTake,ct)→OpResult<IReadOnlyList<TextValue>> through Search.LoadAsync (old 3-arg overload kept beside,removed in block 02);DistinctTextValuesTests seed gains Quantity 1..6 in note order,14 new tests+SQL test replaced to the new overload (same name,old overload loses it,block 02 moves the rest),LoadTypesTests+1 (TextValue JSON {"Value":"pear","Count":2});fix:empties excluded BY THE FILTER ([col,"<>",""] and [col,"<>",null] AND-combined binary,client filter nested first) ← DevExtreme Take bounds GROUPS incl.null/"" first in key order (probe:Take=2 → only null+"" groups → in-memory filter after take = empty list);guards ArgumentNull source/column,ArgumentOutOfRange maxTake}{build 0/0,format✓,ast-grep 0 (.ai-agent submodule init+junction .claude/lint-rules),Domain 172 (165+7skip) all pass,LoadTypesTests 5/5}
+
 [11-entity-service]
 @plan::tasks/11-entity-service/index.md{TDDAB#6}
 @execution::run-20261103-zerox11

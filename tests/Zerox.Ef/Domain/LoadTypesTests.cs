@@ -57,6 +57,14 @@ public sealed class LoadTypesTests
     }
 
     [Fact]
+    public void Should_WriteATextValueWithItsDeclaredNames_WhenSerialized()
+    {
+        var json = JsonSerializer.Serialize(new TextValue("pear", 2), AsIs);
+
+        json.Should().Be("""{"Value":"pear","Count":2}""");
+    }
+
+    [Fact]
     public void Should_WriteAGroupWithDevExtremeNames()
     {
         var full = new LoadGroup { Key = "a", Items = null, Count = 3, Summary = [6] };

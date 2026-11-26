@@ -3,7 +3,7 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [16-VALUES-ON-LOAD-OPTIONS]
-@state::PLAN{written,parsePlan✓#3,¬executed→©User::/dev:j-cvm-exec-plan tasks/16-values-on-load-options/plan.md}
+@state::EXEC{run-202611261451,block 01/3 done✓ (RED✓GREEN✓VERIFY✓CROSS✓MB✓);blocks 02,03 pending}
 @feature::16-values-on-load-options
 @branch::feature/16-values-on-load-options (from feature/15-hierid-parent-name)
 @plan::tasks/16-values-on-load-options/{notes,plan}.md{TDDAB#3}
@@ -11,6 +11,9 @@
 !decisions©User::one way only:ValuesAsync(column,LoadOptions)+POST values/{column} with body,GET removed (breaking,README);new branch so earlier consumers keep theirs
 !design::only Filter of the options is read (grid options sent as they are);answer = TextValue(Value,Count) new in Ef.Core (©User:"abbiamo anche la cardinalità");values = Search.LoadAsync grouped on the column (keys+counts),on SearchSource(),at most MaxTake;old DistinctTextValues.ValuesAsync(query,column,ct) removed (one implementation)
 !review::written in a session of carta-modelli;LSAI ¬ready there (needs dotnet restore)→symbols read from source,low confidence;j-review-plan ¬run on this plan
+[DECISIONS DURING EXECUTION-01]
+>fixed-01::empties excluded BY THE FILTER,not after the take ← DevExtreme's Take bounds the GROUPS and null/"" come first in key order (measured:Take=2 returned only the null+"" groups;sketch's Take=maxTake+in-memory filter answered an EMPTY list);DistinctTextValues.ValuesAsync adds [column,"<>",""] and [column,"<>",null] to the client's filter (AND,binary form) so Take in SQL bounds the values themselves;counts unchanged (a null/empty row has no value)
+!env-01::ast-grep rules were missing in this checkout (.ai-agent submodule uninitialized,.claude links absent)→git submodule update --init .ai-agent + junction .claude/lint-rules→.ai-agent/.claude/lint-rules;ast-grep scan 0
 
 [13-STANDS-ALONE]
 @why::©User 2026-11-06 "sto aspettando per partire con progetto nuovo con smgen e zerox":fresh clone+new project with real submodules
