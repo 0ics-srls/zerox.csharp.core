@@ -230,7 +230,7 @@
         "tags": [
           "Customers"
         ],
-        "summary": "The distinct values of a text column; the column name comes from the URL and is checked against the real\nproperties before any query.",
+        "summary": "The distinct values of a text column, each with the number of rows that have it; the column name comes from\nthe URL and is checked against the real properties before any query. (Its route and verb change with the\noptions in the body: the next block.)",
         "operationId": "Customers_Values",
         "parameters": [
           {
@@ -250,7 +250,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "$ref": "#/components/schemas/TextValue"
                   }
                 }
               }
@@ -691,7 +691,7 @@
         "tags": [
           "Orders"
         ],
-        "summary": "The distinct values of a text column; the column name comes from the URL and is checked against the real\nproperties before any query.",
+        "summary": "The distinct values of a text column, each with the number of rows that have it; the column name comes from\nthe URL and is checked against the real properties before any query. (Its route and verb change with the\noptions in the body: the next block.)",
         "operationId": "Orders_Values",
         "parameters": [
           {
@@ -711,7 +711,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "$ref": "#/components/schemas/TextValue"
                   }
                 }
               }
@@ -1506,6 +1506,25 @@
           }
         },
         "description": "One sum, total or per group."
+      },
+      "TextValue": {
+        "required": [
+          "Value",
+          "Count"
+        ],
+        "type": "object",
+        "properties": {
+          "Value": {
+            "type": "string",
+            "description": "The value, never empty."
+          },
+          "Count": {
+            "type": "integer",
+            "description": "How many rows have it.",
+            "format": "int32"
+          }
+        },
+        "description": "A distinct value of a text column and the number of rows that have it, among the rows that were asked."
       }
     }
   },

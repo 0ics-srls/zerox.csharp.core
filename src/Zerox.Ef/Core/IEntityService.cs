@@ -15,9 +15,13 @@ public interface IEntityService<T> where T : class, IEntity
     Task<OpResult<Loaded>> LoadAsync(LoadOptions options, CancellationToken ct = default);
 
     /// <summary>
-    /// The distinct values of a readable text column, for a filter dropdown. Invalid for any other name.
+    /// The distinct values of a text column, for the dropdown of its filter: of the rows the load works on, under
+    /// the <see cref="LoadOptions.Filter"/> of the options — the options of the client's grid as they are; their
+    /// sort, page, selection, grouping and summaries are not read. Each value comes with the number of those rows
+    /// that have it. Ordered, without empty values, a bounded number.
+    /// Invalid when the column is not a readable text column, or the filter cannot be run.
     /// </summary>
-    Task<OpResult<IReadOnlyList<string>>> ValuesAsync(string column, CancellationToken ct = default);
+    Task<OpResult<IReadOnlyList<TextValue>>> ValuesAsync(string column, LoadOptions options, CancellationToken ct = default);
 
     /// <summary>
     /// The row with that id: Ok, or NotFound.

@@ -39,12 +39,13 @@ public class EntityService<T>(IRepository<T> repository) : IEntityService<T> whe
     }
 
     /// <inheritdoc />
-    public virtual Task<OpResult<IReadOnlyList<string>>> ValuesAsync(string column, CancellationToken ct = default)
+    public virtual Task<OpResult<IReadOnlyList<TextValue>>> ValuesAsync(string column, LoadOptions options, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(column);
-        return RunAsync(async c => DistinctTextValues.IsTextColumn<T>(column)
-            ? OpResult.Ok(await DistinctTextValues.ValuesAsync(Repository.Query(), column, c).ConfigureAwait(false))
-            : OpResult.Invalid<IReadOnlyList<string>>($"'{column}' is not a readable text column of {typeof(T).Name}."), ct);
+        ArgumentNullException.ThrowIfNull(options);
+        return RunAsync(c => DistinctTextValues.IsTextColumn<T>(column)
+            ? DistinctTextValues.ValuesAsync(SearchSource(), column, options.Filter, MaxTake, c)
+            : Task.FromResult(OpResult.Invalid<IReadOnlyList<TextValue>>($"'{column}' is not a readable text column of {typeof(T).Name}.")), ct);
     }
 
     /// <inheritdoc />

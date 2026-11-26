@@ -34,16 +34,6 @@ public sealed class DistinctTextValuesTests : IAsyncLifetime
     public async ValueTask DisposeAsync() => await Db.DisposeAsync();
 
     [Fact]
-    public async Task Should_ReturnDistinctOrderedValuesWithoutEmpty()
-    {
-        await using var context = Db.NewContext();
-
-        var values = await DistinctTextValues.ValuesAsync(context.Items.AsNoTracking(), "Note", Ct);
-
-        values.Should().Equal("apple", "fig", "pear");
-    }
-
-    [Fact]
     public async Task Should_ReturnDistinctOrderedValuesWithoutEmpty_WhenThereIsNoFilter()
     {
         await using var context = Db.NewContext();

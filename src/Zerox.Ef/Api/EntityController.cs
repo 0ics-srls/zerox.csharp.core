@@ -30,12 +30,13 @@ public abstract class EntityController<T>(IEntityService<T> service) : ResultCon
         Answer(await Service.LoadAsync(options ?? new LoadOptions(), ct).ConfigureAwait(false));
 
     /// <summary>
-    /// The distinct values of a text column; the column name comes from the URL and is checked against the real
-    /// properties before any query.
+    /// The distinct values of a text column, each with the number of rows that have it; the column name comes from
+    /// the URL and is checked against the real properties before any query. (Its route and verb change with the
+    /// options in the body: the next block.)
     /// </summary>
     [HttpGet("values/{column}")]
-    public virtual async Task<ActionResult<IReadOnlyList<string>>> Values(string column, CancellationToken ct) =>
-        Answer(await Service.ValuesAsync(column, ct).ConfigureAwait(false));
+    public virtual async Task<ActionResult<IReadOnlyList<TextValue>>> Values(string column, CancellationToken ct) =>
+        Answer(await Service.ValuesAsync(column, new LoadOptions(), ct).ConfigureAwait(false));
 
     /// <summary>
     /// The row with that Id, or 404.

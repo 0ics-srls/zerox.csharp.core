@@ -147,10 +147,84 @@ public sealed class EntityServiceTests : IAsyncLifetime
     {
         await using var scope = Db.NewScope();
 
-        var result = await ServiceOf<Item>(scope).ValuesAsync("Name", Ct);
+        var result = await ServiceOf<Item>(scope).ValuesAsync("Name", new LoadOptions(), Ct);
 
         result.Status.Should().Be(OpStatus.Ok);
-        result.Value.Should().BeEquivalentTo(Enumerable.Range(1, 30).Select(q => $"item{q:00}"));
+        result.Value.Should().Equal(Enumerable.Range(1, 30).Select(q => new TextValue($"item{q:00}", 1)));
+    }
+
+    [Fact]
+    public async Task Should_ReturnOnlyTheValuesOfTheFilteredRows_WhenTheOptionsHaveAFilter()
+    {
+        await using var scope = Db.NewScope();
+
+        var result = await ServiceOf<Item>(scope).ValuesAsync("Name", new LoadOptions { Filter = ["Quantity", "<=", 2] }, Ct);
+
+        result.Status.Should().Be(OpStatus.Ok);
+        result.Value.Should().Equal(new TextValue("item01", 1), new TextValue("item02", 1));
+    }
+
+    [Fact]
+    public async Task Should_ReturnOnlyTheValuesOfTheSearchSource_WhenItIsOverridden()
+    {
+        await using var scope = Db.NewScope();
+        var service = new SmallOnes(RepositoryOf<Item>(scope));
+
+        var result = await service.ValuesAsync("Name", new LoadOptions(), Ct);
+
+        result.Status.Should().Be(OpStatus.Ok);
+        result.Value.Should().Equal(new TextValue("item01", 1), new TextValue("item02", 1), new TextValue("item03", 1));
+    }
+
+    [Fact]
+    public async Task Should_ApplyTheFilterInsideTheSearchSource_WhenBothNarrow()
+    {
+        await using var scope = Db.NewScope();
+        var service = new SmallOnes(RepositoryOf<Item>(scope));
+
+        var result = await service.ValuesAsync("Name", new LoadOptions { Filter = ["Quantity", ">=", 3] }, Ct);
+
+        result.Status.Should().Be(OpStatus.Ok);
+        result.Value.Should().Equal(new TextValue("item03", 1));
+    }
+
+    [Fact]
+    public async Task Should_ReturnTheValuesOfTheRowsTheLoadReturns_WhenTheSameFilterIsGiven()
+    {
+        await using var scope = Db.NewScope();
+        IReadOnlyList<object?> filter = ["Quantity", "<=", 5];
+
+        var loaded = await ServiceOf<Item>(scope).LoadAsync(new LoadOptions { Filter = filter, Take = 50, RequireTotalCount = true }, Ct);
+        var values = await ServiceOf<Item>(scope).ValuesAsync("Name", new LoadOptions { Filter = filter }, Ct);
+
+        loaded.Status.Should().Be(OpStatus.Ok);
+        values.Value!.Select(v => v.Value)
+            .Should().Equal(loaded.Value!.Data.Cast<Item>().Select(i => i.Name).Distinct().OrderBy(n => n));
+        values.Value!.Sum(v => v.Count).Should().Be(loaded.Value.TotalCount);
+    }
+
+    [Fact]
+    public async Task Should_IgnoreThePageAndTheSortOfTheOptions_WhenValuesAreAsked()
+    {
+        await using var scope = Db.NewScope();
+        var options = new LoadOptions { Take = 1, Skip = 5, Sort = [new SortingInfo { Selector = "Quantity", Desc = true }] };
+
+        var result = await ServiceOf<Item>(scope).ValuesAsync("Name", options, Ct);
+
+        result.Status.Should().Be(OpStatus.Ok);
+        result.Value.Should().Equal(Enumerable.Range(1, 30).Select(q => new TextValue($"item{q:00}", 1)));
+    }
+
+    [Fact]
+    public async Task Should_ReturnAtMostMaxTakeValues_WhenThereAreMore()
+    {
+        await using var scope = Db.NewScope();
+        var service = new Probe(RepositoryOf<Item>(scope), maxTake: 10);
+
+        var result = await service.ValuesAsync("Name", new LoadOptions(), Ct);
+
+        result.Status.Should().Be(OpStatus.Ok);
+        result.Value.Should().Equal(Enumerable.Range(1, 10).Select(q => new TextValue($"item{q:00}", 1)));
     }
 
     [Theory]
@@ -161,10 +235,21 @@ public sealed class EntityServiceTests : IAsyncLifetime
     {
         await using var scope = Db.NewScope();
 
-        var result = await ServiceOf<Item>(scope).ValuesAsync(column, Ct);
+        var result = await ServiceOf<Item>(scope).ValuesAsync(column, new LoadOptions(), Ct);
 
         result.Status.Should().Be(OpStatus.Invalid);
         result.Reason.Should().Contain(column);
+    }
+
+    [Fact]
+    public async Task Should_ReturnInvalid_WhenTheFilterNamesAReservedField()
+    {
+        await using var scope = Db.NewScope();
+
+        var result = await ServiceOf<Item>(scope).ValuesAsync("Name", new LoadOptions { Filter = ["Secret", "=", "s"] }, Ct);
+
+        result.Status.Should().Be(OpStatus.Invalid);
+        result.Reason.Should().Contain("Secret");
     }
 
     // --- get ---
@@ -432,7 +517,22 @@ public sealed class EntityServiceTests : IAsyncLifetime
             () => service.CreateAsync(null!, Ct),
             () => service.UpdateAsync(null!, Ct),
             () => service.LoadAsync(null!, Ct),
-            () => service.ValuesAsync(null!, Ct),
+        ];
+
+        foreach (var call in calls)
+            await call.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task Should_ThrowArgumentNull_WhenTheColumnOrTheOptionsAreNull()
+    {
+        await using var scope = Db.NewScope();
+        var service = ServiceOf<Item>(scope);
+
+        Func<Task>[] calls =
+        [
+            () => service.ValuesAsync(null!, new LoadOptions(), Ct),
+            () => service.ValuesAsync("Name", null!, Ct),
         ];
 
         foreach (var call in calls)

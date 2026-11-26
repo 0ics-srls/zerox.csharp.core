@@ -173,12 +173,13 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_ReturnDistinctCities_WhenValuesIsCalled()
+    public async Task Should_ReturnDistinctCitiesWithTheirCounts_WhenValuesIsCalled()
     {
         var (status, body) = await SendAsync(HttpMethod.Get, "api/Customers/values/City");
 
         status.Should().Be(HttpStatusCode.OK);
-        body.EnumerateArray().Select(v => v.GetString()).Should().Equal("Milan", "Rome");
+        body.EnumerateArray().Select(v => (v.GetProperty("Value").GetString(), v.GetProperty("Count").GetInt32()))
+            .Should().Equal(("Milan", 1), ("Rome", 1));
     }
 
     [Theory]

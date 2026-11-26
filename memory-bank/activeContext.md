@@ -3,7 +3,7 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [16-VALUES-ON-LOAD-OPTIONS]
-@state::EXEC{run-202611261451,block 01/3 done✓ (RED✓GREEN✓VERIFY✓CROSS✓MB✓);blocks 02,03 pending}
+@state::EXEC{run-202611261451,blocks 01,02/3 done✓;block 03 pending}
 @feature::16-values-on-load-options
 @branch::feature/16-values-on-load-options (from feature/15-hierid-parent-name)
 @plan::tasks/16-values-on-load-options/{notes,plan}.md{TDDAB#3}

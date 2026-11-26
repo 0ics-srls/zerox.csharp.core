@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore;
 using Zerox.Ef.Core;
 
 namespace Zerox.Ef.Domain;
@@ -70,19 +69,4 @@ public static class DistinctTextValues
                 group.Count ?? throw new InvalidOperationException("A group that is not expanded came without its count.")))];
         return OpResult.Ok(values);
     }
-
-    /// <summary>
-    /// Ordered, without repetitions and without empty values (an empty choice would filter on "" and
-    /// empty the list without saying why). The query comes from the caller, so a view of its own
-    /// (a subset of the rows) is kept.
-    /// </summary>
-    public static async Task<IReadOnlyList<string>> ValuesAsync<T>(IQueryable<T> query, string column, CancellationToken ct = default)
-        where T : class =>
-        await query
-            .Select(row => EF.Property<string>(row, column))
-            .Where(value => value != null && value != "")
-            .Distinct()
-            .OrderBy(value => value)
-            .ToListAsync(ct)
-            .ConfigureAwait(false);
 }
