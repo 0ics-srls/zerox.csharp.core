@@ -9,7 +9,7 @@
 @plan::tasks/16-values-on-load-options/{notes,plan}.md{TDDAB#3}
 @why::©User 2026-11-26 (from carta-modelli,consumer by submodule):"ValuesAsync deve accettare lo stesso dataloadoptions";EntityService<T>.ValuesAsync took no options and read Repository.Query()→skipped SearchSource() (a narrowed service leaked the values of every row)
 !decisions©User::one way only:ValuesAsync(column,LoadOptions)+POST values/{column} with body,GET removed (breaking,README);new branch so earlier consumers keep theirs
-!design::only Filter of the options is read (grid options sent as they are);values = Search.LoadAsync grouped on the column (keys),on SearchSource(),at most MaxTake;old DistinctTextValues.ValuesAsync(query,column,ct) removed (one implementation)
+!design::only Filter of the options is read (grid options sent as they are);answer = TextValue(Value,Count) new in Ef.Core (©User:"abbiamo anche la cardinalità");values = Search.LoadAsync grouped on the column (keys+counts),on SearchSource(),at most MaxTake;old DistinctTextValues.ValuesAsync(query,column,ct) removed (one implementation)
 !review::written in a session of carta-modelli;LSAI ¬ready there (needs dotnet restore)→symbols read from source,low confidence;j-review-plan ¬run on this plan
 
 [13-STANDS-ALONE]

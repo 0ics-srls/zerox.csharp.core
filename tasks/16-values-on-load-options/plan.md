@@ -11,7 +11,7 @@ API foundation of applications: `Zerox.Ef.Core` → `Zerox.Ef.Db` → `Zerox.Ef.
 root. Every project sees its tests' internals. Everything in the repository is English.
 
 ```
-src/Zerox.Ef/Core/     contracts, no dependency: IEntityService<T>, OpResult<T> + OpResult (Ok, Invalid, …), OpStatus,
+src/Zerox.Ef/Core/     contracts, no dependency (TextValue is added here by this work): IEntityService<T>, OpResult<T> + OpResult (Ok, Invalid, …), OpStatus,
                        LoadOptions (Filter, Group, Take, …), GroupingInfo (Selector, IsExpanded), Loaded (Data), LoadGroup (Key)
 src/Zerox.Ef/Domain/   Search.LoadAsync(IQueryable<T> source, LoadOptions options, int maxTake, CancellationToken ct)
                        → Task<OpResult<Loaded>> (an option the query cannot answer is Invalid with the reason);
@@ -34,7 +34,9 @@ tests/Zerox.Ef/Api/    Zerox.Ef.Api.Tests — Sample/ (Customers: Acme/Rome, Bol
 it takes no options, so the dropdown of a column's filter ignores the filter of the grid; and it skips
 `SearchSource()`, so a service that narrows its rows (the caller's rows, a tenant's) answers the values of every
 row. After this work the distinct values go through the same search as the load: on `SearchSource()`, with the
-`Filter` of the `LoadOptions` the client sends, at most `MaxTake` values.
+`Filter` of the `LoadOptions` the client sends, at most `MaxTake` values — and each value comes with the number
+of rows that have it (`TextValue`: `Value`, `Count`), which the grouping gives in the same query: a dropdown
+can show `Rome (12)`.
 
 Of the options only `Filter` is read: a client sends the options of its grid as they are, and its sort, page,
 select, group and summaries have no meaning for a list of distinct values. The contract becomes
@@ -48,7 +50,8 @@ the README).
 |---|---|---|
 | Run load options on any query, in SQL, as an outcome | `src/Zerox.Ef/Domain/Search.cs`: `Search.LoadAsync(IQueryable<T>, LoadOptions, int, CancellationToken)` — EXISTS | `DistinctTextValues` |
 | Is this name a readable text column | `src/Zerox.Ef/Domain/DistinctTextValues.cs`: `IsTextColumn<T>` — EXISTS | `DistinctTextValues`, `EntityService<T>` |
-| The distinct values of a text column under a filter | `src/Zerox.Ef/Domain/DistinctTextValues.cs`: `ValuesAsync(source, column, filter, maxTake, ct)` — NEW | `EntityService<T>` |
+| A distinct value with the number of rows that have it | `src/Zerox.Ef/Core/TextValue.cs`: `TextValue(Value, Count)` — NEW | `DistinctTextValues`, `IEntityService<T>`, `EntityController<T>` |
+| The distinct values of a text column under a filter, each with its count | `src/Zerox.Ef/Domain/DistinctTextValues.cs`: `ValuesAsync(source, column, filter, maxTake, ct)` — NEW | `EntityService<T>` |
 | The rows and the limit of a service | `src/Zerox.Ef/Domain/EntityService.cs`: `SearchSource()`, `MaxTake` — EXISTS | `EntityService<T>.ValuesAsync` |
 | An outcome translated to HTTP | `src/Zerox.Ef/Api/ResultController.cs`: `Answer` — EXISTS | `EntityController<T>.Values` |
 
@@ -101,7 +104,9 @@ only by `Search.LoadAsync` — which EXISTS and is used here, not rewritten: the
 the groups of the column and reads their keys. This block ADDS the new method beside the old one, so the
 solution keeps building; block 02 removes the old one with its last caller.
 
-File to change: `src/Zerox.Ef/Domain/DistinctTextValues.cs`. Tests:
+Files: `src/Zerox.Ef/Core/TextValue.cs` (new), `src/Zerox.Ef/Domain/DistinctTextValues.cs` (changed),
+`docs/catalog.md` (a row for `TextValue`). Tests: `tests/Zerox.Ef/Domain/LoadTypesTests.cs` (the JSON of a
+`TextValue`) and
 `tests/Zerox.Ef/Domain/DistinctTextValuesTests.cs` (its seed: notes `pear`, `apple`, `pear`, null, empty, `fig`,
 every item named `x`; the tests of this block add what they need to that seed — a `Quantity` per item, 1 to 6
 in the order of the notes).
@@ -111,8 +116,11 @@ Focused run: `dotnet test --project tests/Zerox.Ef/Domain/Zerox.Ef.Domain.Tests.
 
 <red>
 - test: Should_ReturnDistinctOrderedValuesWithoutEmpty_WhenThereIsNoFilter — `apple`, `fig`, `pear`
+- test: Should_CountTheRowsOfEachValue_WhenThereIsNoFilter — `apple` 1, `fig` 1, `pear` 2
+- test: Should_CountOnlyTheFilteredRows_WhenAFilterIsGiven — filter `["Quantity", "<=", 2]`: `apple` 1, `pear` 1
+- test: Should_WriteATextValueWithItsDeclaredNames_WhenSerialized — `{"Value":"pear","Count":2}`
 - test: Should_ReturnOnlyTheValuesOfTheFilteredRows_WhenAFilterIsGiven — filter `["Quantity", "<=", 2]`: `apple`, `pear`
-- test: Should_ReturnTheSameValuesAsTheLoadGroupedOnTheColumn_WhenAFilterIsGiven — for the same filter, the values equal the non-empty keys of `Search.LoadAsync` with `Group` on `Note`
+- test: Should_ReturnTheSameValuesAsTheLoadGroupedOnTheColumn_WhenAFilterIsGiven — for the same filter, the values and their counts equal the non-empty keys and the counts of `Search.LoadAsync` with `Group` on `Note`
 - test: Should_ReturnNoValues_WhenTheFilterMatchesNoRow — `Ok` with an empty list
 - test: Should_KeepTheViewOfTheQuery_WhenTheSourceIsNarrowed — source `Where(i => i.Quantity >= 5)`, no filter: `fig` only
 - test: Should_ReturnAtMostMaxTakeValues_WhenThereAreMore — `maxTake` 2: two values, the first two in order
@@ -126,15 +134,28 @@ Focused run: `dotnet test --project tests/Zerox.Ef/Domain/Zerox.Ef.Domain.Tests.
 ### Implementation
 
 ```csharp
+// src/Zerox.Ef/Core/TextValue.cs
+namespace Zerox.Ef.Core;
+
+/// <summary>
+/// A distinct value of a text column and the number of rows that have it, among the rows that were asked.
+/// </summary>
+/// <param name="Value">The value, never empty.</param>
+/// <param name="Count">How many rows have it.</param>
+public sealed record TextValue(string Value, int Count);
+```
+
+```csharp
 // src/Zerox.Ef/Domain/DistinctTextValues.cs — added
 /// <summary>
-/// The distinct values of a text column of the rows the filter keeps: ordered, without repetitions and without
+/// The distinct values of a text column of the rows the filter keeps, each with the number of those rows that
+/// have it: ordered, without repetitions and without
 /// empty values, at most <paramref name="maxTake"/>, computed by the database. The filter is a load-options
 /// filter and goes through the one search (<see cref="Search"/>), so a field it cannot name — unknown,
 /// reserved — is <see cref="OpStatus.Invalid"/> with the reason, as in a load. The query comes from the
 /// caller, so a view of its own (a subset of the rows) is kept.
 /// </summary>
-public static async Task<OpResult<IReadOnlyList<string>>> ValuesAsync<T>(
+public static async Task<OpResult<IReadOnlyList<TextValue>>> ValuesAsync<T>(
     IQueryable<T> source, string column, IReadOnlyList<object?>? filter, int maxTake, CancellationToken ct = default)
     where T : class
 {
@@ -150,22 +171,23 @@ public static async Task<OpResult<IReadOnlyList<string>>> ValuesAsync<T>(
     };
     var loaded = await Search.LoadAsync(source, options, maxTake, ct).ConfigureAwait(false);
     if (loaded.Status != OpStatus.Ok || loaded.Value is null)
-        return OpResult.Invalid<IReadOnlyList<string>>(loaded.Reason ?? "The values cannot be read.");
+        return OpResult.Invalid<IReadOnlyList<TextValue>>(loaded.Reason ?? "The values cannot be read.");
 
     // One group per distinct value, in the order of the key; the empty choice is left out: it would filter
     // on "" and empty the list without saying why.
-    IReadOnlyList<string> values = [.. loaded.Value.Data.OfType<LoadGroup>()
-        .Select(group => group.Key as string)
-        .OfType<string>()
-        .Where(value => value.Length > 0)];
+    IReadOnlyList<TextValue> values = [.. loaded.Value.Data.OfType<LoadGroup>()
+        .Where(group => group.Key is string { Length: > 0 })
+        .Select(group => new TextValue(
+            group.Key as string ?? throw new InvalidOperationException("The key of a group of a text column is not text."),
+            group.Count ?? throw new InvalidOperationException("A group that is not expanded came without its count.")))];
     return OpResult.Ok(values);
 }
 ```
 
 `Search.LoadAsync` on `LoadOptions` answers `Ok` or `Invalid` only (any other failure it leaves to the caller as
-an exception), so the branch above handles `Invalid`. The key of a group arrives as the column's value; when the
-test shows it arrives in another form (a `JsonElement`), the reading of the key is fixed where it is read, in
-this method, and nowhere else.
+an exception), so the branch above handles `Invalid`. The key of a group arrives as the column's value and a
+group that is not expanded carries its count; when a test shows either arrives in another form (a `JsonElement`
+key, a count the options must ask for), it is fixed where it is read, in this method, and nowhere else.
 
 ```csharp
 // tests/Zerox.Ef/Domain/DistinctTextValuesTests.cs
@@ -180,7 +202,7 @@ public async Task Should_ReturnOnlyTheValuesOfTheFilteredRows_WhenAFilterIsGiven
     var result = await DistinctTextValues.ValuesAsync(context.Items.AsNoTracking(), "Note", FirstTwo, Limit, Ct);
 
     result.Status.Should().Be(OpStatus.Ok);
-    result.Value.Should().Equal("apple", "pear");
+    result.Value.Should().Equal(new TextValue("apple", 1), new TextValue("pear", 1));
 }
 
 [Fact]
@@ -189,11 +211,12 @@ public async Task Should_ReturnTheSameValuesAsTheLoadGroupedOnTheColumn_WhenAFil
     await using var context = Db.NewContext();
     var grouped = await Search.LoadAsync(context.Items.AsNoTracking(),
         new LoadOptions { Filter = FirstTwo, Group = [new GroupingInfo { Selector = "Note", IsExpanded = false }], Take = Limit }, Limit, Ct);
-    var keys = grouped.Value?.Data.OfType<LoadGroup>().Select(g => g.Key as string).OfType<string>().Where(k => k.Length > 0);
+    var keys = grouped.Value?.Data.OfType<LoadGroup>().Where(g => g.Key is string { Length: > 0 })
+        .Select(g => (g.Key, g.Count));
 
     var result = await DistinctTextValues.ValuesAsync(context.Items.AsNoTracking(), "Note", FirstTwo, Limit, Ct);
 
-    result.Value.Should().Equal(keys);
+    result.Value?.Select(v => ((object?)v.Value, (int?)v.Count)).Should().Equal(keys);
 }
 
 [Fact]
@@ -213,7 +236,7 @@ The existing tests of the old method stay green in this block: they are moved to
 If a test or a criterion fails, the cause is found with Protocol D — `${CLAUDE_PLUGIN_ROOT}/commands/mind-sets/debug-protocol.md`, read in full — before any change.
 
 <success>
-- [ ] `DistinctTextValues` has the new `ValuesAsync` with its `///`, and turns no filter into a query itself: the only call that reads the filter is `Search.LoadAsync`
+- [ ] `TextValue` is in `Zerox.Ef.Core` with its `///` and its row in `docs/catalog.md`; `DistinctTextValues` has the new `ValuesAsync` with its `///`, and turns no filter into a query itself: the only call that reads the filter is `Search.LoadAsync`
 - [ ] Gate: `dotnet build zerox.csharp.core.slnx -warnaserror` && `dotnet format zerox.csharp.core.slnx --verify-no-changes` && `ast-grep scan` → exit 0
 - [ ] Block tests: `dotnet test --project tests/Zerox.Ef/Domain/Zerox.Ef.Domain.Tests.csproj --stop-on-fail on` → all pass
 - [ ] Regression: `dotnet test --solution zerox.csharp.core.slnx -- --filter-not-trait "Category=Integration"` → all pass
@@ -250,11 +273,11 @@ Focused run: `dotnet test --project tests/Zerox.Ef/Domain/Zerox.Ef.Domain.Tests.
 </intro>
 
 <red>
-- test: Should_ReturnTheDistinctValues_WhenTheColumnIsText — empty options: `Ok` with the 30 names
+- test: Should_ReturnTheDistinctValues_WhenTheColumnIsText — empty options: `Ok` with the 30 names, each with count 1
 - test: Should_ReturnOnlyTheValuesOfTheFilteredRows_WhenTheOptionsHaveAFilter — `Filter` `["Quantity", "<=", 2]`: `item01`, `item02`
 - test: Should_ReturnOnlyTheValuesOfTheSearchSource_WhenItIsOverridden — `SmallOnes` (`Quantity <= 3`), empty options: `item01`, `item02`, `item03`
 - test: Should_ApplyTheFilterInsideTheSearchSource_WhenBothNarrow — `SmallOnes`, `Filter` `["Quantity", ">=", 3]`: `item03`
-- test: Should_ReturnTheValuesOfTheRowsTheLoadReturns_WhenTheSameFilterIsGiven — for one filter, the values equal the distinct names of the rows `LoadAsync` answers
+- test: Should_ReturnTheValuesOfTheRowsTheLoadReturns_WhenTheSameFilterIsGiven — for one filter, the values equal the distinct names of the rows `LoadAsync` answers, and the counts add up to its total count
 - test: Should_IgnoreThePageAndTheSortOfTheOptions_WhenValuesAreAsked — `Take` 1, `Skip` 5, `Sort` on `Quantity` descending: still the 30 names, in order
 - test: Should_ReturnAtMostMaxTakeValues_WhenThereAreMore — a service whose `MaxTake` is 10: ten values
 - test: Should_ReturnInvalid_WhenTheColumnIsNotReadableText (theory: `Quantity`, `Secret`, `Nope`) — the reason names the column
@@ -269,22 +292,23 @@ Focused run: `dotnet test --project tests/Zerox.Ef/Domain/Zerox.Ef.Domain.Tests.
 /// <summary>
 /// The distinct values of a text column, for the dropdown of its filter: of the rows the load works on, under
 /// the <see cref="LoadOptions.Filter"/> of the options — the options of the client's grid as they are; their
-/// sort, page, selection, grouping and summaries are not read. Ordered, without empty values, a bounded number.
+/// sort, page, selection, grouping and summaries are not read. Each value comes with the number of those rows
+/// that have it. Ordered, without empty values, a bounded number.
 /// Invalid when the column is not a readable text column, or the filter cannot be run.
 /// </summary>
-Task<OpResult<IReadOnlyList<string>>> ValuesAsync(string column, LoadOptions options, CancellationToken ct = default);
+Task<OpResult<IReadOnlyList<TextValue>>> ValuesAsync(string column, LoadOptions options, CancellationToken ct = default);
 ```
 
 ```csharp
 // src/Zerox.Ef/Domain/EntityService.cs
 /// <inheritdoc />
-public virtual Task<OpResult<IReadOnlyList<string>>> ValuesAsync(string column, LoadOptions options, CancellationToken ct = default)
+public virtual Task<OpResult<IReadOnlyList<TextValue>>> ValuesAsync(string column, LoadOptions options, CancellationToken ct = default)
 {
     ArgumentNullException.ThrowIfNull(column);
     ArgumentNullException.ThrowIfNull(options);
     return RunAsync(c => DistinctTextValues.IsTextColumn<T>(column)
         ? DistinctTextValues.ValuesAsync(SearchSource(), column, options.Filter, MaxTake, c)
-        : Task.FromResult(OpResult.Invalid<IReadOnlyList<string>>($"'{column}' is not a readable text column of {typeof(T).Name}.")), ct);
+        : Task.FromResult(OpResult.Invalid<IReadOnlyList<TextValue>>($"'{column}' is not a readable text column of {typeof(T).Name}.")), ct);
 }
 ```
 
@@ -304,7 +328,7 @@ public async Task Should_ReturnOnlyTheValuesOfTheSearchSource_WhenItIsOverridden
     var result = await service.ValuesAsync("Name", new LoadOptions(), Ct);
 
     result.Status.Should().Be(OpStatus.Ok);
-    result.Value.Should().Equal("item01", "item02", "item03");
+    result.Value.Should().Equal(new TextValue("item01", 1), new TextValue("item02", 1), new TextValue("item03", 1));
 }
 
 [Fact]
@@ -315,7 +339,7 @@ public async Task Should_IgnoreThePageAndTheSortOfTheOptions_WhenValuesAreAsked(
 
     var result = await ServiceOf<Item>(scope).ValuesAsync("Name", options, Ct);
 
-    result.Value.Should().Equal(Enumerable.Range(1, 30).Select(q => $"item{q:00}"));
+    result.Value.Should().Equal(Enumerable.Range(1, 30).Select(q => new TextValue($"item{q:00}", 1)));
 }
 ```
 
@@ -354,8 +378,8 @@ Files to change:
 - `tests/Zerox.Ef/Api/Sample/EntityControllerApiTests.cs` — the tests of the values
 - `tests/Zerox.Ef/Api/Sample/OpenApiDocumentTests.cs` — one test on the values' operation
 - `tests/Zerox.Ef/Api/Sample/openapi/Sample.json` — rewritten by the test; `tests/Zerox.Ef/Api/Sample/client/src/sample.test.ts` — one case that calls the generated `customersValues` with a filter
-- `README.md` (step 5: `POST api/Customers/values/{column}` with the load options; a **Breaking
-  (feature/16-values-on-load-options)** paragraph: the contract's new parameter, the `GET` gone, a derived
+- `README.md` (step 5: `POST api/Customers/values/{column}` with the load options, answering each value with its count; a **Breaking
+  (feature/16-values-on-load-options)** paragraph: the contract's new parameter and its new answer (`TextValue`: `Value`, `Count`, no longer a string), the `GET` gone, a derived
   service that overrode `ValuesAsync` only to narrow its rows can drop the override), `docs/catalog.md` (the row
   of `EntityController<T>`)
 
@@ -363,14 +387,14 @@ Focused run: `dotnet test --project tests/Zerox.Ef/Api/Zerox.Ef.Api.Tests.csproj
 </intro>
 
 <red>
-- test: Should_ReturnDistinctCities_WhenValuesIsCalledWithoutABody — `POST api/Customers/values/City`: 200, `Milan`, `Rome`
-- test: Should_ReturnOnlyTheCitiesOfTheFilteredCustomers_WhenValuesIsCalledWithAFilter — body `{"Filter":["Name","=","Acme"]}`: `Rome`
+- test: Should_ReturnDistinctCities_WhenValuesIsCalledWithoutABody — `POST api/Customers/values/City`: 200, `[{"Value":"Milan","Count":1},{"Value":"Rome","Count":1}]`
+- test: Should_ReturnOnlyTheCitiesOfTheFilteredCustomers_WhenValuesIsCalledWithAFilter — body `{"Filter":["Name","=","Acme"]}`: `Rome` with count 1
 - test: Should_ReturnDistinctCities_WhenValuesIsCalledWithTheOptionsOfAGrid — body `{"Take":1,"Skip":1,"Sort":[{"Selector":"Name","Desc":true}],"Select":["Name"]}`: still `Milan`, `Rome`
 - test: Should_Answer400_WhenValuesNamesAColumnThatIsNotText (theory: `Version`, `Nope`) — `Code` `InvalidRequest`
 - test: Should_Answer400_WhenValuesNamesAReservedField — `POST api/Orders/values/InternalNote`; the detail does not carry a stored value
 - test: Should_Answer400WithTheReason_WhenTheFilterOfValuesNamesAnUnknownField — `POST api/Customers/values/City`, body `{"Filter":["Nope","=",1]}`: 400, `Code` `InvalidRequest`, the detail names `Nope`
 - test: Should_Answer405_WhenValuesIsAskedWithGet — `GET api/Customers/values/City`: 405 as a ProblemDetails
-- test: Should_DocumentTheValuesWithTheLoadOptionsAsItsBody_WhenTheDocumentIsServed — `/api/Customers/values/{column}` has `post` and no `get`, operation `Customers_Values`, body `LoadOptions` or null, answer an array of strings
+- test: Should_DocumentTheValuesWithTheLoadOptionsAsItsBody_WhenTheDocumentIsServed — `/api/Customers/values/{column}` has `post` and no `get`, operation `Customers_Values`, body `LoadOptions` or null, answer an array of `TextValue` (`Value` a string, `Count` an integer)
 - test: Should_KeepTheFileEqualToTheServedDocument — the existing test: `Sample.json` rewritten once, its diff read, then green
 - test: the generated client reads the cities of the customers named Acme (`sample.test.ts`, run by `ClientTests`)
 </red>
@@ -386,7 +410,7 @@ Focused run: `dotnet test --project tests/Zerox.Ef/Api/Zerox.Ef.Api.Tests.csproj
 /// checked against the real properties before any query.
 /// </summary>
 [HttpPost("values/{column}")]
-public virtual async Task<ActionResult<IReadOnlyList<string>>> Values(string column, [FromBody] LoadOptions? options, CancellationToken ct) =>
+public virtual async Task<ActionResult<IReadOnlyList<TextValue>>> Values(string column, [FromBody] LoadOptions? options, CancellationToken ct) =>
     Answer(await Service.ValuesAsync(column, options ?? new LoadOptions(), ct).ConfigureAwait(false));
 ```
 
@@ -398,7 +422,8 @@ public async Task Should_ReturnOnlyTheCitiesOfTheFilteredCustomers_WhenValuesIsC
     var (status, body) = await PostAsync("api/Customers/values/City", """{"Filter":["Name","=","Acme"]}""");
 
     status.Should().Be(HttpStatusCode.OK);
-    body.EnumerateArray().Select(v => v.GetString()).Should().Equal("Rome");
+    body.EnumerateArray().Select(v => (v.GetProperty("Value").GetString(), v.GetProperty("Count").GetInt32()))
+        .Should().Equal(("Rome", 1));
 }
 
 [Fact]
@@ -416,7 +441,7 @@ both a text column and a reserved field, so the endpoint proves the refusal of a
 If a test or a criterion fails, the cause is found with Protocol D — `${CLAUDE_PLUGIN_ROOT}/commands/mind-sets/debug-protocol.md`, read in full — before any change.
 
 <success>
-- [ ] `git diff tests/Zerox.Ef/Api/Sample/openapi/Sample.json` shows, for `Customers` and `Orders`, the values' operation moved from `get` to `post` with the `LoadOptions` body, and nothing else
+- [ ] `git diff tests/Zerox.Ef/Api/Sample/openapi/Sample.json` shows, for `Customers` and `Orders`, the values' operation moved from `get` to `post` with the `LoadOptions` body and answering `TextValue` items, the schema `TextValue` added, and nothing else
 - [ ] `README.md` has the breaking paragraph and `docs/catalog.md` the controller's row as it is after this block
 - [ ] Gate: `dotnet build zerox.csharp.core.slnx -warnaserror` && `dotnet format zerox.csharp.core.slnx --verify-no-changes` && `ast-grep scan` → exit 0
 - [ ] Block tests: `dotnet test --project tests/Zerox.Ef/Api/Zerox.Ef.Api.Tests.csproj --stop-on-fail on` → all pass

@@ -56,11 +56,14 @@ Mindsets: `principles.md`, `code-principles.md`, `testing-principles.md`; branch
 ## Code Organization
 
 - **Contract** (`Zerox.Ef.Core`, `IEntityService<T>`):
-  `Task<OpResult<IReadOnlyList<string>>> ValuesAsync(string column, LoadOptions options, CancellationToken ct = default)`.
+  `Task<OpResult<IReadOnlyList<TextValue>>> ValuesAsync(string column, LoadOptions options, CancellationToken ct = default)`.
 - **What of the options counts**: the `Filter`, and nothing else. A client sends the options of its grid as they
   are; sort, page, select, group and summaries have no meaning for a list of distinct values and are not read
   (the grid's `Take` of 10 must not cut a dropdown to 10 values).
 - **Bound**: at most `MaxTake` values (`data` 7: every list is bounded), ordered, without the empty ones.
+- **The answer** (©User 2026-11-26: *"con groups è forse anche meglio perché abbiamo anche la cardinalità"*,
+  then *"mi piace 1"*): each value with the number of rows that have it — `TextValue(string Value, int Count)`, a
+  new record in `Zerox.Ef.Core`. The grouping gives the count in the same query; the contract breaks once, now.
 - **Owner of the computation**: `DistinctTextValues.ValuesAsync(IQueryable<T> source, string column,
   IReadOnlyList<object?>? filter, int maxTake, CancellationToken ct)`, an `OpResult`, through `Search.LoadAsync`
   grouped on the column. `EntityService<T>.ValuesAsync` gives it `SearchSource()` and `MaxTake`.
