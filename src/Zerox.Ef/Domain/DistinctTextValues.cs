@@ -29,7 +29,7 @@ public static class DistinctTextValues
     /// The distinct values of a text column of the rows the filter keeps, each with the number of those rows that
     /// have it: ordered, without repetitions and without empty values, at most <paramref name="maxTake"/>, computed
     /// by the database. The filter is a load-options filter and goes through the one search (<see cref="Search"/>),
-    /// so a file it cannot name — unknown, reserved — is <see cref="OpStatus.Invalid"/> with the reason, as in a
+    /// so a field it cannot name — unknown, reserved — is <see cref="OpStatus.Invalid"/> with the reason, as in a
     /// load. The query comes from the caller, so a view of its own (a subset of the rows) is kept.
     /// </summary>
     /// <remarks>
