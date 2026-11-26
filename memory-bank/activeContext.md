@@ -3,7 +3,7 @@
 # CURRENT TASK ONLY — overwrite, do not append
 
 [16-VALUES-ON-LOAD-OPTIONS]
-@state::EXEC{run-202611261451,blocks 01,02,03/3 done✓;FINAL REVIEW pending}
+@state::DONE✓{run-202611261451 3/3 blocks,FINAL REVIEW✓}{branch committed,¬pushed;close with /dev:j-close (final gate+PostgreSQL,merge,push)}
 @feature::16-values-on-load-options
 @branch::feature/16-values-on-load-options (from feature/15-hierid-parent-name)
 @plan::tasks/16-values-on-load-options/{notes,plan}.md{TDDAB#3}
