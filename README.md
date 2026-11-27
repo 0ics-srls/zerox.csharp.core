@@ -118,6 +118,9 @@ piece. The complete example, tested from the repository to HTTP, is
 The library is consumed as a git submodule, by project references:
 
     git submodule add https://github.com/0ics-srls/zerox.csharp.core.git externals/zerox.csharp.core
+    git -C externals/zerox.csharp.core checkout v1.0.0
+
+A release is a tag `v<major>.<minor>.<patch>` on `main`; what each one changes is in [CHANGELOG.md](CHANGELOG.md).
 
 ```xml
 <ProjectReference Include="../../externals/zerox.csharp.core/src/Zerox.Ef/Api/Zerox.Ef.Api.csproj" />
