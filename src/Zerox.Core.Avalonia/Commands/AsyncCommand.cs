@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Windows.Input;
-using Avalonia.Threading;
+using Zerox.Core.Avalonia.Threading;
 using Zerox.Core.Cancellation;
 
 namespace Zerox.Core.Avalonia.Commands;
@@ -91,7 +91,8 @@ public sealed class AsyncCommand<T> : ICommandWithInfo
         }
     }
 
-    public void RaiseCanExecuteChanged() => Dispatcher.UIThread.Post(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+    // the requery follows the UI thread's rule: at once on it, posted from another thread, on the caller where no application runs
+    public void RaiseCanExecuteChanged() => UiThread.Run(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
 
     bool ICommand.CanExecute(object? parameter) => CanExecute(CommandParameter.Cast<T>(parameter));
 

@@ -177,4 +177,31 @@ public sealed class AsyncCommandTests
 
         raised.Should().HaveCountGreaterThanOrEqualTo(2).And.OnlyContain(onUi => onUi);
     });
+
+    [Fact]
+    public Task Should_RaiseCanExecuteChanged_AtOnce_WhenRaisedOnTheUiThread() => HeadlessUi.RunAsync(() =>
+    {
+        using var terminator = new Terminator(new FakeTimeProvider());
+        var command = AsyncCommand.Create(_ => Task.CompletedTask, terminator);
+        var raised = false;
+        command.CanExecuteChanged += (_, _) => raised = true;
+
+        command.RaiseCanExecuteChanged();
+
+        raised.Should().BeTrue("the requery follows the UI thread's rule: at once on it, posted nowhere");
+        return Task.CompletedTask;
+    });
+
+    [Fact]
+    public Task Should_RaiseCanExecuteChanged_OnTheUiThread_WhenRaisedFromAnotherThread() => HeadlessUi.RunAsync(async () =>
+    {
+        using var terminator = new Terminator(new FakeTimeProvider());
+        var command = AsyncCommand.Create(_ => Task.CompletedTask, terminator);
+        var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        command.CanExecuteChanged += (_, _) => done.TrySetResult(OnUi);
+
+        await Task.Run(command.RaiseCanExecuteChanged);
+
+        (await done.Task.WaitAsync(TimeSpan.FromSeconds(10))).Should().BeTrue("the posted requery runs on the UI thread");
+    });
 }
