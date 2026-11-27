@@ -20,18 +20,21 @@ public sealed class LoadTypesTests
              "TotalSummary":[{"Selector":"Quantity","SummaryType":"sum"}],"Select":["Name"]}
             """;
 
-        var options = JsonSerializer.Deserialize<LoadOptions>(json, AsIs)!;
+        var options = JsonSerializer.Deserialize<LoadOptions>(json, AsIs);
+        options.Should().NotBeNull();
 
         options.Skip.Should().Be(10);
         options.Take.Should().Be(5);
         options.RequireTotalCount.Should().BeTrue();
         options.Filter.Should().HaveCount(3);
-        options.Sort!.Single().Selector.Should().Be("Quantity");
-        options.Sort!.Single().Desc.Should().BeTrue();
-        options.Group!.Single().Selector.Should().Be("At");
-        options.Group!.Single().GroupInterval.Should().Be("month");
-        options.Group!.Single().IsExpanded.Should().BeFalse();
-        options.TotalSummary!.Single().SummaryType.Should().Be("sum");
+        var sort = options.Sort.Should().ContainSingle().Which;
+        sort.Selector.Should().Be("Quantity");
+        sort.Desc.Should().BeTrue();
+        var group = options.Group.Should().ContainSingle().Which;
+        group.Selector.Should().Be("At");
+        group.GroupInterval.Should().Be("month");
+        group.IsExpanded.Should().BeFalse();
+        options.TotalSummary.Should().ContainSingle().Which.SummaryType.Should().Be("sum");
         options.Select.Should().Equal("Name");
     }
 
@@ -41,9 +44,11 @@ public sealed class LoadTypesTests
     {
         const string json = """{"Group":[{"Selector":"Quantity","GroupInterval":10},{"Selector":"At","GroupInterval":"month"}]}""";
 
-        var options = JsonSerializer.Deserialize<LoadOptions>(json, AsIs)!;
+        var options = JsonSerializer.Deserialize<LoadOptions>(json, AsIs);
+        options.Should().NotBeNull();
 
-        options.Group!.Select(g => g.GroupInterval).Should().Equal("10", "month");
+        options.Group.Should().NotBeNull();
+        options.Group.Select(g => g.GroupInterval).Should().Equal("10", "month");
     }
 
     [Fact]

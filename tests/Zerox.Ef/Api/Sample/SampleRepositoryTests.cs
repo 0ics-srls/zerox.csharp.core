@@ -29,6 +29,8 @@ public sealed class SampleRepositoryTests : IAsyncLifetime
         await using var scope = App.Services.CreateAsyncScope();
         var orders = scope.ServiceProvider.GetRequiredService<IRepository<Order>>();
 
+        // An EF query: the `!` is never run, the navigation becomes a SQL join (EF's form for a navigation in a query).
+        // ast-grep-ignore: no-null-forgiving
         (await orders.Query().CountAsync(o => o.Customer!.Name == "Cargo", Ct)).Should().Be(8);
         (await orders.Query().CountAsync(Ct)).Should().Be(25);
     }

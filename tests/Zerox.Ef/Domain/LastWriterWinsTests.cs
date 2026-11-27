@@ -63,7 +63,8 @@ public sealed class LastWriterWinsTests : IAsyncLifetime
         var saved = await wins.SaveAsync<Memo>(id, _ => true, (m, _) => { calls++; m.Text = "mine"; return Task.CompletedTask; }, ct: Ct);
 
         calls.Should().Be(1);
-        saved!.Text.Should().Be("mine");
+        saved.Should().NotBeNull();
+        saved.Text.Should().Be("mine");
         (await ReadAsync(id)).Text.Should().Be("mine");
     }
 

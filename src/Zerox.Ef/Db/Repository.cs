@@ -52,7 +52,9 @@ internal sealed class Repository<T> : IRepository<T> where T : class, IEntity
                 throw new ArgumentException($"{typeof(T).Name} has a row version: give the version the client read.", nameof(versionReadByClient));
             if (!TryRowVersion(version, rowVersion.ClrType, out var value))
                 return false;
-            rowVersion.PropertyInfo!.SetValue(stub, value);
+            var property = rowVersion.PropertyInfo ?? throw new InvalidOperationException(
+                $"{typeof(T).Name}.{rowVersion.Name} is a shadow row version: the version the client read is set on a property of the entity.");
+            property.SetValue(stub, value);
         }
         _db.Set<T>().Remove(stub);
         return true;

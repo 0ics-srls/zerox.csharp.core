@@ -73,9 +73,8 @@ public sealed class JobQueue : JobBase
         {
             leaves = await job.ExecuteAsync(cancellationToken).ConfigureAwait(false);
         }
-#pragma warning disable CA1031 // the supervisor (user decision): with a handler, a job's failure is reported and the ring goes on
+        // The supervisor (user decision): with a handler, a job's failure is reported and the ring goes on.
         catch (Exception error) when (_onJobError is not null)
-#pragma warning restore CA1031
         {
             _onJobError(job, error);
         }

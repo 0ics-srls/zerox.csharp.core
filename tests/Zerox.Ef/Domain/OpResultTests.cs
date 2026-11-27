@@ -102,6 +102,8 @@ public sealed class OpResultTests
     [Fact]
     public void Should_RefuseANullException_WhenFaulted()
     {
+        // A guard test: null goes into a parameter that is not nullable (the rule's own exception for tests).
+        // ast-grep-ignore: no-null-forgiving
         var build = () => OpResult.Faulted<int>(null!);
 
         build.Should().Throw<ArgumentNullException>();

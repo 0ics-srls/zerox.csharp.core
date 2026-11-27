@@ -146,9 +146,7 @@ public sealed class OwnerQueue : IDisposable, IAsyncDisposable
             {
                 _completion.SetCanceled(token);
             }
-#pragma warning disable CA1031 // the exception is handed to the one caller waiting for it
-            catch (Exception exception)
-#pragma warning restore CA1031
+            catch (Exception exception)   // handed to the one caller waiting for it
             {
                 _completion.SetException(exception);
             }

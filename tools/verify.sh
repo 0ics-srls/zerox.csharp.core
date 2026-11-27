@@ -18,12 +18,11 @@ step() {   # step <k> <name> <function>
 build() { dotnet build zerox.csharp.core.slnx -warnaserror; }
 format() { dotnet format zerox.csharp.core.slnx --verify-no-changes; }
 tests() { dotnet test --solution zerox.csharp.core.slnx; }
-# exit 3 = ast-grep not installed: a warning, not a failure
+# the rules of sgconfig.yml (the ai-agent pack, linked under .claude/lint-rules); ast-grep missing is a failure:
+# a check that cannot run proves nothing
 astgrep() {
-  local code=0
-  bash .claude/support/lint/lint-run.sh || code=$?
-  if [[ $code -eq 3 ]]; then echo "ast-grep not installed: layer skipped"; return 0; fi
-  return $code
+  if ! command -v ast-grep >/dev/null 2>&1; then echo "ast-grep is not installed"; return 1; fi
+  ast-grep scan
 }
 
 step 1 build build

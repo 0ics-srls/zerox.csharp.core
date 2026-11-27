@@ -248,7 +248,8 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
         using var response = await App.Client.PostAsync("api/Customers", Json("""{"Name":"Delta","City":"Turin"}"""), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var location = response.Headers.Location!.ToString();
+        response.Headers.Location.Should().NotBeNull();
+        var location = response.Headers.Location.ToString();
         location.Should().MatchRegex(@"/api/Customers/\d+$");
 
         var (status, body) = await SendAsync(HttpMethod.Get, location);
@@ -348,7 +349,8 @@ public sealed class EntityControllerApiTests : IAsyncLifetime
     public async Task Should_DeleteAtTheVersionRead_WhenDeleted()
     {
         using var created = await App.Client.PostAsync("api/Customers", Json("""{"Name":"Temp","City":"Bari"}"""), Ct);
-        var location = created.Headers.Location!.ToString();
+        created.Headers.Location.Should().NotBeNull();
+        var location = created.Headers.Location.ToString();
         var read = await VersionOfAsync(location);
 
         var (status, _) = await SendAsync(HttpMethod.Delete, $"{location}?version={read}");

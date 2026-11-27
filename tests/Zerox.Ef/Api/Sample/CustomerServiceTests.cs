@@ -130,7 +130,8 @@ public sealed class CustomerServiceTests : IAsyncLifetime
         var result = await scope.ServiceProvider.GetRequiredService<ICustomerService>().RenameAsync(Acme, "Acme2", read.Version, Ct);
 
         result.Status.Should().Be(OpStatus.Ok);
-        result.Value!.Name.Should().Be("Acme2");
+        result.Value.Should().NotBeNull();
+        result.Value.Name.Should().Be("Acme2");
         var stored = await StoredAsync(Acme);
         (stored.Name, stored.City).Should().Be(("Acme2", read.City));
     }

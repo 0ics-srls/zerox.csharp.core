@@ -41,7 +41,8 @@ public sealed class DistinctTextValuesTests : IAsyncLifetime
         var result = await DistinctTextValues.ValuesAsync(context.Items.AsNoTracking(), "Note", null, Limit, Ct);
 
         result.Status.Should().Be(OpStatus.Ok);
-        result.Value!.Select(v => v.Value).Should().Equal("apple", "fig", "pear");
+        result.Value.Should().NotBeNull();
+        result.Value.Select(v => v.Value).Should().Equal("apple", "fig", "pear");
     }
 
     [Fact]
@@ -74,7 +75,8 @@ public sealed class DistinctTextValuesTests : IAsyncLifetime
         var result = await DistinctTextValues.ValuesAsync(context.Items.AsNoTracking(), "Note", FirstTwo, Limit, Ct);
 
         result.Status.Should().Be(OpStatus.Ok);
-        result.Value!.Select(v => v.Value).Should().Equal("apple", "pear");
+        result.Value.Should().NotBeNull();
+        result.Value.Select(v => v.Value).Should().Equal("apple", "pear");
     }
 
     [Fact]
@@ -88,7 +90,9 @@ public sealed class DistinctTextValuesTests : IAsyncLifetime
 
         var result = await DistinctTextValues.ValuesAsync(context.Items.AsNoTracking(), "Note", FirstTwo, Limit, Ct);
 
-        result.Value!.Select(v => ((object?)v.Value, (int?)v.Count)).Should().Equal(keys);
+        result.Value.Should().NotBeNull();
+
+        result.Value.Select(v => ((object?)v.Value, (int?)v.Count)).Should().Equal(keys);
     }
 
     [Fact]
@@ -111,7 +115,8 @@ public sealed class DistinctTextValuesTests : IAsyncLifetime
         var result = await DistinctTextValues.ValuesAsync(narrowed, "Note", null, Limit, Ct);
 
         result.Status.Should().Be(OpStatus.Ok);
-        result.Value!.Select(v => v.Value).Should().Equal("fig");
+        result.Value.Should().NotBeNull();
+        result.Value.Select(v => v.Value).Should().Equal("fig");
     }
 
     [Fact]
@@ -122,7 +127,8 @@ public sealed class DistinctTextValuesTests : IAsyncLifetime
         var result = await DistinctTextValues.ValuesAsync(context.Items.AsNoTracking(), "Note", null, 2, Ct);
 
         result.Status.Should().Be(OpStatus.Ok);
-        result.Value!.Select(v => v.Value).Should().Equal("apple", "fig");
+        result.Value.Should().NotBeNull();
+        result.Value.Select(v => v.Value).Should().Equal("apple", "fig");
     }
 
     [Fact]
@@ -169,7 +175,10 @@ public sealed class DistinctTextValuesTests : IAsyncLifetime
         await using var context = Db.NewContext();
         var source = context.Items.AsNoTracking();
 
+        // A guard test: null goes into a parameter that is not nullable (the rule's own exception for tests).
+        // ast-grep-ignore: no-null-forgiving
         var nullSource = async () => await DistinctTextValues.ValuesAsync<Item>(null!, "Note", null, Limit, Ct);
+        // ast-grep-ignore: no-null-forgiving
         var nullColumn = async () => await DistinctTextValues.ValuesAsync(source, null!, null, Limit, Ct);
 
         await nullSource.Should().ThrowAsync<ArgumentNullException>();

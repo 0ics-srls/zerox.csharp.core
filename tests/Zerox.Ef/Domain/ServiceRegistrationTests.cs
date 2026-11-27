@@ -103,7 +103,10 @@ public sealed class ServiceRegistrationTests : IAsyncLifetime
     {
         var calls = new Action[]
         {
+            // A guard test: null goes into a parameter that is not nullable (the rule's own exception for tests).
+            // ast-grep-ignore: no-null-forgiving
             () => Domain.ServiceCollectionExtensions.AddZeroxDomain(null!),
+            // ast-grep-ignore: no-null-forgiving
             () => Domain.ServiceCollectionExtensions.AddEntityService<Item, IItemService, ItemService>(null!),
         };
 

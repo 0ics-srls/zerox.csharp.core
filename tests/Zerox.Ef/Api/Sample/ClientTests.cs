@@ -15,8 +15,17 @@ public sealed class ClientTests : IAsyncLifetime
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static string ClientDirectory =>
-        Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(OpenApiDocumentTests.DocumentFile)!)!, "client");
+    private static string ClientDirectory
+    {
+        get
+        {
+            var openApi = Path.GetDirectoryName(OpenApiDocumentTests.DocumentFile)
+                ?? throw new InvalidOperationException("The OpenAPI document is a file in a folder.");
+            var sample = Path.GetDirectoryName(openApi)
+                ?? throw new InvalidOperationException("The OpenAPI folder is in the sample's folder.");
+            return Path.Combine(sample, "client");
+        }
+    }
 
     public async ValueTask InitializeAsync()
     {

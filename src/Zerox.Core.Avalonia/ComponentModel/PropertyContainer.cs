@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Avalonia.Threading;
 using Zerox.Core.ComponentModel;
@@ -127,11 +128,10 @@ public abstract class PropertyContainer : NotifyingObject, IDisposable
         return true;
     }
 
-    // AVA2001 is for AvaloniaObject.OnPropertyChanged; this is NotifyingObject's seam, and not calling
-    // the base at once is the point: the event is posted or throttled, and Raise calls the base later.
-#pragma warning disable AVA2001
+    // AVA2001 is for AvaloniaObject.OnPropertyChanged and reads only the method's name; this is NotifyingObject's
+    // seam, and not calling the base at once is the point: the event is posted or throttled, and Raise calls the base later.
+    [SuppressMessage("Usage", "AVA2001", Justification = "NotifyingObject's seam, not AvaloniaObject's: Raise calls the base later, on the UI thread")]
     protected override void OnPropertyChanged(string? propertyName)
-#pragma warning restore AVA2001
     {
         if (!_eventsOn || _disposed)
             return;

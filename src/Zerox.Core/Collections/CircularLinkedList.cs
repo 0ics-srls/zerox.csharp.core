@@ -27,15 +27,13 @@ public sealed class CircularLinkedList<T> : IEnumerable<T>
             return false;
         if (_head is null)
         {
-            node.Next = node;
-            node.Previous = node;
-            _head = _current = node;
+            _head = _current = node;   // a node alone is its own ring
         }
         else
         {
             node.Next = _head;
             node.Previous = _head.Previous;
-            _head.Previous!.Next = node;
+            _head.Previous.Next = node;
             _head.Previous = node;
         }
         return true;
@@ -54,8 +52,8 @@ public sealed class CircularLinkedList<T> : IEnumerable<T>
             _current = node.Next;
         if (_head == node)
             _head = node.Next;
-        node.Next!.Previous = node.Previous;
-        node.Previous!.Next = node.Next;
+        node.Next.Previous = node.Previous;
+        node.Previous.Next = node.Next;
         return true;
     }
 
@@ -88,17 +86,25 @@ public sealed class CircularLinkedList<T> : IEnumerable<T>
         do
         {
             yield return node.Value;
-            node = node.Next!;
+            node = node.Next;
         }
         while (node != _head);
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    private sealed class Node(T value)
+    // A node is born linked to itself: in the ring every node has a previous and a next.
+    private sealed class Node
     {
-        public T Value { get; } = value;
-        public Node? Previous { get; set; }
-        public Node? Next { get; set; }
+        public Node(T value)
+        {
+            Value = value;
+            Previous = this;
+            Next = this;
+        }
+
+        public T Value { get; }
+        public Node Previous { get; set; }
+        public Node Next { get; set; }
     }
 }

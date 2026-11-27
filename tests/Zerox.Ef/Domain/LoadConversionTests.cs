@@ -81,7 +81,11 @@ public sealed class LoadConversionTests : IAsyncLifetime
             return;
         }
         foreach (var property in theirs.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
-            ShouldMatch(ours.GetType().GetProperty(property.Name)!.GetValue(ours), property.GetValue(theirs), $"{path}.{property.Name}");
+        {
+            var mine = ours.GetType().GetProperty(property.Name);
+            mine.Should().NotBeNull("{0} has every member of {1}", ours.GetType().Name, theirs.GetType().Name);
+            ShouldMatch(mine.GetValue(ours), property.GetValue(theirs), $"{path}.{property.Name}");
+        }
     }
 
     [Fact]
@@ -157,7 +161,8 @@ public sealed class LoadConversionTests : IAsyncLifetime
     [InlineData("PrimaryKey")]
     public async Task Should_LeaveANullEntryOut_WhenAListHasOne(string list)
     {
-        var options = JsonSerializer.Deserialize<LoadOptions>($$"""{"Take":1,"{{list}}":[null]}""")!;
+        var options = JsonSerializer.Deserialize<LoadOptions>($$"""{"Take":1,"{{list}}":[null]}""");
+        options.Should().NotBeNull();
 
         var (_, converted) = await LoadAsync(options);
 
@@ -169,7 +174,8 @@ public sealed class LoadConversionTests : IAsyncLifetime
     public async Task Should_ReadAJsonFilterAsDevExtremeDoes()
     {
         var options = JsonSerializer.Deserialize<LoadOptions>(
-            """{"Take":10,"Filter":[["Kind","=","Large"],"and",["Quantity","<",7]],"Sort":[{"Selector":"Quantity"}]}""")!;
+            """{"Take":10,"Filter":[["Kind","=","Large"],"and",["Quantity","<",7]],"Sort":[{"Selector":"Quantity"}]}""");
+        options.Should().NotBeNull();
 
         var (_, converted) = await LoadAsync(options);
 
@@ -198,7 +204,7 @@ public sealed class LoadConversionTests : IAsyncLifetime
         groups.Should().HaveCount(2);
         var small = groups.Single(g => Equals(g.Key, ItemKind.Small));
         small.Count.Should().Be(15);
-        Convert.ToInt32(small.Summary!.Single(), CultureInfo.InvariantCulture).Should().Be(225);
+        Convert.ToInt32(small.Summary.Should().ContainSingle().Which, CultureInfo.InvariantCulture).Should().Be(225);
         small.Items.Should().BeNull();
     }
 
@@ -212,7 +218,7 @@ public sealed class LoadConversionTests : IAsyncLifetime
 
         var groups = converted.Data.Cast<LoadGroup>().ToList();
         groups.Should().AllSatisfy(g => g.Items.Should().HaveCount(2));
-        groups.SelectMany(g => g.Items!).Sum(inner => inner.Count ?? 0).Should().Be(30);
+        groups.SelectMany(g => g.Items ?? throw new InvalidOperationException("Every group has its inner groups: asserted above.")).Sum(inner => inner.Count ?? 0).Should().Be(30);
     }
 
     [Fact]
@@ -227,6 +233,6 @@ public sealed class LoadConversionTests : IAsyncLifetime
 
         converted.Data.Should().BeEmpty();
         converted.TotalCount.Should().Be(30);
-        Convert.ToInt32(converted.Summary!.Single(), CultureInfo.InvariantCulture).Should().Be(465);
+        Convert.ToInt32(converted.Summary.Should().ContainSingle().Which, CultureInfo.InvariantCulture).Should().Be(465);
     }
 }

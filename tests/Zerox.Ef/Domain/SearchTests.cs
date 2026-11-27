@@ -122,7 +122,8 @@ public sealed class SearchTests : IAsyncLifetime
         count.data.Cast<object>().Should().BeEmpty();
         count.totalCount.Should().Be(30);
         summary.data.Cast<object>().Should().BeEmpty();
-        Convert.ToInt32(summary.summary![0], CultureInfo.InvariantCulture).Should().Be(465);
+        summary.summary.Should().NotBeEmpty();
+        Convert.ToInt32(summary.summary[0], CultureInfo.InvariantCulture).Should().Be(465);
     }
 
     [Fact]
@@ -187,7 +188,8 @@ public sealed class SearchTests : IAsyncLifetime
         groups.Should().HaveCount(2);
         var small = groups.Single(g => Equals(g.key, ItemKind.Small));
         small.count.Should().Be(15);
-        Convert.ToInt32(small.summary![0], CultureInfo.InvariantCulture).Should().Be(225);
+        small.summary.Should().NotBeEmpty();
+        Convert.ToInt32(small.summary[0], CultureInfo.InvariantCulture).Should().Be(225);
         small.items.Should().BeNull();
     }
 
@@ -204,7 +206,7 @@ public sealed class SearchTests : IAsyncLifetime
 
         var groups = result.data.Cast<Group>().ToList();
         groups.Should().AllSatisfy(g => g.items.Should().NotBeNull().And.Subject.As<System.Collections.IList>().Cast<object>().Should().HaveCount(2));
-        var inner = groups.SelectMany(g => g.items!.Cast<Group>()).ToList();
+        var inner = groups.SelectMany(g => (g.items ?? throw new InvalidOperationException("Every group has its inner groups: asserted above.")).Cast<Group>()).ToList();
         inner.Sum(c => c.count ?? 0).Should().Be(30);
         inner.Should().AllSatisfy(c => c.items.Should().BeNull());
     }
@@ -265,6 +267,8 @@ public sealed class SearchTests : IAsyncLifetime
     }
 
     private static IQueryable<ItemLine> Lines(TestDbContext context) =>
+        // An EF query: the `!` is never run, the navigation becomes a SQL join (EF's form for a navigation in a query).
+        // ast-grep-ignore: no-null-forgiving
         context.Items.AsNoTracking().Select(i => new ItemLine { Name = i.Name, Quantity = i.Quantity, BoxLabel = i.Box!.Label });
 
     [Fact]
@@ -283,7 +287,8 @@ public sealed class SearchTests : IAsyncLifetime
         var result = await Search.LoadAsync(Lines(context), options, Search.DefaultMaxTake, Ct);
 
         result.Status.Should().Be(OpStatus.Ok);
-        result.Value!.Data.Cast<ItemLine>().Select(l => l.Quantity).Should().Equal(29, 28, 27);
+        result.Value.Should().NotBeNull();
+        result.Value.Data.Cast<ItemLine>().Select(l => l.Quantity).Should().Equal(29, 28, 27);
         result.Value.TotalCount.Should().Be(15);
     }
 
@@ -309,7 +314,9 @@ public sealed class SearchTests : IAsyncLifetime
         var viaSearch = await Search.LoadAsync(Items(context), options, Search.DefaultMaxTake, Ct);
 
         viaSearch.Status.Should().Be(viaService.Status);
-        viaSearch.Value!.Data.Cast<Item>().Select(i => i.Quantity).Should().Equal(viaService.Value!.Data.Cast<Item>().Select(i => i.Quantity));
+        viaSearch.Value.Should().NotBeNull();
+        viaService.Value.Should().NotBeNull();
+        viaSearch.Value.Data.Cast<Item>().Select(i => i.Quantity).Should().Equal(viaService.Value.Data.Cast<Item>().Select(i => i.Quantity));
         viaSearch.Value.TotalCount.Should().Be(viaService.Value.TotalCount);
     }
 }

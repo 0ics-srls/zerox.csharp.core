@@ -102,7 +102,8 @@ public sealed class EntityServiceTests : IAsyncLifetime
             new LoadOptions { Take = 5, Sort = [new() { Selector = "Quantity", Desc = true }], RequireTotalCount = true }, Ct);
 
         result.Status.Should().Be(OpStatus.Ok);
-        result.Value!.Data.Cast<Item>().Select(i => i.Quantity).Should().Equal(30, 29, 28, 27, 26);
+        result.Value.Should().NotBeNull();
+        result.Value.Data.Cast<Item>().Select(i => i.Quantity).Should().Equal(30, 29, 28, 27, 26);
         result.Value.TotalCount.Should().Be(30);
     }
 
@@ -137,7 +138,9 @@ public sealed class EntityServiceTests : IAsyncLifetime
 
         var result = await service.LoadAsync(new LoadOptions { Take = 50, RequireTotalCount = true }, Ct);
 
-        result.Value!.TotalCount.Should().Be(3);
+        result.Value.Should().NotBeNull();
+
+        result.Value.TotalCount.Should().Be(3);
     }
 
     // --- values ---
@@ -198,9 +201,11 @@ public sealed class EntityServiceTests : IAsyncLifetime
         var values = await ServiceOf<Item>(scope).ValuesAsync("Name", new LoadOptions { Filter = filter }, Ct);
 
         loaded.Status.Should().Be(OpStatus.Ok);
-        values.Value!.Select(v => v.Value)
-            .Should().Equal(loaded.Value!.Data.Cast<Item>().Select(i => i.Name).Distinct().OrderBy(n => n));
-        values.Value!.Sum(v => v.Count).Should().Be(loaded.Value.TotalCount);
+        loaded.Value.Should().NotBeNull();
+        values.Value.Should().NotBeNull();
+        values.Value.Select(v => v.Value)
+            .Should().Equal(loaded.Value.Data.Cast<Item>().Select(i => i.Name).Distinct().OrderBy(n => n));
+        values.Value.Sum(v => v.Count).Should().Be(loaded.Value.TotalCount);
     }
 
     [Fact]
@@ -263,7 +268,8 @@ public sealed class EntityServiceTests : IAsyncLifetime
         var result = await ServiceOf<Item>(scope).GetAsync(id, Ct);
 
         result.Status.Should().Be(OpStatus.Ok);
-        result.Value!.Quantity.Should().Be(7);
+        result.Value.Should().NotBeNull();
+        result.Value.Quantity.Should().Be(7);
     }
 
     [Fact]
@@ -286,8 +292,11 @@ public sealed class EntityServiceTests : IAsyncLifetime
         var result = await ServiceOf<Item>(scope).CreateAsync(new Item { Name = "new", BoxId = _boxId }, Ct);
 
         result.Status.Should().Be(OpStatus.Created);
-        result.Value!.Id.Should().BePositive();
-        (await StoredItemAsync(result.Value.Id))!.Name.Should().Be("new");
+        result.Value.Should().NotBeNull();
+        result.Value.Id.Should().BePositive();
+        var stored = await StoredItemAsync(result.Value.Id);
+        stored.Should().NotBeNull();
+        stored.Name.Should().Be("new");
     }
 
     [Fact]
@@ -314,14 +323,17 @@ public sealed class EntityServiceTests : IAsyncLifetime
 
         result.Status.Should().Be(OpStatus.Ok);
         var stored = await StoredMemoAsync(read.Id);
-        stored!.Text.Should().Be("mine");
-        (result.Value!.Text, result.Value.Version).Should().Be((stored.Text, stored.Version));
+        stored.Should().NotBeNull();
+        stored.Text.Should().Be("mine");
+        result.Value.Should().NotBeNull();
+        (result.Value.Text, result.Value.Version).Should().Be((stored.Text, stored.Version));
     }
 
     [Fact]
     public async Task Should_KeepTheReservedFields_WhenUpdated()
     {
-        var sent = (await StoredItemAsync(await ItemIdAsync(5)))!;
+        var sent = await StoredItemAsync(await ItemIdAsync(5));
+        sent.Should().NotBeNull();
         sent.Name = "renamed";
         sent.Secret = "changed";
         await using var scope = Db.NewScope();
@@ -330,7 +342,8 @@ public sealed class EntityServiceTests : IAsyncLifetime
 
         result.Status.Should().Be(OpStatus.Ok);
         var stored = await StoredItemAsync(sent.Id);
-        (stored!.Name, stored.Secret).Should().Be(("renamed", "seeded"));
+        stored.Should().NotBeNull();
+        (stored.Name, stored.Secret).Should().Be(("renamed", "seeded"));
     }
 
     [Fact]
@@ -357,7 +370,8 @@ public sealed class EntityServiceTests : IAsyncLifetime
         result.Status.Should().Be(OpStatus.Conflict);
         result.Reason.Should().Be("The row was changed by another user.");
         var stored = await StoredMemoAsync(read.Id);
-        (stored!.Text, stored.Note).Should().Be(("first", "theirs"));
+        stored.Should().NotBeNull();
+        (stored.Text, stored.Note).Should().Be(("first", "theirs"));
     }
 
     // --- delete ---
@@ -368,7 +382,9 @@ public sealed class EntityServiceTests : IAsyncLifetime
         var read = await SeedMemoAsync();
         await using var scope = Db.NewScope();
 
-        var result = await ServiceOf<Memo>(scope).DeleteAsync(read.Id, (await StoredMemoAsync(read.Id))!.Version, Ct);
+        var current = await StoredMemoAsync(read.Id);
+        current.Should().NotBeNull();
+        var result = await ServiceOf<Memo>(scope).DeleteAsync(read.Id, current.Version, Ct);
 
         result.Status.Should().Be(OpStatus.Deleted);
         (await StoredMemoAsync(read.Id)).Should().BeNull();
@@ -404,7 +420,9 @@ public sealed class EntityServiceTests : IAsyncLifetime
     public async Task Should_ReturnNotFound_WhenDeletingAMissingRow()
     {
         var another = await SeedMemoAsync();
-        var versionOfAnother = (await StoredMemoAsync(another.Id))!.Version;
+        var stored = await StoredMemoAsync(another.Id);
+        stored.Should().NotBeNull();
+        var versionOfAnother = stored.Version;
         await using var scope = Db.NewScope();
 
         var result = await ServiceOf<Memo>(scope).DeleteAsync(404, versionOfAnother, Ct);
@@ -490,7 +508,8 @@ public sealed class EntityServiceTests : IAsyncLifetime
 
         var result = await probe.Run(async c =>
         {
-            var item = (await probe.Items.GetByIdAsync(id, c))!;
+            var item = await probe.Items.GetByIdAsync(id, c);
+            item.Should().NotBeNull();
             await using (var other = Db.NewContext())
             {
                 other.Items.Remove(await other.Items.SingleAsync(i => i.Id == id, c));
@@ -514,8 +533,12 @@ public sealed class EntityServiceTests : IAsyncLifetime
 
         Func<Task>[] calls =
         [
+            // A guard test: null goes into a parameter that is not nullable (the rule's own exception for tests).
+            // ast-grep-ignore: no-null-forgiving
             () => service.CreateAsync(null!, Ct),
+            // ast-grep-ignore: no-null-forgiving
             () => service.UpdateAsync(null!, Ct),
+            // ast-grep-ignore: no-null-forgiving
             () => service.LoadAsync(null!, Ct),
         ];
 
@@ -531,7 +554,10 @@ public sealed class EntityServiceTests : IAsyncLifetime
 
         Func<Task>[] calls =
         [
+            // A guard test: null goes into a parameter that is not nullable (the rule's own exception for tests).
+            // ast-grep-ignore: no-null-forgiving
             () => service.ValuesAsync(null!, new LoadOptions(), Ct),
+            // ast-grep-ignore: no-null-forgiving
             () => service.ValuesAsync("Name", null!, Ct),
         ];
 

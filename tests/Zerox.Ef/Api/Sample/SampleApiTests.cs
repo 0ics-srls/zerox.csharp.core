@@ -168,7 +168,7 @@ public sealed class SampleApiTests : IAsyncLifetime
         var sums = await SendAsync(HttpMethod.Post, "api/Orders/load",
             """{"Filter":["Date",">=","2026-03-01"],"Group":[{"Selector":"Customer.Name"}],"GroupSummary":[{"Selector":"Amount","SummaryType":"sum"}]}""");
         sums.Body.GetProperty("data").EnumerateArray()
-            .ToDictionary(g => g.GetProperty("key").GetString()!, g => g.GetProperty("summary")[0].GetDecimal())
+            .ToDictionary(g => g.GetProperty("key").GetString() ?? throw new InvalidOperationException("A group of Customer.Name has a name as its key."), g => g.GetProperty("summary")[0].GetDecimal())
             .Should().BeEquivalentTo(new Dictionary<string, decimal> { ["North"] = 300m, ["South"] = 300m });
 
         // Merge South into North, close everything before April, rename North, delete an order.

@@ -47,6 +47,14 @@ public sealed class ClientRowTests : IAsyncLifetime
         return await check.Locked.SingleOrDefaultAsync(l => l.Id == id, Ct);
     }
 
+    // A row the test knows is there: a missing one fails the test here, saying so.
+    private async Task<Locked> StoredAsync(int id)
+    {
+        var row = await ReadAsync(id);
+        row.Should().NotBeNull("row {0} is there", id);
+        return row;
+    }
+
     private async Task<Item?> ReadItemAsync(int id)
     {
         await using var check = Db.NewContext();
@@ -98,7 +106,8 @@ public sealed class ClientRowTests : IAsyncLifetime
         await items.SaveChangesAsync(Ct);
 
         var stored = await ReadItemAsync(id);
-        stored!.Name.Should().Be("pencil");
+        stored.Should().NotBeNull();
+        stored.Name.Should().Be("pencil");
         stored.Quantity.Should().Be(3);
     }
 
@@ -106,11 +115,11 @@ public sealed class ClientRowTests : IAsyncLifetime
     public async Task Should_NeverWriteTheKeyOrTheRowVersion_WhenTheyAreNamed()
     {
         var id = await SeedAsync("a");
-        var stored = (await ReadAsync(id))!.Version;
+        var stored = (await StoredAsync(id)).Version;
 
         await SaveClientRowAsync(new Locked { Id = id, Name = "b", Version = stored }, nameof(Locked.Id), nameof(Locked.Name), nameof(Locked.Version));
 
-        (await ReadAsync(id))!.Name.Should().Be("b");
+        (await StoredAsync(id)).Name.Should().Be("b");
     }
 
     [Fact]
@@ -198,13 +207,13 @@ public sealed class ClientRowTests : IAsyncLifetime
     {
         Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync("a");
-        var read = (await ReadAsync(id))!.Version;
+        var read = (await StoredAsync(id)).Version;
         var row = new Locked { Id = id, Name = "mine", Version = read };
 
         await SaveClientRowAsync(row, nameof(Locked.Name));
 
-        var stored = await ReadAsync(id);
-        stored!.Name.Should().Be("mine");
+        var stored = await StoredAsync(id);
+        stored.Name.Should().Be("mine");
         stored.Version.Should().NotBe(read);
         row.Version.Should().Be(stored.Version);
     }
@@ -214,13 +223,13 @@ public sealed class ClientRowTests : IAsyncLifetime
     {
         Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync("a");
-        var read = (await ReadAsync(id))!.Version;
+        var read = (await StoredAsync(id)).Version;
         await RenameElsewhereAsync(id, "other");
 
         var save = () => SaveClientRowAsync(new Locked { Id = id, Name = "mine", Version = read }, nameof(Locked.Name));
 
         await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
-        (await ReadAsync(id))!.Name.Should().Be("other");
+        (await StoredAsync(id)).Name.Should().Be("other");
     }
 
     [Fact]
@@ -228,13 +237,13 @@ public sealed class ClientRowTests : IAsyncLifetime
     {
         Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync("a");
-        var read = (await ReadAsync(id))!.Version;   // the client's GET
+        var read = (await StoredAsync(id)).Version;   // the client's GET
         await MassiveRenameAsync(id, "massive");      // a write outside SaveChanges
 
         var save = () => SaveClientRowAsync(new Locked { Id = id, Name = "mine", Version = read }, nameof(Locked.Name));
 
         await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
-        (await ReadAsync(id))!.Name.Should().Be("massive");
+        (await StoredAsync(id)).Name.Should().Be("massive");
     }
 
     [Fact]
@@ -242,7 +251,7 @@ public sealed class ClientRowTests : IAsyncLifetime
     {
         Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync("a");
-        var read = (await ReadAsync(id))!.Version;
+        var read = (await StoredAsync(id)).Version;
 
         await DeleteAsync<Locked>(id, read);
 
@@ -254,7 +263,7 @@ public sealed class ClientRowTests : IAsyncLifetime
     {
         Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         var id = await SeedAsync("a");
-        var read = (await ReadAsync(id))!.Version;
+        var read = (await StoredAsync(id)).Version;
         await RenameElsewhereAsync(id, "other");
 
         var delete = () => DeleteAsync<Locked>(id, read);
@@ -268,11 +277,11 @@ public sealed class ClientRowTests : IAsyncLifetime
     {
         Assert.SkipWhen(TestDatabase.OnPostgres, SqliteOnly);
         var id = await SeedAsync("a");
-        var read = (await ReadAsync(id))!.Version;
+        var read = (await StoredAsync(id)).Version;
         await RenameElsewhereAsync(id, "other");
 
         await SaveClientRowAsync(new Locked { Id = id, Name = "mine", Version = read }, nameof(Locked.Name));
 
-        (await ReadAsync(id))!.Name.Should().Be("mine");
+        (await StoredAsync(id)).Name.Should().Be("mine");
     }
 }

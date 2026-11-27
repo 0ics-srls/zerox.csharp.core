@@ -57,7 +57,7 @@ public sealed class RepositoryTests : IAsyncLifetime
             var items = scope.ServiceProvider.GetRequiredService<IRepository<Item>>();
             var item = await items.GetByIdAsync(id, Ct);
             item.Should().NotBeNull();
-            item!.Quantity = 5;   // tracked: the change is saved without Update
+            item.Quantity = 5;   // tracked: the change is saved without Update
             await items.SaveChangesAsync(Ct);
         }
 
@@ -83,7 +83,8 @@ public sealed class RepositoryTests : IAsyncLifetime
         {
             var items = scope.ServiceProvider.GetRequiredService<IRepository<Item>>();
             var item = await items.GetByIdAsync(id, Ct);
-            item!.Name = "pencil";
+            item.Should().NotBeNull();
+            item.Name = "pencil";
             item.Quantity = 2;
             await items.SaveChangesAsync(Ct);
         }
@@ -102,7 +103,9 @@ public sealed class RepositoryTests : IAsyncLifetime
         await using (var scope = Db.NewScope())
         {
             var items = scope.ServiceProvider.GetRequiredService<IRepository<Item>>();
-            items.Delete((await items.GetByIdAsync(id, Ct))!);
+            var item = await items.GetByIdAsync(id, Ct);
+            item.Should().NotBeNull();
+            items.Delete(item);
             await items.SaveChangesAsync(Ct);
         }
 

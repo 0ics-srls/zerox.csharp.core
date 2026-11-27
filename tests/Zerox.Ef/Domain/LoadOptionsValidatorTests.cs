@@ -193,7 +193,9 @@ public sealed class LoadOptionsValidatorTests
     [InlineData(typeof(Sample), "Code", "abc")]
     public void Should_Throw_WhenTheValueHasTheWrongType(Type type, string field, string value)
     {
-        var validate = () => typeof(LoadOptionsValidator).GetMethod(nameof(LoadOptionsValidator.Validate))!
+        var validateOf = typeof(LoadOptionsValidator).GetMethod(nameof(LoadOptionsValidator.Validate));
+        validateOf.Should().NotBeNull();
+        var validate = () => validateOf
             .MakeGenericMethod(type).Invoke(null, [WithFilter(L(field, "=", value))]);
 
         var exception = validate.Should().Throw<TargetInvocationException>()
@@ -372,8 +374,8 @@ public sealed class LoadOptionsValidatorTests
         options.RequireGroupCount.Should().BeTrue();
         options.Skip.Should().Be(3);
         options.Take.Should().Be(7);
-        options.Sort!.Single().Selector.Should().Be("At");
-        options.Group!.Single().GroupInterval.Should().Be("2");
+        options.Sort.Should().ContainSingle().Which.Selector.Should().Be("At");
+        options.Group.Should().ContainSingle().Which.GroupInterval.Should().Be("2");
         options.Filter.Should().BeSameAs(filter);
         options.Select.Should().Equal("Name");
         options.DefaultSort.Should().Be("Id");

@@ -69,7 +69,8 @@ internal static class LoadConversion
         {
             null => null,
             _ when HasJsonElement(filter) =>
-                JsonSerializer.Deserialize<DataSourceLoadOptionsBase>(JsonSerializer.SerializeToUtf8Bytes(new { Filter = filter }))!.Filter,
+                (JsonSerializer.Deserialize<DataSourceLoadOptionsBase>(JsonSerializer.SerializeToUtf8Bytes(new { Filter = filter }))
+                    ?? throw new InvalidOperationException("An object serialized is read back as an object, never as null.")).Filter,
             _ => filter.ToList(),
         };
 

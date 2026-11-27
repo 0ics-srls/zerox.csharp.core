@@ -91,7 +91,7 @@ public static class LoadOptionsValidator
 
             type = EntityPaths.Inner(property.PropertyType);
         }
-        return property!;
+        return property ?? throw new InvalidOperationException("A path that is not blank has at least one segment.");
     }
 
     private static string NotFound(string segment, Type type, string option)
@@ -151,7 +151,7 @@ public static class LoadOptionsValidator
         if (triple.Count is not (2 or 3))
             throw new InvalidRequestException(ConditionForm);
 
-        var property = Field(type, (string)triple[0]!, "Filter");
+        var property = Field(type, (string?)triple[0], "Filter");
         var value = triple[triple.Count - 1];
         if (triple.Count == 3)
         {
@@ -247,7 +247,7 @@ public static class LoadOptionsValidator
     private static void Group(Type type, GroupingInfo? group)
     {
         var property = Field(type, group?.Selector, "Group");
-        var interval = group!.GroupInterval;
+        var interval = (group ?? throw new InvalidOperationException("Field refuses a missing group: it has no Selector.")).GroupInterval;
         if (string.IsNullOrWhiteSpace(interval))
             return;
 

@@ -64,7 +64,7 @@ public sealed class OpenApiDocumentTests : IAsyncLifetime
 
     private static IEnumerable<string> Strings(JsonElement element) => element.ValueKind switch
     {
-        JsonValueKind.String => [element.GetString()!],
+        JsonValueKind.String => [element.GetString() ?? throw new InvalidOperationException("A JSON string reads as a string.")],
         JsonValueKind.Object => element.EnumerateObject().SelectMany(p => Strings(p.Value)),
         JsonValueKind.Array => element.EnumerateArray().SelectMany(Strings),
         _ => [],

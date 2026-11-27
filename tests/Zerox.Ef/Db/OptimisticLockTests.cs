@@ -58,8 +58,9 @@ public sealed class OptimisticLockTests : IAsyncLifetime
         await using var scope = Db.NewScope();
         var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
         var row = await rows.GetByIdAsync(id, Ct);
+        row.Should().NotBeNull();
         await RenameElsewhereAsync(id, "other");
-        row!.Name = "mine";
+        row.Name = "mine";
         await rows.SaveChangesAsync(Ct);
     }
 
@@ -69,7 +70,10 @@ public sealed class OptimisticLockTests : IAsyncLifetime
         Assert.SkipUnless(TestDatabase.OnPostgres, PostgresOnly);
         await using var context = Db.NewContext();
 
-        var version = context.Model.FindEntityType(typeof(Locked))!.FindProperty(nameof(Locked.Version))!;
+        var locked = context.Model.FindEntityType(typeof(Locked));
+        locked.Should().NotBeNull();
+        var version = locked.FindProperty(nameof(Locked.Version));
+        version.Should().NotBeNull();
 
         version.GetColumnName().Should().Be("xmin");
         version.ValueGenerated.Should().Be(ValueGenerated.OnAddOrUpdate);
@@ -99,7 +103,8 @@ public sealed class OptimisticLockTests : IAsyncLifetime
         await using var scope = Db.NewScope();
         var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
         var row = await rows.GetByIdAsync(id, Ct);
-        row!.Name = "b";
+        row.Should().NotBeNull();
+        row.Name = "b";
 
         await rows.SaveChangesAsync(Ct);
 
@@ -149,7 +154,8 @@ public sealed class OptimisticLockTests : IAsyncLifetime
         var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
         await using var work = rows.OpenUnitOfWork();
         var row = await rows.GetByIdAsync(id, Ct);
-        row!.Name = "b";
+        row.Should().NotBeNull();
+        row.Name = "b";
         await rows.SaveChangesAsync(Ct);
         (await ReadAsync(id)).Version.Should().Be(before);
 
@@ -249,7 +255,9 @@ public sealed class OptimisticLockTests : IAsyncLifetime
     {
         await using var context = Db.NewContext();
 
-        context.Model.FindEntityType(typeof(Item))!.GetProperties().Should().NotContain(p => p.IsConcurrencyToken);
+        var item = context.Model.FindEntityType(typeof(Item));
+        item.Should().NotBeNull();
+        item.GetProperties().Should().NotContain(p => p.IsConcurrencyToken);
     }
 
     [Fact]
@@ -269,8 +277,10 @@ public sealed class OptimisticLockTests : IAsyncLifetime
         var items = scope.ServiceProvider.GetRequiredService<IRepository<Item>>();
         var a = await rows.GetByIdAsync(first, Ct);
         var b = await rows.GetByIdAsync(second, Ct);
-        a!.Name = "a2";
-        b!.Name = "b2";
+        a.Should().NotBeNull();
+        b.Should().NotBeNull();
+        a.Name = "a2";
+        b.Name = "b2";
         var pen = await items.Query(tracked: true).SingleAsync(Ct);
 
         rows.DetachAll();
@@ -287,11 +297,15 @@ public sealed class OptimisticLockTests : IAsyncLifetime
 
         await using var scope = Db.NewScope();
         var rows = scope.ServiceProvider.GetRequiredService<IRepository<Locked>>();
-        (await rows.GetByIdAsync(id, Ct))!.Name.Should().Be("a");   // a tracked copy, soon stale
+        var stale = await rows.GetByIdAsync(id, Ct);   // a tracked copy, soon stale
+        stale.Should().NotBeNull();
+        stale.Name.Should().Be("a");
         await RenameElsewhereAsync(id, "fresh");
 
         rows.DetachAll();
 
-        (await rows.GetByIdAsync(id, Ct))!.Name.Should().Be("fresh");
+        var fresh = await rows.GetByIdAsync(id, Ct);
+        fresh.Should().NotBeNull();
+        fresh.Name.Should().Be("fresh");
     }
 }

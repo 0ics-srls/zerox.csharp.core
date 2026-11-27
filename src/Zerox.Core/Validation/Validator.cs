@@ -97,13 +97,12 @@ public sealed class Validator<T> : INotifyDataErrorInfo, IValidatable
     {
         lock (_lock)
         {
-            var had = _errors.TryGetValue(propertyName, out var previous);
             if (errors.Count == 0)
             {
                 if (_errors.Remove(propertyName))
                     changed.Add(propertyName);
             }
-            else if (!had || !previous!.SequenceEqual(errors))
+            else if (!_errors.TryGetValue(propertyName, out var previous) || !previous.SequenceEqual(errors))
             {
                 _errors[propertyName] = errors;
                 changed.Add(propertyName);

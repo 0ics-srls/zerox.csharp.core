@@ -31,7 +31,8 @@ public sealed class ControllerSurfaceTests
     [Fact]
     public void Should_BindTheLoadOptions_AsTheServiceType()
     {
-        var load = typeof(EntityController<Plain>).GetMethod(nameof(EntityController<Plain>.Load))!;
+        var load = typeof(EntityController<Plain>).GetMethod(nameof(EntityController<Plain>.Load));
+        load.Should().NotBeNull();
 
         var shape = (Body: load.GetParameters().Single(p => p.GetCustomAttribute<FromBodyAttribute>() is not null).ParameterType, Result: load.ReturnType);
 

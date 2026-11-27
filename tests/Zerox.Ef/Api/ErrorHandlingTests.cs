@@ -27,7 +27,7 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
             app.MapPost("/conflict", async (HostDbContext db) =>
             {
                 var doc = await db.Docs.SingleAsync();
-                await using (var other = _host!.NewContext())
+                await using (var other = Host.NewContext())
                 {
                     (await other.Docs.SingleAsync()).Name = "theirs";
                     await other.SaveChangesAsync();
@@ -180,7 +180,7 @@ public sealed class ErrorHandlingTests : IAsyncLifetime
         }
 
         cut.Should().NotBeNull();
-        cut!.ToString().Should().NotContain("ErrorHandlingMiddleware");   // nothing escaped the middleware
+        cut.ToString().Should().NotContain("ErrorHandlingMiddleware");   // nothing escaped the middleware
         var logs = await MiddlewareLogsAsync(e => e.Level == LogLevel.Error);
         logs.Should().ContainSingle(e => e.Level == LogLevel.Error);
     }

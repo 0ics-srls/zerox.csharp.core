@@ -57,7 +57,8 @@ internal sealed class SessionInterceptor : SaveChangesInterceptor, IDbCommandInt
         DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventData);
-        var session = DbSession.Of(eventData.Context!);
+        var session = DbSession.Of(eventData.Context
+            ?? throw new InvalidOperationException("EF saves changes of a context: SavingChanges always names it."));
 
         if (session.Massive is not null)
             throw new InvalidOperationException("A massive operation is open: no repository can save until it is closed.");
